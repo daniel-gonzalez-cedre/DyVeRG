@@ -10,10 +10,10 @@ from tqdm import tqdm
 
 
 def read_data(dataname: str = 'nips', lookback: int = 10, num_epochs: int = 10) -> Tuple[List[nx.Graph], List[int]]:
-    rootpath = '/Users/danielgonzalez/repos/LLNL/'
+    rootpath = '/Users/danielgonzalez/repos/temporal_VRG/'
 
     if dataname == 'fb-messages' or dataname == 'email-dnc':
-        datapath = f'gonzalez_mrhyde/data/{dataname}/{dataname}.edges'
+        datapath = f'data_old/{dataname}/{dataname}.edges'
         graph = nx.read_edgelist(join(rootpath, datapath),
                                  delimiter=',',
                                  nodetype=int,

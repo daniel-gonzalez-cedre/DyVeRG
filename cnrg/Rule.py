@@ -10,15 +10,16 @@ class BaseRule:
     Base class for Rule
     """
 
-    __slots__ = "lhs", "graph", "level", "cost", "frequency", "id", "non_terminals", "subtree"
+    __slots__ = "lhs", "graph", "level", "cost", "frequency", "id", "non_terminals", "subtree", "time"
 
-    def __init__(self, lhs, graph, level=0, cost=0, frequency=1, id=None):
+    def __init__(self, lhs, graph, level=0, cost=0, frequency=1, id=None, time=None):
         self.lhs = lhs  # the left hand side: the number of boundary edges
         self.graph = graph  # the right hand side subgraph
         self.level = level  # level of discovery in the tree (the root is at 0)
         self.cost = cost  # the cost of encoding the rule using MDL (in bits)
         self.frequency = frequency  # frequency of occurrence
         self.id = id
+        self.time = time
         self.non_terminals = []  # list of non-terminals in the RHS graph
         # store original vertex ids (subgraph-to-subgraph dynamics)
         self.subtree = None

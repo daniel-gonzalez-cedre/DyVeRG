@@ -12,7 +12,8 @@ from cnrg.VRG import VRG as VRG
 # from cnrg.LightMultiGraph import LightMultiGraph as LightMultiGraph
 
 sys.path.append('../src')
-from data_scripts import read_data
+# from data import load_data
+from data_old import read_data
 from bookkeeping import decompose
 from update_grammar import update_grammar
 
@@ -41,9 +42,9 @@ def main():
     dataname = 'fb-messages'
     lookbacks = list(range(11))
 
-    base_grammars: dict[int, list[VRG]] = {lookback: [] for lookback in lookbacks}
-    joint_grammars: dict[int, list[VRG]] = {lookback: [] for lookback in lookbacks}
-    indep_grammars: dict[int, list[VRG]] = {lookback: [] for lookback in lookbacks}
+    base_grammars: dict[int, dict[int, VRG]] = {lookback: {} for lookback in lookbacks}
+    joint_grammars: dict[int, dict[int, VRG]] = {lookback: {} for lookback in lookbacks}
+    indep_grammars: dict[int, dict[int, VRG]] = {lookback: {} for lookback in lookbacks}
 
     base_mdls: dict[int, dict[int, float]] = {lookback: {} for lookback in lookbacks}
     joint_mdls: dict[int, dict[int, float]] = {lookback: {} for lookback in lookbacks}
@@ -65,9 +66,9 @@ def main():
         for lookback, idx, base_grammar, joint_grammar, indep_grammar in results:
             base_grammars[lookback][idx] = base_grammar
             joint_grammars[lookback][idx] = joint_grammar
-            indep_grammars[lookback] = indep_grammar
+            indep_grammars[lookback][idx] = indep_grammar
 
-            base_mdls[lookback][idx] = base_grammarcalculate_cost()
+            base_mdls[lookback][idx] = base_grammar.calculate_cost()
 
             joint_mdls[lookback][idx] = joint_grammar.calculate_cost()
             joint_lls[lookback][idx] = joint_grammar.conditional_ll()
@@ -89,18 +90,18 @@ def main():
                                                                home_graph,
                                                                away_graph,
                                                                mode='joint')
-                indep_grammars[lookback] = update_grammar(base_grammars[lookback],
-                                                          home_graph,
-                                                          away_graph,
-                                                          mode='independent')
+                indep_grammars[lookback][idx] = update_grammar(base_grammars[lookback],
+                                                               home_graph,
+                                                               away_graph,
+                                                               mode='independent')
 
-                base_mdls[lookback][idx] = base_grammars[lookback].calculate_cost()
+                base_mdls[lookback][idx] = base_grammars[lookback][idx].calculate_cost()
 
-                joint_mdls[lookback][idx] = joint_grammars[lookback].calculate_cost()
-                joint_lls[lookback][idx] = joint_grammars[lookback].conditional_ll()
+                joint_mdls[lookback][idx] = joint_grammars[lookback][idx].calculate_cost()
+                joint_lls[lookback][idx] = joint_grammars[lookback][idx].conditional_ll()
 
-                indep_mdls[lookback][idx] = indep_grammars[lookback].calculate_cost()
-                indep_lls[lookback][idx] = indep_grammars[lookback].conditional_ll()
+                indep_mdls[lookback][idx] = indep_grammars[lookback][idx].calculate_cost()
+                indep_lls[lookback][idx] = indep_grammars[lookback][idx].conditional_ll()
 
             base_grammar = decompose(graphs[-1], mu=mu)
             base_grammars[lookback][idx + 1] = base_grammar

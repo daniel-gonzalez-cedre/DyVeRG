@@ -1,0 +1,17 @@
+# Email DNC temporal dataset
+- data acquired from SNAP.
+- `https://snap.stanford.edu/data/email-Eu-core-temporal.html`
+
+# quick stats
+- First timestamp: `1970-01-01 00:00:00`
+- Last timestamp: `1972-03-14 22:14:14`
+- Total number of months: `19`
+- Number of interactions: `332_334`
+
+# raw data
+- Each line contains a sender, receiver, and UNIX epoch timestamp (if valid) separated by spaces.
+
+# processed
+- UNIX epochs are then converted into datetime strings `year,month,day,hour,minute,second`.
+- The strings are filtered to remove all but the `year` and `month` information.
+- The lines are then relabelled with the new monthly timestamps.
