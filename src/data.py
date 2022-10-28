@@ -19,7 +19,7 @@ def load_data(dataname: str = 'email-dnc', lookback: int = 0) -> list[tuple[int,
         else:
             edge_dict[t] = [(u, v)]
 
-    graphs = sorted([(t, nx.Graph(edge_dict[t], time=t)) for t in edge_dict],
+    graphs = sorted([(t, nx.Graph(edges, time=t)) for t, edges in edge_dict.items()],
                     key=lambda x: x[0])
 
     if lookback > 0:
@@ -32,11 +32,13 @@ def load_data(dataname: str = 'email-dnc', lookback: int = 0) -> list[tuple[int,
 
         graphs = cum_graphs
 
-    if float(nx.__version__[:3]) < 2.4:
-        giants = [(t, sorted(nx.connected_component_subgraphs(g), key=len, reverse=True)[0])
-                  for t, g in graphs]
-    else:
-        giants = [(t, g.subgraph(sorted(nx.connected_components(g), key=len, reverse=True)[0]))
-                  for t, g in graphs]
+    # if float(nx.__version__[:3]) < 2.4:
+    #     giants = [(t, sorted(nx.connected_component_subgraphs(g), key=len, reverse=True)[0])
+    #               for t, g in graphs]
+    # else:
+    #     giants = [(t, g.subgraph(sorted(nx.connected_components(g), key=len, reverse=True)[0]))
+    #               for t, g in graphs]
 
-    return sorted(giants, key=lambda x: x[0])
+    # return sorted(giants, key=lambda x: x[0])
+
+    return sorted(graphs, key=lambda x: x[0])

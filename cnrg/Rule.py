@@ -2,7 +2,8 @@
 import networkx as nx
 import networkx.algorithms.isomorphism as iso
 
-import cnrg.MDL as MDL
+# import cnrg.MDL as MDL
+from cnrg import MDL
 
 
 class BaseRule:
@@ -35,11 +36,11 @@ class BaseRule:
         g1 = self.graph.copy()
         g2 = other.graph.copy()
 
-        for v, d in g1.nodes(data=True):
+        for _, d in g1.nodes(data=True):
             if 'label' not in d:
                 d['label'] = -1
 
-        for v, d in g2.nodes(data=True):
+        for _, d in g2.nodes(data=True):
             if 'label' not in d:
                 d['label'] = -1
 
@@ -83,8 +84,16 @@ class BaseRule:
         )
 
     def __hash__(self):
-        g = nx.freeze(self.graph)
-        return hash((self.lhs, g))
+        g = self.graph.copy()
+
+        for _, d in g.nodes(data=True):
+            if 'label' not in d:
+                d['label'] = -1
+
+        return int(nx.weisfeiler_lehman_graph_hash(g, node_attr='label'), 16)
+
+        # g = nx.freeze(self.graph)
+        # return hash((self.lhs, g))
 
     def __deepcopy__(self, memodict={}):
         return BaseRule(
@@ -181,7 +190,7 @@ class FullRule(BaseRule):
         :return:
         """
         self.cost = (
-            MDL.gamma_code(self.lhs + 1) +
+            MDL.gamma_code(max(0, self.lhs) + 1) +
             MDL.graph_dl(self.graph) +
             MDL.gamma_code(self.frequency + 1)
         )
@@ -299,7 +308,7 @@ class PartRule(BaseRule):
         #     if 'label' in data:  # it's a non-terminal
         #         l_u = 3
         self.cost = (
-            MDL.gamma_code(self.lhs + 1) +
+            MDL.gamma_code(max(0, self.lhs) + 1) +
             MDL.graph_dl(self.graph) +
             MDL.gamma_code(self.frequency + 1) +
             self.graph.order() * MDL.gamma_code(max_boundary_degree + 1)
@@ -337,7 +346,7 @@ class NoRule(PartRule):
         :return:
         """
         self.cost = (
-            MDL.gamma_code(self.lhs + 1)
+            MDL.gamma_code(max(0, self.lhs) + 1)
             + MDL.graph_dl(self.graph)
             + MDL.gamma_code(self.frequency + 1)
         )

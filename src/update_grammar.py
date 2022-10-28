@@ -1,12 +1,14 @@
+import os
 import sys
-import networkx as nx
-from tqdm import tqdm
 
 sys.path.append('../')
 
+import networkx as nx
+from tqdm import tqdm
 from cnrg.VRG import VRG
 
-from bookkeeping import decompose
+from utils import silence
+from bookkeeping import decompose, decompose_component
 from grammar_transitions import graft_grammars
 from rule_transitions import update_rule_domestic, update_rule_diplomatic
 
@@ -44,11 +46,24 @@ def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph, mod
 
         count = 1
         for nodes, territory in tqdm(uncharted_territories.items(), desc=f'joint changes: {count}', leave=True):
-            if territory.order() > mu:
-                territory_grammar = decompose(territory, mu=mu)
+            if territory.order() > 0:
+
+                with silence():
+                    territory_grammar = decompose(territory, mu=mu)
+
                 frontier = {(u if u in home_graph else v, v if v not in home_graph else u)
-                            for (u, v) in edges_diplomatic if (u in territory) or (v in territory)}
-                charted_grammar = graft_grammars(charted_grammar, territory_grammar, frontier)
+                            for (u, v) in edges_diplomatic
+                            if (u in territory) or (v in territory)}
+
+                problems = [u for u in territory.nodes() if u not in charted_grammar.rule_source]
+                print(len(problems), territory.order())
+                # exit()
+
+                for u, v in frontier:
+                    assert u in charted_grammar.rule_source and v in territory_grammar.rule_source
+
+                with silence():
+                    charted_grammar = graft_grammars(charted_grammar, territory_grammar, frontier)
 
                 conquered_components += [nodes]
 
@@ -61,7 +76,7 @@ def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph, mod
 
         for nodes in conquered_components:
             uncharted_components.remove(nodes)
-            del(uncharted_territories[nodes])
+            del uncharted_territories[nodes]
 
         for nodes, territory in uncharted_territories.items():
             for u, v in territory.edges():

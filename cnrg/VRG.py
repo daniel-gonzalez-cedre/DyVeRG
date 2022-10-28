@@ -5,12 +5,11 @@ refactored VRG
 # import os
 # import copy
 # from collections import defaultdict
+from typing import List, Dict
 
 import numpy as np
 import networkx.algorithms.isomorphism as iso
 from tqdm import tqdm
-
-from typing import List, Dict
 
 # import src.full_info as full_info
 # import src.no_info as no_info
