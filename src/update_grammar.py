@@ -1,4 +1,3 @@
-import os
 import sys
 
 sys.path.append('../')
@@ -32,7 +31,7 @@ def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph, mod
                      if u not in home_graph.nodes() and v not in home_graph.nodes()}
 
     # orient the edges (u, v) so that u ∈ home and v ∈ away
-    edges_diplomatic = {(u if u in home_graph.nodes() else v, v if v in away_graph.nodes() else u)
+    edges_diplomatic = {(u if u in home_graph.nodes() else v, v if v not in home_graph.nodes() else u)
                         for u, v in edges_diplomatic}
 
     if mode == 'joint':
@@ -48,22 +47,20 @@ def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph, mod
         for nodes, territory in tqdm(uncharted_territories.items(), desc=f'joint changes: {count}', leave=True):
             if territory.order() > 0:
 
-                with silence():
-                    territory_grammar = decompose(territory, mu=mu)
+                territory_grammar = decompose(territory, mu=mu)
 
                 frontier = {(u if u in home_graph else v, v if v not in home_graph else u)
                             for (u, v) in edges_diplomatic
                             if (u in territory) or (v in territory)}
 
-                problems = [u for u in territory.nodes() if u not in charted_grammar.rule_source]
-                print(len(problems), territory.order())
+                # problems = [u for u in territory.nodes() if u not in charted_grammar.rule_source]
+                # print(len(problems), territory.order())
                 # exit()
 
                 for u, v in frontier:
                     assert u in charted_grammar.rule_source and v in territory_grammar.rule_source
 
-                with silence():
-                    charted_grammar = graft_grammars(charted_grammar, territory_grammar, frontier)
+                charted_grammar = graft_grammars(charted_grammar, territory_grammar, frontier)
 
                 conquered_components += [nodes]
 
