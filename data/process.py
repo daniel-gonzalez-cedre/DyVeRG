@@ -2,7 +2,13 @@ from datetime import datetime as dt
 
 
 def sieve(lines):
-    return [(u, v, t) for u, v, t in lines if t != r'\N']
+    if len(lines[0]) == 3:
+        sieved = [(u, v, t) for u, v, t in lines if t != r'\N']
+    elif len(lines[0]) == 4:
+        sieved = [(u, v, t) for u, v, _, t in lines if t != r'\N']
+    else:
+        raise AssertionError
+    return sieved
 
 
 # (u, v, year, month, day, hour, minute, second)
@@ -12,18 +18,27 @@ def convert(filtered):
 
 
 # split into monthly groups
-def discretize(converted, granularity='monthly'):
-    assert granularity in ['monthly', 'weekly']
+def discretize(converted, granularity):
+    assert granularity in ['monthly', 'weekly', 'monthly', 'hourly', 'minutely']
 
     if granularity == 'monthly':
         discretized = [(u, v, int(str(year) + str(month)))
                        for u, v, year, month, _, _, _, _ in converted]
     elif granularity == 'weekly':
-        yearmonthdays = [int(str(year) + str(month) + str(day)) % 7
-                         for u, v, year, month, day, _, _, _ in converted]
+        raise NotImplementedError
+        # yearmonthdays = [int(str(year) + str(month) + str(day)) % 7
+        #                  for u, v, year, month, day, _, _, _ in converted]
 
-        discretized = [(u, v, int(str(year) + str(month)))
-                       for u, v, year, month, _, _, _, _ in converted]
+        # discretized = [(u, v, int(str(year) + str(month)))
+        #                for u, v, year, month, _, _, _, _ in converted]
+    elif granularity == 'hourly':
+        discretized = [(u, v, int(str(year) + str(month) + str(day) + str(hour)))
+                       for u, v, year, month, day, hour, _, _ in converted]
+    elif granularity == 'minutely':
+        discretized = [(u, v, int(str(year) + str(month) + str(day) + str(hour) + str(minute)))
+                       for u, v, year, month, day, hour, minute, _ in converted]
+    else:
+        raise NotImplementedError
     return sorted(discretized, key=lambda x: x[2])
 
 
@@ -31,12 +46,19 @@ def process(dataname):
     if dataname == 'facebook-links':
         ext = 'txt'
         sep = '\t'
+        granularity = 'monthly'
     elif dataname == 'email-dnc':
         ext = 'edges'
         sep = ','
+        granularity = 'hourly'
+    elif dataname == 'email-enron':
+        ext = 'edges'
+        sep = ' '
+        granularity = 'minutely'
     elif dataname == 'email-eucore':
         ext = 'txt'
         sep = ' '
+        granularity = 'monthly'
     else:
         raise NotImplementedError
 
@@ -53,7 +75,7 @@ def process(dataname):
 
     filtered = sieve(lines)
     converted = convert(filtered)
-    discretized = discretize(converted)
+    discretized = discretize(converted, granularity)
 
     print('done.')
 
@@ -65,6 +87,6 @@ def process(dataname):
 
 
 if __name__ == '__main__':
-    dataname = input('enter the name of the dataset to process: ')
-    assert dataname in ['facebook-links', 'email-dnc', 'email-eucore']
-    process(dataname)
+    name = input('enter the name of the dataset to process: ')
+    assert name in ['facebook-links', 'email-dnc', 'email-enron', 'email-eucore']
+    process(name)

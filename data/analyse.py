@@ -1,6 +1,5 @@
-
 def analyse(dataname):
-    assert dataname in ['email-dnc', 'email-eucore', 'facebook-links']
+    assert dataname in ['email-dnc', 'email-enron', 'email-eucore', 'facebook-links']
 
     with open(f'{dataname}/{dataname}_processed.edgelist', 'r') as infile:
         edges = [line.strip().split(',') for line in infile]
