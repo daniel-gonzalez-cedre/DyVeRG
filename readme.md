@@ -1,4 +1,4 @@
-# DyVeRG:
+# DyVeRG
 ## Dynamic Vertex Replacement Grammar
 
 # Acknowledgements

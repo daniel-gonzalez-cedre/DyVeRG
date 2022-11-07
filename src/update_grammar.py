@@ -47,7 +47,7 @@ def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph, mod
         for nodes, territory in tqdm(uncharted_territories.items(), desc=f'joint changes: {count}', leave=True):
             if territory.order() > 0:
 
-                with silence()
+                with silence():
                     territory_grammar = decompose(territory, mu=mu)
 
                 frontier = {(u if u in home_graph else v, v if v not in home_graph else u)
