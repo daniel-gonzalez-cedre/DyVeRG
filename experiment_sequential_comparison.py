@@ -118,8 +118,8 @@ if __name__ == '__main__':
                         default='facebook-links',
                         dest='dataset',
                         type=str,
-                        choices=['facebook-links', 'email-dnc', 'email-eucore', 'email-email-enron'],
-                        help='select a dataset from ["facebook-links", "email-dnc", "email-eucore", "email-email-enron"]')
+                        choices=['facebook-links', 'email-dnc', 'email-eucore', 'email-enron'],
+                        help='select a dataset from ["facebook-links", "email-dnc", "email-eucore", "email-enron"]')
     parser.add_argument('-p', '--parallel',
                         action='store_true',
                         default=False,
