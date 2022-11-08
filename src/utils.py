@@ -1,18 +1,18 @@
 from contextlib import contextmanager
 import sys
-import os
+from os import makedirs, devnull
 import warnings
 
 
 @contextmanager
 def silence(enabled=True):
     if enabled:
-        with warnings.catch_warnings(), open(os.devnull, "w") as devnull:
+        with warnings.catch_warnings(), open(devnull, "w") as null:
             warnings.filterwarnings(action='ignore')
             old_stdout = sys.stdout
-            sys.stdout = devnull
+            sys.stdout = null
             old_stderr = sys.stderr
-            sys.stderr = devnull
+            sys.stderr = null
             try:
                 yield
             finally:
@@ -20,3 +20,7 @@ def silence(enabled=True):
                 sys.stderr = old_stderr
     else:
         yield
+
+
+def mkdir(path):
+    makedirs(path, exist_ok=True)

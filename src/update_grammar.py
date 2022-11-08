@@ -7,21 +7,22 @@ from tqdm import tqdm
 
 from cnrg.VRG import VRG
 from utils import silence
-from bookkeeping import decompose, decompose_component
+from bookkeeping import decompose
 from grammar_transitions import graft_grammars
 from rule_transitions import update_rule_domestic, update_rule_diplomatic
 
 
-def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph, mode: str = 'joint', mu: int = None):
+def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph,
+                   time: int, mode: str = 'joint', mu: int = None):
     if mu is None:
         mu = grammar.mu
 
-    assert mode in ['joint', 'independent']
+    assert mode in ['joint', 'j', 'independent', 'indep', 'i']
 
     charted_grammar = grammar.copy()
 
     edge_additions = set(away_graph.edges()) - set(home_graph.edges())
-    edge_deletions = set(home_graph.edges()) - set(away_graph.edges())
+    # edge_deletions = set(home_graph.edges()) - set(away_graph.edges())
 
     edges_domestic = {(u, v) for u, v in edge_additions
                       if u in home_graph.nodes() and v in home_graph.nodes()}
@@ -34,7 +35,7 @@ def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph, mod
     edges_diplomatic = {(u if u in home_graph.nodes() else v, v if v not in home_graph.nodes() else u)
                         for u, v in edges_diplomatic}
 
-    if mode == 'joint':
+    if mode in ['joint', 'j']:
         uncharted_region = nx.Graph()
         uncharted_region.add_edges_from(edges_diplomatic | edges_foreign)
 
@@ -48,7 +49,7 @@ def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph, mod
             if territory.order() > 0:
 
                 with silence():
-                    territory_grammar = decompose(territory, mu=mu)
+                    territory_grammar = decompose(territory, time=time, mu=mu)
 
                 frontier = {(u if u in home_graph else v, v if v not in home_graph else u)
                             for (u, v) in edges_diplomatic

@@ -13,7 +13,8 @@ from cnrg.VRG import VRG as VRG
 
 sys.path.append('../src')
 # from data import load_data
-from data_old import read_data
+# from data_old import read_data
+from data import load_data
 from bookkeeping import decompose
 from update_grammar import update_grammar
 

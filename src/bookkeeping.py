@@ -7,7 +7,7 @@ import networkx as nx
 
 sys.path.append('..')
 
-from utils import silence
+# from utils import silence
 from cnrg.Rule import PartRule
 from cnrg.VRG import VRG
 from cnrg.Tree import create_tree
@@ -23,7 +23,9 @@ def convert_LMG(g: nx.Graph):
     return g_lmg
 
 
-def decompose(g: nx.Graph, clustering: str = 'leiden', gtype: str = 'mu_level_dl', name: str = '', mu: int = 4):
+def decompose(g: nx.Graph, time: int = 0, mu: int = 4,
+              clustering: str = 'leiden', gtype: str = 'mu_level_dl',
+              name: str = ''):
     if g.order() == 0:
         raise AssertionError('!!! graph is empty !!!')
 
@@ -34,9 +36,9 @@ def decompose(g: nx.Graph, clustering: str = 'leiden', gtype: str = 'mu_level_dl
 
     # connected_components = [g for g in connected_components if g.order() > mu]
     if len(connected_components) == 1:
-        supergrammar = decompose_component(g)
+        supergrammar = decompose_component(g, time=time)
     else:
-        subgrammars = [decompose_component(component, clustering=clustering, gtype=gtype, name=name, mu=mu)
+        subgrammars = [decompose_component(component, time=time, clustering=clustering, gtype=gtype, name=name, mu=mu)
                        for component in connected_components]
 
         S = min(min(key for key in subgrammar.rule_dict) for subgrammar in subgrammars) - 1
@@ -136,7 +138,9 @@ def decompose(g: nx.Graph, clustering: str = 'leiden', gtype: str = 'mu_level_dl
     return supergrammar
 
 
-def decompose_component(g: nx.Graph, clustering: str = 'leiden', gtype: str = 'mu_level_dl', name: str = '', mu: int = 4):
+def decompose_component(g: nx.Graph, time: int = 0, mu: int = 4,
+                        clustering: str = 'leiden', gtype: str = 'mu_level_dl',
+                        name: str = ''):
     if not isinstance(g, LMG):
         g = convert_LMG(g)
 
@@ -163,6 +167,9 @@ def decompose_component(g: nx.Graph, clustering: str = 'leiden', gtype: str = 'm
     extractor.generate_grammar()
     # ex_sequence = extractor.extracted_sequence
     grammar = extractor.grammar
+
+    for rule in grammar.rule_list:
+        rule.time = time
 
     return grammar
 
