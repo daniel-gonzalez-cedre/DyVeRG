@@ -101,17 +101,18 @@ def main(dataset, parallel, rewire, mu):
         joint_grammars[(curr_time, next_time, p)] = joint_grammar
         indep_grammars[(curr_time, next_time, p)] = indep_grammar
 
-    base_mdls = {time: grammar.calculate_cost()
-                 for time, grammar in base_grammars.items()}
-    joint_mdls = {(curr_time, next_time): grammar.calculate_cost()
-                  for (curr_time, next_time), grammar in joint_grammars.items()}
-    indep_mdls = {(curr_time, next_time): grammar.calculate_cost()
-                  for (curr_time, next_time), grammar in indep_grammars.items()}
+    base_mdls = {key: grammar.calculate_cost()
+                 for key, grammar in base_grammars.items()}
 
-    joint_lls = {(curr_time, next_time): grammar.conditional_ll()
-                 for (curr_time, next_time), grammar in joint_grammars.items()}
-    indep_lls = {(curr_time, next_time): grammar.conditional_ll()
-                 for (curr_time, next_time), grammar in indep_grammars.items()}
+    joint_mdls = {key: grammar.calculate_cost()
+                  for key, grammar in joint_grammars.items()}
+    indep_mdls = {key: grammar.calculate_cost()
+                  for key, grammar in indep_grammars.items()}
+
+    joint_lls = {key: grammar.conditional_ll()
+                 for key, grammar in joint_grammars.items()}
+    indep_lls = {key: grammar.conditional_ll()
+                 for key, grammar in indep_grammars.items()}
 
     with open(join(rootpath, resultspath, f'{dataset}_base.grammars'), 'wb') as outfile:
         pickle.dump(base_grammars, outfile)
@@ -123,6 +124,7 @@ def main(dataset, parallel, rewire, mu):
     with open(join(rootpath, resultspath, f'{dataset}_base.mdls'), 'w') as outfile:
         for (time, p), mdl in base_mdls.items():
             outfile.write(f'{time},{p},{mdl}\n')
+
     with open(join(rootpath, resultspath, f'{dataset}_joint.mdls'), 'w') as outfile:
         for (curr_time, next_time, p), mdl in joint_mdls.items():
             outfile.write(f'{curr_time},{next_time},{p},{mdl}\n')
