@@ -152,7 +152,7 @@ if __name__ == '__main__':
                         dest='parallel',
                         help='run the experiment in parallel or not')
     parser.add_argument('-r', '--rewire',
-                        default=4,
+                        default=0.2,
                         dest='rewire',
                         type=float,
                         help='the max percentage of edges to rewire')
