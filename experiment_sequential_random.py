@@ -87,7 +87,7 @@ def main(dataset, parallel, rewire, mu):
         results = Parallel(n_jobs=55)(
             delayed(experiment)(curr_time, curr_graph, next_time, next_graph, p, mu)
             for (curr_time, curr_graph), (next_time, next_graph)
-            in tqdm(zip(time_graph_pairs[:-1], time_graph_pairs[1:]))
+            in zip(time_graph_pairs[:-1], time_graph_pairs[1:])
             for p in np.linspace(0, rewire, 10)
         )
     else:
