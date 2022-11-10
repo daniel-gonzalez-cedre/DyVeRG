@@ -53,22 +53,10 @@ def main(dataset, parallel, mu):
             for (curr_time, curr_graph), (next_time, next_graph)
             in tqdm(zip(time_graph_pairs[:-1], time_graph_pairs[1:]))
         )
-
-        # for curr_time, next_time, base_grammar, joint_grammar, indep_grammar in results:
-        #     base_grammars[curr_time] = base_grammar
-        #     joint_grammars[(curr_time, next_time)] = joint_grammar
-        #     indep_grammars[(curr_time, next_time)] = indep_grammar
     else:
         results = [experiment(curr_time, curr_graph, next_time, next_graph, mu)
                    for (curr_time, curr_graph), (next_time, next_graph)
                    in tqdm(zip(time_graph_pairs[:-1], time_graph_pairs[1:]))]
-
-        # for (curr_time, curr_graph), (next_time, next_graph) in tqdm(zip(time_graph_pairs[:-1], time_graph_pairs[1:])):
-        #     _, _, base_grammar, joint_grammar, indep_grammar = experiment(curr_time, curr_graph, next_time, next_graph, mu)
-
-        #     base_grammars[curr_time] = base_grammar
-        #     joint_grammars[(curr_time, next_time)] = joint_grammar
-        #     indep_grammars[(curr_time, next_time)] = indep_grammar
 
     for curr_time, next_time, base_grammar, joint_grammar, indep_grammar in results:
         base_grammars[curr_time] = base_grammar
