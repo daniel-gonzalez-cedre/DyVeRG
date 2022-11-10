@@ -91,27 +91,28 @@ def main(dataset, parallel, rewire, mu):
             for p in np.linspace(0, rewire, 10)
         )
     else:
-        for p in np.linspace(0, rewire, 10):
-            results = [experiment(curr_time, curr_graph, next_time, next_graph, p, mu)
-                       for (curr_time, curr_graph), (next_time, next_graph)
-                       in zip(time_graph_pairs[:-1], time_graph_pairs[1:])]
+        results = [experiment(curr_time, curr_graph, next_time, next_graph, p, mu)
+                   for (curr_time, curr_graph), (next_time, next_graph)
+                   in zip(time_graph_pairs[:-1], time_graph_pairs[1:])
+                   for p in np.linspace(0, rewire, 10)]
 
     for curr_time, next_time, p, base_grammar, joint_grammar, indep_grammar in results:
         base_grammars[(curr_time, p)] = base_grammar
         joint_grammars[(curr_time, next_time, p)] = joint_grammar
         indep_grammars[(curr_time, next_time, p)] = indep_grammar
 
-    base_mdls = {time: grammar.calculate_cost()
+    base_mdls = {(time, p): grammar.calculate_cost()
                  for time, grammar in base_grammars.items()}
-    joint_mdls = {(curr_time, next_time): grammar.calculate_cost()
-                  for (curr_time, next_time), grammar in joint_grammars.items()}
-    indep_mdls = {(curr_time, next_time): grammar.calculate_cost()
-                  for (curr_time, next_time), grammar in indep_grammars.items()}
 
-    joint_lls = {(curr_time, next_time): grammar.conditional_ll()
-                 for (curr_time, next_time), grammar in joint_grammars.items()}
-    indep_lls = {(curr_time, next_time): grammar.conditional_ll()
-                 for (curr_time, next_time), grammar in indep_grammars.items()}
+    joint_mdls = {(curr_time, next_time, p): grammar.calculate_cost()
+                  for (curr_time, next_time, p), grammar in joint_grammars.items()}
+    indep_mdls = {(curr_time, next_time, p): grammar.calculate_cost()
+                  for (curr_time, next_time, p), grammar in indep_grammars.items()}
+
+    joint_lls = {(curr_time, next_time, p): grammar.conditional_ll()
+                 for (curr_time, next_time, p), grammar in joint_grammars.items()}
+    indep_lls = {(curr_time, next_time, p): grammar.conditional_ll()
+                 for (curr_time, next_time, p), grammar in indep_grammars.items()}
 
     with open(join(rootpath, resultspath, f'{dataset}_base.grammars'), 'wb') as outfile:
         pickle.dump(base_grammars, outfile)
@@ -123,6 +124,7 @@ def main(dataset, parallel, rewire, mu):
     with open(join(rootpath, resultspath, f'{dataset}_base.mdls'), 'w') as outfile:
         for (time, p), mdl in base_mdls.items():
             outfile.write(f'{time},{p},{mdl}\n')
+
     with open(join(rootpath, resultspath, f'{dataset}_joint.mdls'), 'w') as outfile:
         for (curr_time, next_time, p), mdl in joint_mdls.items():
             outfile.write(f'{curr_time},{next_time},{p},{mdl}\n')
@@ -131,10 +133,10 @@ def main(dataset, parallel, rewire, mu):
             outfile.write(f'{curr_time},{next_time},{p},{mdl}\n')
 
     with open(join(rootpath, resultspath, f'{dataset}_joint.lls'), 'w') as outfile:
-        for (curr_time, next_time), ll in joint_lls.items():
+        for (curr_time, next_time, p), ll in joint_lls.items():
             outfile.write(f'{curr_time},{next_time},{p},{ll}\n')
     with open(join(rootpath, resultspath, f'{dataset}_indep.lls'), 'w') as outfile:
-        for (curr_time, next_time), ll in indep_lls.items():
+        for (curr_time, next_time, p), ll in indep_lls.items():
             outfile.write(f'{curr_time},{next_time},{p},{ll}\n')
 
 
