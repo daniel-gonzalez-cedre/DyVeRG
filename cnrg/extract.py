@@ -221,7 +221,7 @@ class BaseExtractor(abc.ABC):
         total_tree_nodes = len([child for child in start_tnode.children if isinstance(child, str)]) + 1  # +1 for root
         is_global_extractor = hasattr(self, 'rule_id_to_record')
 
-        # logging.warning('Updaing the tree')
+        # logging.warning('Updating the tree')
         # with tqdm(total=100, bar_format='{l_bar}{bar}|[{elapsed}<{remaining}]', ncols=50) as pbar:
         while len(stack) != 0:
             tnode = stack.pop()
@@ -340,7 +340,7 @@ class BaseExtractor(abc.ABC):
 
         if is_global_extractor:
             self.grammar = self.final_grammar
-        logging.warning(f'{self.grammar} generated in {round(time() - start_time, 3)} secs\n')
+        # logging.warning(f'{self.grammar} generated in {round(time() - start_time, 3)} secs\n')
 
 
 class MuExtractor(BaseExtractor):
