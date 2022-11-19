@@ -331,7 +331,7 @@ class BaseExtractor(abc.ABC):
                 else:
                     self.grammar.add_rule(rule)
 
-                percent = (1 - (self.g.order() - 1) / (num_nodes - 1)) * 100
+                percent = (1 - (self.g.order() - 1) / (num_nodes - 1)) * 100 if num_nodes > 1 else 100
                 curr_progress = percent - pbar.n
                 pbar.update(curr_progress)
                 if rule.lhs == 0:  # we are compressing the root, so that's the end
