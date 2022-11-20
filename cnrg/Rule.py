@@ -4,6 +4,7 @@ import networkx.algorithms.isomorphism as iso
 
 # import cnrg.MDL as MDL
 from cnrg import MDL
+from cnrg.LightMultiGraph import convert
 
 
 class BaseRule:
@@ -15,7 +16,7 @@ class BaseRule:
 
     def __init__(self, lhs, graph, level=0, cost=0, frequency=1, id=None, time=None, edit_cost=0):
         self.lhs = lhs  # the left hand side: the number of boundary edges
-        self.graph = graph  # the right hand side subgraph
+        self.graph = convert(graph)  # the right hand side subgraph
         self.level = level  # level of discovery in the tree (the root is at 0)
         self.cost = cost  # the cost of encoding the rule using MDL (in bits)
         self.frequency = frequency  # frequency of occurrence

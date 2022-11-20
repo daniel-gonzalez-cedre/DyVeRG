@@ -4,6 +4,15 @@ import networkx as nx
 from tqdm import tqdm
 
 
+def convert(g: nx.Graph):
+    if isinstance(g, LightMultiGraph):
+        return g
+    g_lmg = LightMultiGraph()
+    g_lmg.add_nodes_from(g.nodes())
+    g_lmg.add_edges_from(g.edges())
+    return g_lmg
+
+
 class LightMultiGraph(nx.Graph):
     def __init__(self):
         nx.Graph.__init__(self)
