@@ -4,13 +4,15 @@ from typing import Set, Tuple
 sys.path.append('..')
 
 import networkx as nx
+from joblib import Parallel, delayed
 
 from cnrg.VRG import VRG
 from cnrg.Rule import PartRule
 from bookkeeping import ancestor, common_ancestor
+from utils import graph_edit_distance
 
 
-def graft_grammars(home_grammar: VRG, away_grammar: VRG, frontier: Set[Tuple[int, int]]):
+def join_grammars(home_grammar: VRG, away_grammar: VRG, frontier: Set[Tuple[int, int]]):
     home_grammar, away_grammar = (home_grammar.copy(), away_grammar.copy())
 
     if len(frontier) == 0:
@@ -23,7 +25,7 @@ def graft_grammars(home_grammar: VRG, away_grammar: VRG, frontier: Set[Tuple[int
 
 
 # when the frontier is empty
-def conjoin_grammars(home_grammar: VRG, away_grammar: VRG):
+def conjoin_grammars(home_grammar: VRG, away_grammar: VRG, parallel: bool = False):
     S = min(home_grammar.rule_dict.keys() | away_grammar.rule_dict.keys()) - 1
     rhs = nx.Graph()
     rhs.add_node(chr(0), b_deg=0, label=min(home_grammar.rule_dict.keys()))
@@ -59,12 +61,28 @@ def conjoin_grammars(home_grammar: VRG, away_grammar: VRG):
     # if we were to PREPEND instead, the common_ancestor(...) would no longer work
     home_grammar.rule_tree = [[splitting_rule, None, None]] + home_grammar.rule_tree + away_grammar.rule_tree
 
-    # merge in new rules that are duplicates of old rules
+    # merge the grammars' rules by combining isomorphic rules together
     for away_rule in away_grammar.rule_list:
         try:
+            # try to find a rule isomorphic to away_rule
             found_idx = home_grammar.rule_list.index(away_rule)
             home_grammar.rule_list[found_idx].frequency += 1
         except ValueError:
+            # no such rule found; away_rule must be new
+            if parallel:
+                edit_dists = Parallel(n_jobs=10)(
+                    delayed(graph_edit_distance)(home_rule.graph, away_rule.graph)
+                    for home_rule in home_grammar.rule_dict[away_rule.lhs]
+                )
+                min_edit_dist = min(edit_dists)
+            else:
+                min_edit_dist = min(graph_edit_distance(home_rule.graph, away_rule.graph)
+                                    for home_rule in home_grammar.rule_dict[away_rule.lhs])
+                # assert min_edit_dist > 0, '!!! nonisomorphic graphs with zero edit distance !!!'
+                # we might have nonisomorphic graphs with zero edit distance unless we define a node label mapping
+
+            away_rule.edit_cost = min_edit_dist
+
             home_grammar.num_rules += 1
             home_grammar.rule_list += [away_rule]
 

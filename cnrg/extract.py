@@ -189,7 +189,7 @@ class BaseExtractor(abc.ABC):
         self.tnode_to_score: Dict[TreeNode, Any] = {}
         self.grammar = grammar
         self.mu = mu
-        self.extracted_sequence = [] # stores list of rules in the order they were extracted
+        self.extracted_sequence = []  # stores list of rules in the order they were extracted
 
     def __str__(self) -> str:
         st = f'Type: {self.type}, mu: {self.mu}'
@@ -413,8 +413,9 @@ class MuExtractor(BaseExtractor):
         logging.debug(f'\nbest tnode: {best_tnode}, score: {score}')
         subtree = best_tnode.leaves & set(self.g.nodes())
 
-# for link prediction: all nonterminals (rules) of subgraph need to update new rule as parent for tree traversal
-# terminals need to point to rule as their source
+        # for link prediction:
+            # all nonterminals (rules) of subgraph need to update new rule as parent for tree traversal
+            # terminals need to point to rule as their source
 
         rule, boundary_edges = create_rule(subtree=subtree, g=self.g, mode='part')
 
@@ -634,15 +635,15 @@ class GlobalExtractor(BaseExtractor):
 
 
 if __name__ == '__main__':
-    name = 'lesmis'
-    outdir = 'output'
+    name_ = 'lesmis'
+    outdir_ = 'output'
     # clustering = 'leiden'
-    clustering = 'cond'
-    type = 'mu_level'
-    mu = 3
+    clustering_ = 'cond'
+    type_ = 'mu_level'
+    mu_ = 3
 
-    g_ = nx.Graph()
-    g_.add_edges_from(
+    h__ = nx.Graph()
+    h__.add_edges_from(
         [
             (1, 2),
             (1, 3),
@@ -662,25 +663,26 @@ if __name__ == '__main__':
             (8, 9),
         ]
     )
-    g = LightMultiGraph()
-    g.add_edges_from(g_.edges())
-    root = pickle.load(open('../output/trees/sample/cond_tree.pkl', 'rb'))
-    print(root)
+    h_ = LightMultiGraph()
+    h_.add_edges_from(h__.edges())
+    with open('../output/trees/sample/cond_tree.pkl', 'rb') as infile:
+        root_ = pickle.load(infile)
+        print(root_)
 
-    grammar = VRG(clustering=clustering, type=type, name=name, mu=mu)
+    grammar_ = VRG(clustering=clustering_, type=type, name=name_, mu=mu_)
 
-    # extractor = MuExtractor(g=g, type=type, mu=mu, grammar=grammar, root=root)
-    # extractor = LocalExtractor(g=g, type=type, mu=mu, grammar=grammar, root=root)
-    extractor = GlobalExtractor(g=g, type=type, mu=mu, grammar=grammar, root=root)
+    # extractor = MuExtractor(g=h, type=type, mu=mu, grammar=grammar, root=root)
+    # extractor = LocalExtractor(g=h, type=type, mu=mu, grammar=grammar, root=root)
+    extractor = GlobalExtractor(g=h_, type=type_, mu=mu_, grammar=grammar_, root=root_)
 
-    key2node = {}
-    s = [extractor.root]
-    while len(s) != 0:
-        tnode = s.pop()
-        key2node[tnode.key] = tnode
-        for kid in tnode.kids:
+    key2node_ = {}
+    s_ = [extractor.root]
+    while len(s_) != 0:
+        tnode_ = s_.pop()
+        key2node_[tnode_.key] = tnode_
+        for kid in tnode_.kids:
             if not kid.is_leaf:
-                s.append(kid)
+                s_.append(kid)
 
-    extractor.update_tree(tnode=key2node['f'])
+    extractor.update_tree(tnode=key2node_['f'])
     print()

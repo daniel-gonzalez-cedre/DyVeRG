@@ -14,7 +14,7 @@ from cnrg.globals import find_boundary_edges
 
 
 def set_boundary_degrees(g, sg):
-    # TODO: test this!!
+    #  TODO: test this!!
     boundary_degree = {n: 0 for n in sg.nodes()}  # by default every boundary degree is 0
 
     for u, v in nx.edge_boundary(g, sg.nodes()):
@@ -27,7 +27,7 @@ def set_boundary_degrees(g, sg):
 
 def set_boundary_degrees_old(g, sg):
     """
-    Find the nunber of boundary edges that each node participate in.
+    Find the number of boundary edges that each node participate in.
     This is stored as a node level attribute - 'b_deg' in nodes in g that are part of nbunch
 
     :param g: whole graph

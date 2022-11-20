@@ -56,6 +56,12 @@ class VRG:
         self.transition_matrix = None
         self.temporal_matrix = None
 
+    def ll(self):
+        return self.conditional_ll()
+
+    def mdl(self):
+        return self.calculate_cost()
+
     # ignore this for now
     def compute_transition_matrix(self):
         n = len(self.rule_list)
@@ -82,14 +88,13 @@ class VRG:
     # ignore this for now
     def transition_ll(self):
         raise NotImplementedError
-        return
 
     def conditional_ll(self, axis: str = 'col'):
         assert axis in ['row', 'col']
         rule_matrix = self.temporal_matrix.copy()
         ll = 0
 
-        for idx, rule in enumerate(self.rule_list):
+        for idx, _ in enumerate(self.rule_list):
             if axis == 'col':
                 ax = rule_matrix[idx, :].copy()
             else:
@@ -158,13 +163,15 @@ class VRG:
             self.rule_dict[rule.lhs] = []
 
         for old_rule in self.rule_dict[rule.lhs]:
-            if rule == old_rule:  # check for isomorphism
-                g1 = old_rule.graph
-                g2 = rule.graph
+            # if rule == old_rule:  # check for isomorphism
+                # g1 = old_rule.graph
+                # g2 = rule.graph
 
-                gm = iso.GraphMatcher(old_rule.graph, rule.graph)
-                assert gm.is_isomorphic()
+            nm = iso.categorical_node_match('label', '')
+            em = iso.numerical_edge_match('weight', 1.0)  # pylint: disable=not-callable
+            gm = iso.GraphMatcher(old_rule.graph, rule.graph, node_match=nm, edge_match=em)
 
+            if gm.is_isomorphic():
                 for old_v, dd in old_rule.graph.nodes(data=True):
                     v = gm.mapping[old_v]
                     if 'node_colors' in dd.keys():

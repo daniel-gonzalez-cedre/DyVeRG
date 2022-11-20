@@ -8,12 +8,13 @@ from tqdm import tqdm
 from cnrg.VRG import VRG
 from utils import silence
 from bookkeeping import decompose
-from grammar_transitions import graft_grammars
-from rule_transitions import update_rule_domestic, update_rule_diplomatic
+from grammar_transitions import join_grammars
+from rule_transitions import mutate_rule_domestic, mutate_rule_diplomatic
 
 
 def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph,
                    time: int, mode: str = 'joint', mu: int = None):
+    """ docstring goes here """
     if mu is None:
         mu = grammar.mu
 
@@ -44,10 +45,8 @@ def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph,
 
         conquered_components: list[frozenset] = []
 
-        count = 1
-        for nodes, territory in tqdm(uncharted_territories.items(), desc=f'joint changes: {count}', leave=True):
+        for nodes, territory in tqdm(uncharted_territories.items(), desc='joint changes', leave=True):
             if territory.order() > 0:
-
                 with silence():
                     territory_grammar = decompose(territory, time=time, mu=mu)
 
@@ -55,14 +54,10 @@ def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph,
                             for (u, v) in edges_diplomatic
                             if (u in territory) or (v in territory)}
 
-                # problems = [u for u in territory.nodes() if u not in charted_grammar.rule_source]
-                # print(len(problems), territory.order())
-                # exit()
-
                 for u, v in frontier:
                     assert u in charted_grammar.rule_source and v in territory_grammar.rule_source
 
-                charted_grammar = graft_grammars(charted_grammar, territory_grammar, frontier)
+                charted_grammar = join_grammars(charted_grammar, territory_grammar, frontier)
 
                 conquered_components += [nodes]
 
@@ -71,7 +66,6 @@ def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph,
 
                 edges_diplomatic -= conquered_diplomatic
                 edges_foreign -= conquered_foreign
-                count += 1
 
         for nodes in conquered_components:
             uncharted_components.remove(nodes)
@@ -87,32 +81,21 @@ def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph,
                     edges_foreign |= {(u, v)}
                 else:
                     raise AssertionError(f'{u}, {v}')
-    # !!!!!!!
-    # for key, val in charted_grammar.rule_source.items():
-    #     if val >= len(charted_grammar.rule_tree):
-    #         print(key, val)
-
-    # for idx, (rule, parent_idx, which_idx) in enumerate(charted_grammar.rule_tree):
-    #     if parent_idx is not None and parent_idx >= len(charted_grammar.rule_tree):
-    #         print('!!!!!::', idx, parent_idx)
-
-    # print(len(charted_grammar.rule_tree))
-    # !!!!!!!
 
     charted_grammar.init_temporal_matrix()
 
     conquered = set(home_graph.nodes())
     changes = edges_domestic | edges_diplomatic
 
-    count = 1
+    # handle the edge additions
     while len(changes) > 0:
-        for u, v in tqdm(changes, desc=f'additions: {count}', leave=True):
+        for u, v in tqdm(changes, desc='additions', leave=True):
             if u in conquered and v in conquered:
-                charted_grammar = update_rule_domestic(charted_grammar, u, v, 'add')
+                charted_grammar = mutate_rule_domestic(charted_grammar, u, v, 'add', time)
             elif u in conquered and v not in conquered:
-                charted_grammar = update_rule_diplomatic(charted_grammar, u, v, 'add')
+                charted_grammar = mutate_rule_diplomatic(charted_grammar, u, v, time)
             elif u not in conquered and v in conquered:
-                charted_grammar = update_rule_diplomatic(charted_grammar, v, u, 'add')
+                charted_grammar = mutate_rule_diplomatic(charted_grammar, v, u, time)
             else:
                 raise AssertionError(f'{u}, {v}')
 
@@ -121,11 +104,12 @@ def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph,
 
         changes = {(u, v) for u, v in edges_foreign if u in conquered or v in conquered}
         edges_foreign -= changes
-        count += 1
 
+    # handle the edge deletions
     # for u, v in tqdm(edge_deletions, desc='deletions', leave=True):
     #     charted_grammar = update_rule_domestic(charted_grammar, u, v, 'del')
 
     charted_grammar.calculate_cost()
+    print(charted_grammar)
 
     return charted_grammar

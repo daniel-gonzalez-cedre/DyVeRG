@@ -11,9 +11,9 @@ class BaseRule:
     Base class for Rule
     """
 
-    __slots__ = "lhs", "graph", "level", "cost", "frequency", "id", "non_terminals", "subtree", "time"
+    __slots__ = "lhs", "graph", "level", "cost", "frequency", "id", "non_terminals", "subtree", "time", "edit_cost"
 
-    def __init__(self, lhs, graph, level=0, cost=0, frequency=1, id=None, time=None):
+    def __init__(self, lhs, graph, level=0, cost=0, frequency=1, id=None, time=None, edit_cost=0):
         self.lhs = lhs  # the left hand side: the number of boundary edges
         self.graph = graph  # the right hand side subgraph
         self.level = level  # level of discovery in the tree (the root is at 0)
@@ -21,12 +21,13 @@ class BaseRule:
         self.frequency = frequency  # frequency of occurrence
         self.id = id
         self.time = time
-        self.non_terminals = []  # list of non-terminals in the RHS graph
+        self.non_terminals = [d['label'] for _, d in self.graph.nodes(data=True) if 'label' in d]
         # store original vertex ids (subgraph-to-subgraph dynamics)
         self.subtree = None
-        for node, d in self.graph.nodes(data=True):
-            if 'label' in d:
-                self.non_terminals.append(d['label'])
+        # for _, d in self.graph.nodes(data=True):
+        #     if 'label' in d:
+        #         self.non_terminals.append(d['label'])
+        self.edit_cost: int = edit_cost
 
     # approximate equality using Weisfeiler-Lehman graph hashing
     def hash_equals(self, other):
@@ -79,7 +80,7 @@ class BaseRule:
         return self.lhs == other.lhs and nx.is_isomorphic(
             g1,
             g2,
-            edge_match=iso.numerical_edge_match('weight', 1.0),
+            edge_match=iso.numerical_edge_match('weight', 1.0),  # pylint: disable=not-callable
             node_match=iso.categorical_node_match('label', '')
         )
 
@@ -102,7 +103,9 @@ class BaseRule:
             level=self.level,
             cost=self.cost,
             frequency=self.frequency,
-            id=self.id
+            id=self.id,
+            time=self.time,
+            edit_cost=self.edit_cost
         )
 
     def contract_rhs(self):
@@ -152,9 +155,11 @@ class FullRule(BaseRule):
         cost=0,
         frequency=1,
         edges_covered=None,
-        id=None
+        id=None,
+        time=None,
+        edit_cost=0
     ):
-        super().__init__(lhs=lhs, graph=graph, level=level, cost=cost, frequency=frequency)
+        super().__init__(lhs=lhs, graph=graph, level=level, cost=cost, frequency=frequency, time=time, edit_cost=edit_cost)
         self.internal_nodes = internal_nodes  # the set of internal nodes
         self.edges_covered = edges_covered  # edges in the original graph that's covered by the rule
         self.subtree = None
@@ -168,10 +173,12 @@ class FullRule(BaseRule):
             frequency=self.frequency,
             internal_nodes=self.internal_nodes,
             edges_covered=self.edges_covered,
-            id=self.id
+            id=self.id,
+            time=self.time,
+            edit_cost=self.edit_cost
         )
 
-    def copy(self, memodict={}):
+    def copy(self):
         return FullRule(
             lhs=self.lhs,
             graph=self.graph.copy(),
@@ -180,7 +187,9 @@ class FullRule(BaseRule):
             frequency=self.frequency,
             internal_nodes=self.internal_nodes,
             edges_covered=self.edges_covered,
-            id=self.id
+            id=self.id,
+            time=self.time,
+            edit_cost=self.edit_cost
         )
 
     def calculate_cost(self):
@@ -247,14 +256,16 @@ class PartRule(BaseRule):
     """
     Rule class for Partial option
     """
-    def __init__(self, lhs, graph, level=0, cost=0, frequency=1, id=None):
+    def __init__(self, lhs, graph, level=0, cost=0, frequency=1, id=None, time=None, edit_cost=0):
         super().__init__(
             lhs=lhs,
             graph=graph,
             level=level,
             cost=cost,
             frequency=frequency,
-            id=id
+            id=id,
+            time=time,
+            edit_cost=edit_cost
         )
         self.subtree = None
 
@@ -265,7 +276,9 @@ class PartRule(BaseRule):
             level=self.level,
             cost=self.cost,
             frequency=self.frequency,
-            id=self.id
+            id=self.id,
+            time=self.time,
+            edit_cost=self.edit_cost
         )
 
     def copy(self):
@@ -275,7 +288,9 @@ class PartRule(BaseRule):
             level=self.level,
             cost=self.cost,
             frequency=self.frequency,
-            id=self.id
+            id=self.id,
+            time=self.time,
+            edit_cost=self.edit_cost
         )
 
     def generalize_rhs(self):
@@ -326,7 +341,9 @@ class NoRule(PartRule):
             level=self.level,
             cost=self.cost,
             frequency=self.frequency,
-            id=self.id
+            id=self.id,
+            time=self.time,
+            edit_cost=self.edit_cost
         )
 
     def copy(self, memodict={}):

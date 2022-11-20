@@ -36,15 +36,15 @@ def decompose(g: nx.Graph, time: int = 0, mu: int = 4,
 
     # connected_components = [g for g in connected_components if g.order() > mu]
     if len(connected_components) == 1:
-        supergrammar = decompose_component(g, time=time)
+        supergrammar = decompose_component(g, clustering=clustering, gtype=gtype, name=name, mu=mu)
     else:
-        subgrammars = [decompose_component(component, time=time, clustering=clustering, gtype=gtype, name=name, mu=mu)
+        subgrammars = [decompose_component(component, clustering=clustering, gtype=gtype, name=name, mu=mu)
                        for component in connected_components]
 
-        S = min(min(key for key in subgrammar.rule_dict) for subgrammar in subgrammars) - 1
+        S = min(min(key for key in subgrammar.rule_dict) for subgrammar in subgrammars)
         rhs = nx.Graph()
         rhs.add_nodes_from(map(chr, range(len(subgrammars))), b_deg=0, label=S)
-        root = PartRule(S, rhs)
+        root = PartRule(S - 1, rhs)
 
         for i, subgrammar in enumerate(subgrammars):
             if i == 0:
@@ -129,16 +129,17 @@ def decompose(g: nx.Graph, time: int = 0, mu: int = 4,
                     break
             else:
                 print(v, end=', ')
-            # for 
-        print()
 
         for v in g.nodes():
             assert v in supergrammar.rule_source
 
+    for rule in supergrammar.rule_list:
+        rule.time = time
+
     return supergrammar
 
 
-def decompose_component(g: nx.Graph, time: int = 0, mu: int = 4,
+def decompose_component(g: nx.Graph, mu: int = 4,
                         clustering: str = 'leiden', gtype: str = 'mu_level_dl',
                         name: str = ''):
     if not isinstance(g, LMG):
@@ -168,8 +169,8 @@ def decompose_component(g: nx.Graph, time: int = 0, mu: int = 4,
     # ex_sequence = extractor.extracted_sequence
     grammar = extractor.grammar
 
-    for rule in grammar.rule_list:
-        rule.time = time
+    # for rule in grammar.rule_list:
+    #     rule.time = time
 
     return grammar
 
