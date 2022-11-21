@@ -2,41 +2,39 @@
 refactored VRG
 """
 
-# import os
 # import copy
-# from collections import defaultdict
-from typing import List, Dict
+# from typing import List, Dict
 
 import numpy as np
 import networkx.algorithms.isomorphism as iso
 from tqdm import tqdm
 
-# import src.full_info as full_info
-# import src.no_info as no_info
-# import src.part_info as part_info
 from cnrg.Rule import PartRule
 
 
 class VRG:
     """
-    Class for Vertex Replacement Grammars
+        Class for Vertex Replacement Grammars
+
+        Class attributes:
+            self.rule_list: list[PartRule] = list of Rule objects
+            self.rule_dict: dict[int, list[PartRule]]  dictionary of rules, keyed in by their LHS
+            self.cost: int = the minimum description length (MDL) of the collection of rules
+            self.num_rules: int = number of active rules
+            self.rule_tree: list[list[PartRule, int, int]] = extraction tree for the grammar
+                                                             each entry looks like [rule, parent_idx, which_child], where:
+                                                                parent_idx = index in self.rule_tree corresponding to the parent of rule
+                                                                which_child = (index of) vertex in rule's parent's RHS graph corresponding to rule
+            self.rule_source: dict[int, int] = dict that maps vertex v -> index in rule_tree of rule R that terminally covers v
+            self.which_rule_source: dict[int, int] = dict that maps vertex v -> index in list(R.graph.nodes()),
+                                                     where R = self.rule_source[v],
+                                                     indicating which node in the rule RHS corresponds to v
     """
 
     __slots__ = (
-        'name',
-        'type',
-        'clustering',
-        'mu',
-        'rule_list',
-        'rule_dict',
-        'cost',
-        'num_rules',
-        'rule_tree',
-        'rule_source',
-        'which_rule_source',
-        'comp_map',
-        'transition_matrix',
-        'temporal_matrix'
+        'name', 'type', 'clustering', 'mu', 'rule_list', 'rule_dict', 'cost', 'num_rules',
+        'rule_tree', 'rule_source', 'which_rule_source', 'comp_map',
+        'transition_matrix', 'temporal_matrix'
     )
 
     def __init__(self, type, clustering, name, mu):
@@ -45,14 +43,14 @@ class VRG:
         self.clustering: str = clustering  # clustering strategy
         self.mu = mu
 
-        self.rule_list: List[PartRule] = []  # list of Rule objects
-        self.rule_dict: Dict[int, List[PartRule]] = {}  # dictionary of rules, keyed in by their LHS
+        self.rule_list: list[PartRule] = []  # list of Rule objects
+        self.rule_dict: dict[int, list[PartRule]] = {}  # dictionary of rules, keyed in by their LHS
         self.cost: int = 0  # the MDL of the rules
         self.num_rules: int = 0  # number of active rules
-        self.rule_tree = []  # extraction tree for the grammar; each entry looks like [rule, parent_idx, which_child]
-        self.rule_source = {}  # dict that maps vertex v -> index in rule_tree of rule R that terminally covers v
-        self.which_rule_source = {}  # dict that maps vertex v -> index in list(R.graph.nodes()), where R = self.rule_source[v], indicating which node in the rule RHS corresponds to v
-        self.comp_map = {}
+        self.rule_tree: list[tuple[PartRule, int, int]] = []  # extraction tree for the grammar; each entry looks like [rule, parent_idx, which_child]
+        self.rule_source: dict[int, int] = {}  # dict that maps vertex v -> index in rule_tree of rule R that terminally covers v
+        self.which_rule_source: dict[int, int] = {}  # dict that maps vertex v -> index in list(R.graph.nodes()), where R = self.rule_source[v], indicating which node in the rule RHS corresponds to v
+        self.comp_map: dict[int, int] = {}
         self.transition_matrix = None
         self.temporal_matrix = None
 
@@ -89,7 +87,10 @@ class VRG:
     def transition_ll(self):
         raise NotImplementedError
 
-    def conditional_ll(self, axis: str = 'col'):
+    def conditional_ll(self):
+        return sum(rule.edit_cost for rule in self.rule_list)
+
+    def conditional_matrix_ll(self, axis: str = 'col'):
         assert axis in ['row', 'col']
         rule_matrix = self.temporal_matrix.copy()
         ll = 0
@@ -109,19 +110,26 @@ class VRG:
         return ll
 
     def copy(self):
+        bag = [rule.copy() for rule in self.rule_list]
+
         vrg_copy = VRG(type=self.type, clustering=self.clustering, name=self.name, mu=self.mu)
         vrg_copy.cost = self.cost
         vrg_copy.num_rules = self.num_rules
 
         # new attributes also need to be copied over
-        vrg_copy.rule_tree = [[rule.copy(), parent_idx, which_idx] for rule, parent_idx, which_idx in self.rule_tree]
+        vrg_copy.rule_tree = [[bag[bag.index(rule)], parent_idx, which_idx] for rule, parent_idx, which_idx in self.rule_tree]
 
-        vrg_copy.rule_list = list({rule for rule, _, _ in self.rule_tree})
-        vrg_copy.rule_dict = {lhs: [rule for rule in vrg_copy.rule_list if rule.lhs == lhs] for lhs in [rule.lhs for rule in self.rule_list]}
+        # vrg_copy.rule_list = list({rule for rule, _, _ in self.rule_tree})
+        # vrg_copy.rule_dict = {lhs: [rule for rule in vrg_copy.rule_list if rule.lhs == lhs] for lhs in [rule.lhs for rule in self.rule_list]}
+        vrg_copy.rule_list = [bag[idx] for idx, _ in enumerate(self.rule_list)]
+        vrg_copy.rule_dict = {lhs: [bag[bag.index(rule)] for rule in self.rule_dict[lhs]] for lhs in self.rule_dict}
 
-        vrg_copy.rule_source = {key: value for key, value in self.rule_source.items()}
-        vrg_copy.which_rule_source = {key: value for key, value in self.which_rule_source.items()}
-        vrg_copy.comp_map = {key: value for key, value in self.comp_map.items()}
+        # vrg_copy.rule_source = {key: value for key, value in self.rule_source.items()}
+        vrg_copy.rule_source = self.rule_source.copy()
+        # vrg_copy.which_rule_source = {key: value for key, value in self.which_rule_source.items()}
+        vrg_copy.which_rule_source = self.which_rule_source.copy()
+        # vrg_copy.comp_map = {key: value for key, value in self.comp_map.items()}
+        vrg_copy.comp_map = self.comp_map.copy()
         vrg_copy.transition_matrix = self.transition_matrix.copy() if self.transition_matrix is not None else None
         vrg_copy.temporal_matrix = self.temporal_matrix.copy() if self.temporal_matrix is not None else None
 
