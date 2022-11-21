@@ -8,8 +8,8 @@ def convert(g: nx.Graph):
     if isinstance(g, LightMultiGraph):
         return g
     g_lmg = LightMultiGraph()
-    g_lmg.add_nodes_from(g.nodes())
-    g_lmg.add_edges_from(g.edges())
+    g_lmg.add_nodes_from(g.nodes(data=True))
+    g_lmg.add_edges_from(g.edges(data=True))
     return g_lmg
 
 
@@ -23,7 +23,18 @@ class LightMultiGraph(nx.Graph):
     def __repr__(self):
         return f'n = {self.order():_d} m = {self.size():_d}'
 
-    def add_edge(self, u, v, attr_dict=None, **attr):
+    # do NOT call super().copy(); see line 64
+    def copy(self, as_view=False):
+        graphcopy = LightMultiGraph()
+        graphcopy.add_nodes_from(self.nodes(data=True))
+
+        for u, v, d in self.edges(data=True):
+            graphcopy.add_edge(u, v, attr_dict=d)
+
+        return graphcopy
+
+    def add_edge(self, u_of_edge, v_of_edge, attr_dict=None, **attr):
+        u, v = (u_of_edge, v_of_edge)
         edge_colors = None
         edge_color = None
         attr_records = None
@@ -69,50 +80,8 @@ class LightMultiGraph(nx.Graph):
             else:
                 super().add_edge(u, v, weight=wt)
 
-    # do NOT call super().copy(); see line 44
-    def copy(self, as_view=False):
-        graphcopy = LightMultiGraph()
-        graphcopy.add_nodes_from(self.nodes(data=True))
-
-        for u, v, d in self.edges(data=True):
-            graphcopy.add_edge(u, v, attr_dict=d)
-
-        return graphcopy
-
-    def copy_legacy(self):
-        g_copy = LightMultiGraph()
-
-        for node, d in self.nodes(data=True):
-            if len(d) == 0:  # prevents adding an empty 'attr_dict' dictionary
-                g_copy.add_node(node)
-            else:
-                if 'attr_records' in d:  # attr_records supercedes other attributes (excluding edge weight)
-                    g_copy.add_node(node, attr_records=d['attr_records'])
-                elif 'b_deg' in d and 'label' in d and 'node_colors' in d:  # this keeps the label and the b_deg attributes to the same level
-                    g_copy.add_node(node, b_deg=d['b_deg'], label=d['label'], node_colors=d['node_colors'])
-                elif 'b_deg' in d and 'label' in d:  # this keeps the label and the b_deg attributes to the same level
-                    g_copy.add_node(node, b_deg=d['b_deg'], label=d['label'])
-                elif 'b_deg' in d and 'node_colors' in d:  # this keeps the label and the b_deg attributes to the same level
-                    g_copy.add_node(node, b_deg=d['b_deg'], node_colors=d['node_colors'])
-                elif 'label' in d and 'node_colors' in d:  # this keeps the label and the b_deg attributes to the same level
-                    g_copy.add_node(node, label=d['label'], node_colors=d['node_colors'])
-                elif 'b_deg' in d:
-                    g_copy.add_node(node, b_deg=d['b_deg'])
-                elif 'label' in d:
-                    g_copy.add_node(node, label=d['label'])
-                elif 'node_colors' in d:
-                    g_copy.add_node(node, node_colors=d['node_colors'])
-                if 'appears' in d:
-                    g_copy.nodes[node]['appears'] = d['appears']
-
-        for e in self.edges(data=True):
-            u, v, d = e
-            g_copy.add_edge(u, v, attr_dict=d)
-
-        return g_copy
-
-    def add_edges_from(self, ebunch, attr_dict=None, **attr):
-        for e in ebunch:
+    def add_edges_from(self, ebunch_to_add, attr_dict=None, **attr):
+        for e in ebunch_to_add:
             ne = len(e)
             if ne == 3:
                 u, v, dd = e
@@ -120,11 +89,17 @@ class LightMultiGraph(nx.Graph):
                 u, v = e
                 dd = {}  # doesnt need edge_attr_dict_factory
             else:
-                raise nx.NetworkXError("Edge tuple %s must be a 2-tuple or 3-tuple." % (e,))
+                raise nx.NetworkXError('Edge tuple %s must be a 2-tuple or 3-tuple.' % (e,))
             if attr_dict is not None:
                 self.add_edge(u, v, attr_dict={**dd, **attr_dict}, **attr)
             else:
                 self.add_edge(u, v, attr_dict=dd, **attr)
+
+    def remove_edge(self, u, v):
+        d = self.edges[u, v]
+        d['weight'] -= 1
+        if d['weight'] <= 0:
+            super().remove_edge(u, v)
 
     def number_of_edges(self, u=None, v=None):
         if u is None:
