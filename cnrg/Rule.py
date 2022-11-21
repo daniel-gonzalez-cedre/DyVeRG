@@ -12,7 +12,7 @@ class BaseRule:
     Base class for Rule
     """
 
-    __slots__ = "lhs", "graph", "level", "cost", "frequency", "id", "non_terminals", "subtree", "time", "edit_cost"
+    __slots__ = "lhs", "graph", "level", "cost", "frequency", "id", "non_terminals", "subtree", "time", "time_last_updated", "edit_cost"
 
     def __init__(self, lhs, graph, level=0, cost=0, frequency=1, id=None, time=None, edit_cost=0):
         self.lhs = lhs  # the left hand side: the number of boundary edges
@@ -22,6 +22,7 @@ class BaseRule:
         self.frequency = frequency  # frequency of occurrence
         self.id = id
         self.time = time
+        self.time_last_updated = time
         self.non_terminals = [d['label'] for _, d in self.graph.nodes(data=True) if 'label' in d]
         # store original vertex ids (subgraph-to-subgraph dynamics)
         self.subtree = None
@@ -98,7 +99,7 @@ class BaseRule:
         # return hash((self.lhs, g))
 
     def __deepcopy__(self, memodict={}):
-        return BaseRule(
+        copy_rule = BaseRule(
             lhs=self.lhs,
             graph=self.graph.copy(),
             level=self.level,
@@ -108,6 +109,8 @@ class BaseRule:
             time=self.time,
             edit_cost=self.edit_cost
         )
+        copy_rule.time_last_updated = self.time_last_updated
+        return copy_rule
 
     def contract_rhs(self):
         pass
@@ -166,7 +169,7 @@ class FullRule(BaseRule):
         self.subtree = None
 
     def __deepcopy__(self, memodict={}):
-        return FullRule(
+        copy_rule = FullRule(
             lhs=self.lhs,
             graph=self.graph.copy(),
             level=self.level,
@@ -178,9 +181,11 @@ class FullRule(BaseRule):
             time=self.time,
             edit_cost=self.edit_cost
         )
+        copy_rule.time_last_updated = self.time_last_updated
+        return copy_rule
 
     def copy(self):
-        return FullRule(
+        copy_rule = FullRule(
             lhs=self.lhs,
             graph=self.graph.copy(),
             level=self.level,
@@ -192,6 +197,8 @@ class FullRule(BaseRule):
             time=self.time,
             edit_cost=self.edit_cost
         )
+        copy_rule.time_last_updated = self.time_last_updated
+        return copy_rule
 
     def calculate_cost(self):
         """
@@ -271,7 +278,7 @@ class PartRule(BaseRule):
         self.subtree = None
 
     def __deepcopy__(self, memodict={}):
-        return PartRule(
+        copy_rule = PartRule(
             lhs=self.lhs,
             graph=self.graph.copy(),
             level=self.level,
@@ -281,9 +288,11 @@ class PartRule(BaseRule):
             time=self.time,
             edit_cost=self.edit_cost
         )
+        copy_rule.time_last_updated = self.time_last_updated
+        return copy_rule
 
     def copy(self):
-        return PartRule(
+        copy_rule = PartRule(
             lhs=self.lhs,
             graph=self.graph.copy(),
             level=self.level,
@@ -293,6 +302,8 @@ class PartRule(BaseRule):
             time=self.time,
             edit_cost=self.edit_cost
         )
+        copy_rule.time_last_updated = self.time_last_updated
+        return copy_rule
 
     def generalize_rhs(self):
         """
@@ -336,7 +347,7 @@ class NoRule(PartRule):
     Class for no_info
     """
     def __deepcopy__(self, memodict={}):
-        return NoRule(
+        copy_rule = NoRule(
             lhs=self.lhs,
             graph=self.graph.copy(),
             level=self.level,
@@ -346,16 +357,22 @@ class NoRule(PartRule):
             time=self.time,
             edit_cost=self.edit_cost
         )
+        copy_rule.time_last_updated = self.time_last_updated
+        return copy_rule
 
     def copy(self, memodict={}):
-        return NoRule(
+        copy_rule = NoRule(
             lhs=self.lhs,
             graph=self.graph.copy(),
             level=self.level,
             cost=self.cost,
             frequency=self.frequency,
-            id=self.id
+            id=self.id,
+            time=self.time,
+            edit_cost=self.edit_cost
         )
+        copy_rule.time_last_updated = self.time_last_updated
+        return copy_rule
 
     def calculate_cost(self):
         """
