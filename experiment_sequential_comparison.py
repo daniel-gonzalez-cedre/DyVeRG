@@ -14,8 +14,8 @@ from joblib import Parallel, delayed
 from cnrg.VRG import VRG
 from src.utils import mkdir, silence
 from src.data import load_data
-from src.bookkeeping import decompose
-from src.update_grammar import update_grammar
+from src.decomposition import decompose
+from src.graph_transitions import update_grammar
 
 
 def experiment(curr_time: int, curr_graph: Graph, next_time: int, next_graph: Graph, mu: int):
