@@ -160,7 +160,7 @@ def main(dataset, rewire, delta, n_trials, parallel, n_jobs, mu):
                 outfile.write(f'{curr_time},{next_time},{p},{ll}\n')
 
 
-# python experiment_sequential_random.py -d <<dataset>> -p -n <<# of jobs>> -r <<rewire %>> -m <<mu>>
+# python experiment_sequential_random.py [dataset] -d [delta] -r [rewire] -n [# trials] -p -j [# jobs] -m [mu]
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('dataset',
