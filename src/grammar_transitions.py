@@ -59,7 +59,7 @@ def conjoin_grammars(home_grammar: VRG, away_grammar: VRG, parallel: bool = True
         splitting_rule = PartRule(S - 1, rhs)
         root_idx = 0
     else:  # splitting rule already exists, so just modify it
-        splitting_rule = home_grammar.rule_dict[S]
+        splitting_rule, = home_grammar.rule_dict[S]
         splitting_nodes = nx.convert_node_labels_to_integers(splitting_rule.graph).nodes()
         new = chr(max(v for v in splitting_nodes) + 1)
         splitting_rule.graph.add_node(new,
