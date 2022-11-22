@@ -24,11 +24,7 @@ class BaseRule:
         self.time = time
         self.time_changed = time
         self.non_terminals = [d['label'] for _, d in self.graph.nodes(data=True) if 'label' in d]
-        # store original vertex ids (subgraph-to-subgraph dynamics)
-        self.subtree = None
-        # for _, d in self.graph.nodes(data=True):
-        #     if 'label' in d:
-        #         self.non_terminals.append(d['label'])
+        self.subtree = None  # store original vertex ids (subgraph-to-subgraph dynamics)
         self.edit_dist: int = edit_dist
         self.timed_out: bool = timed_out
 
@@ -152,8 +148,17 @@ class FullRule(BaseRule):
     """
     __slots__ = 'internal_nodes', 'edges_covered'
 
-    def __init__(self, lhs, graph, internal_nodes, level=0, dl=0, frequency=1, edges_covered=None, id=None, time=None, edit_dist=0):
-        super().__init__(lhs=lhs, graph=graph, level=level, dl=dl, frequency=frequency, time=time, edit_dist=edit_dist)
+    def __init__(self, lhs, graph, internal_nodes, level=0, dl=0, frequency=1, edges_covered=None, id=None, time=None, edit_dist=0, timed_out: bool = False):
+        super().__init__(
+            lhs=lhs,
+            graph=graph,
+            level=level,
+            dl=dl,
+            frequency=frequency,
+            time=time,
+            edit_dist=edit_dist,
+            timed_out=timed_out
+        )
         self.internal_nodes = internal_nodes  # the set of internal nodes
         self.edges_covered = edges_covered  # edges in the original graph that's covered by the rule
         self.subtree = None
@@ -256,7 +261,7 @@ class PartRule(BaseRule):
     """
     Rule class for Partial option
     """
-    def __init__(self, lhs, graph, level=0, dl=0, frequency=1, id=None, time=None, edit_dist=0):
+    def __init__(self, lhs, graph, level=0, dl=0, frequency=1, id=None, time=None, edit_dist=0, timed_out=False):
         super().__init__(
             lhs=lhs,
             graph=graph,
@@ -265,7 +270,8 @@ class PartRule(BaseRule):
             frequency=frequency,
             id=id,
             time=time,
-            edit_dist=edit_dist
+            edit_dist=edit_dist,
+            timed_out=timed_out
         )
         self.subtree = None
 
