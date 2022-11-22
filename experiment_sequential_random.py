@@ -22,7 +22,7 @@ from src.graph_transitions import update_grammar
 
 # g: the graph to perturb
 # p: the percentage of the edges to rewire
-def perturb_graph(g: nx.Graph, p: float = .01) -> nx.Graph:
+def perturb_graph(g: nx.Graph, p: float = 0.01) -> nx.Graph:
     h = g.copy()
 
     if p == 0:
@@ -54,28 +54,27 @@ def experiment(curr_time: int, curr_graph: nx.Graph,
                next_time: int, next_graph: nx.Graph,
                p: float, mu: int):
     base_grammar = decompose(curr_graph, time=curr_time, mu=mu)
-
     perturbed_graph = perturb_graph(next_graph, p)
-
     joint_grammar = update_grammar(base_grammar,
                                    curr_graph,
-                                   next_graph,
+                                   perturbed_graph,
                                    next_time,
-                                   mode='joint',
-                                   mu=mu)
+                                   mode='j')
     indep_grammar = update_grammar(base_grammar,
                                    curr_graph,
-                                   next_graph,
+                                   perturbed_graph,
                                    next_time,
-                                   mode='independent',
-                                   mu=mu)
+                                   mode='i')
     return curr_time, next_time, p, base_grammar, joint_grammar, indep_grammar
 
 
-def main(dataset, parallel, rewire, mu):
+# TODO: implement saving intermediate results in case we need to stop the code
+def main(dataset, parallel, n_jobs, rewire, mu):
     rootpath = git.Repo(getcwd(), search_parent_directories=True).git.rev_parse("--show-toplevel")
     resultspath = 'results/experiment_sequential_random/'
     mkdir(join(rootpath, resultspath))
+
+    max_rewire = 10
 
     base_grammars: dict[tuple[int, float], VRG] = {}
     joint_grammars: dict[tuple[int, int, float], VRG] = {}
@@ -84,34 +83,34 @@ def main(dataset, parallel, rewire, mu):
     time_graph_pairs: list[tuple[int, nx.Graph]] = load_data(dataset)
 
     if parallel:
-        results = Parallel(n_jobs=55)(
+        results = Parallel(n_jobs=n_jobs)(
             delayed(experiment)(curr_time, curr_graph, next_time, next_graph, p, mu)
             for (curr_time, curr_graph), (next_time, next_graph)
             in zip(time_graph_pairs[:-1], time_graph_pairs[1:])
-            for p in np.linspace(0, rewire, 10)
+            for p in np.linspace(0, rewire, max_rewire)
         )
     else:
         results = [experiment(curr_time, curr_graph, next_time, next_graph, p, mu)
                    for (curr_time, curr_graph), (next_time, next_graph)
                    in zip(time_graph_pairs[:-1], time_graph_pairs[1:])
-                   for p in np.linspace(0, rewire, 10)]
+                   for p in np.linspace(0, rewire, max_rewire)]
 
     for curr_time, next_time, p, base_grammar, joint_grammar, indep_grammar in results:
         base_grammars[(curr_time, p)] = base_grammar
         joint_grammars[(curr_time, next_time, p)] = joint_grammar
         indep_grammars[(curr_time, next_time, p)] = indep_grammar
 
-    base_mdls = {key: grammar.calculate_cost()
+    base_mdls = {key: grammar.mdl()
                  for key, grammar in base_grammars.items()}
 
-    joint_mdls = {key: grammar.calculate_cost()
+    joint_mdls = {key: grammar.mdl()
                   for key, grammar in joint_grammars.items()}
-    indep_mdls = {key: grammar.calculate_cost()
+    indep_mdls = {key: grammar.mdl()
                   for key, grammar in indep_grammars.items()}
 
-    joint_lls = {key: grammar.conditional_ll()
+    joint_lls = {key: grammar.ll()
                  for key, grammar in joint_grammars.items()}
-    indep_lls = {key: grammar.conditional_ll()
+    indep_lls = {key: grammar.ll()
                  for key, grammar in indep_grammars.items()}
 
     with open(join(rootpath, resultspath, f'{dataset}_base.grammars'), 'wb') as outfile:
@@ -122,25 +121,33 @@ def main(dataset, parallel, rewire, mu):
         pickle.dump(indep_grammars, outfile)
 
     with open(join(rootpath, resultspath, f'{dataset}_base.mdls'), 'w') as outfile:
+        outfile.write('time,p,mdl\n')
         for (time, p), mdl in base_mdls.items():
             outfile.write(f'{time},{p},{mdl}\n')
 
     with open(join(rootpath, resultspath, f'{dataset}_joint.mdls'), 'w') as outfile:
+        outfile.write('curr_time,next_time,p,mdl\n')
         for (curr_time, next_time, p), mdl in joint_mdls.items():
             outfile.write(f'{curr_time},{next_time},{p},{mdl}\n')
     with open(join(rootpath, resultspath, f'{dataset}_indep.mdls'), 'w') as outfile:
+        outfile.write('curr_time,next_time,p,mdl\n')
         for (curr_time, next_time, p), mdl in indep_mdls.items():
             outfile.write(f'{curr_time},{next_time},{p},{mdl}\n')
 
     with open(join(rootpath, resultspath, f'{dataset}_joint.lls'), 'w') as outfile:
+        outfile.write('curr_time,next_time,p,ll\n')
         for (curr_time, next_time, p), ll in joint_lls.items():
             outfile.write(f'{curr_time},{next_time},{p},{ll}\n')
     with open(join(rootpath, resultspath, f'{dataset}_indep.lls'), 'w') as outfile:
+        outfile.write('curr_time,next_time,p,ll\n')
         for (curr_time, next_time, p), ll in indep_lls.items():
             outfile.write(f'{curr_time},{next_time},{p},{ll}\n')
 
 
 if __name__ == '__main__':
+    """
+        python experiment_sequential_random.py -d <<dataset>> -p -n 55 -r 0.2 -m 4
+    """
     parser = ArgumentParser()
     parser.add_argument('-d', '--dataset',
                         default='facebook-links',
@@ -153,6 +160,11 @@ if __name__ == '__main__':
                         default=False,
                         dest='parallel',
                         help='run the experiment in parallel or not')
+    parser.add_argument('-n', '--numjobs',
+                        default=55,
+                        dest='n_jobs',
+                        type=int,
+                        help='the max number of parallel jobs to spawn')
     parser.add_argument('-r', '--rewire',
                         default=0.2,
                         dest='rewire',
@@ -164,4 +176,4 @@ if __name__ == '__main__':
                         type=int,
                         help='select a value for the μ hyperparameter for CNRG')
     args = parser.parse_args()
-    main(args.dataset, args.parallel, args.rewire, args.mu)
+    main(args.dataset, args.parallel, args.n_jobs, args.rewire, args.mu)
