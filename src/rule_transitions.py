@@ -112,21 +112,22 @@ def incorporate_rule(grammar: VRG, parent_rule: PartRule, new_rule: PartRule, wh
     if mode == 'iso':
         parent_idx = find(parent_rule, grammar.rule_list)[0]
 
-        for rule in grammar.rule_dict[new_rule.lhs]:
-            # if new_rule == rule:
-            message, result = timeout(is_isomorphic, [new_rule, rule], patience=120)
+        if new_rule.lhs in grammar.rule_dict:
+            for rule in grammar.rule_dict[new_rule.lhs]:
+                # if new_rule == rule:
+                message, result = timeout(is_isomorphic, [new_rule, rule], patience=120)
 
-            # if isomorphism check times out, then pretend like it failed and move on
-            if not message and result:
-                rule.frequency += 1
-                grammar.rule_tree[which_parent][0] = rule
-                grammar.temporal_matrix[parent_idx, find(rule, grammar.rule_list)[0]] += 1
-                return
+                # if isomorphism check times out, then pretend like it failed and move on
+                if not message and result:
+                    rule.frequency += 1
+                    grammar.rule_tree[which_parent][0] = rule
+                    grammar.temporal_matrix[parent_idx, find(rule, grammar.rule_list)[0]] += 1
+                    return
 
-            # if timed out, mark this rule
-            if message:
-                new_rule.timed_out = True
-                print(message)
+                # if timed out, mark this rule
+                if message:
+                    new_rule.timed_out = True
+                    print(message)
 
     if mode == 'hash':  # need to evaluate whether or not to deprecate this mode
         for parent_idx, other_rule in enumerate(grammar.rule_list):

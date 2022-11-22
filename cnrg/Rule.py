@@ -76,7 +76,7 @@ class BaseRule:
         g1 = nx.convert_node_labels_to_integers(self.graph)
         g2 = nx.convert_node_labels_to_integers(other.graph)
         # and nx.fast_could_be_isomorphic(g1, g2) \
-        return self.lhs == other.lhs and nx.is_isomorphic(
+        return self.lhs == other.lhs and g1.order() == g2.order() and g1.size() == g2.size() and nx.is_isomorphic(
             g1,
             g2,
             edge_match=iso.numerical_edge_match('weight', 1.0),  # pylint: disable=not-callable
