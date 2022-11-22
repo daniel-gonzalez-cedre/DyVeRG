@@ -165,7 +165,6 @@ if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('dataset',
                         default='email-eucore',
-                        dest='dataset',
                         type=str,
                         choices=['facebook-links', 'email-dnc', 'email-eucore', 'email-enron'],
                         help='select a dataset from ["facebook-links", "email-dnc", "email-eucore", "email-enron"]')
