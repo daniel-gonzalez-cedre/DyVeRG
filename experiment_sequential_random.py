@@ -146,7 +146,7 @@ def main(dataset, parallel, n_jobs, rewire, mu):
 
 if __name__ == '__main__':
     """
-        python experiment_sequential_random.py -d <<dataset>> -p -n 55 -r 0.2 -m 4
+        python experiment_sequential_random.py -d <<dataset>> -p -n <<# of jobs>> -r <<rewire %>> -m <<mu>>
     """
     parser = ArgumentParser()
     parser.add_argument('-d', '--dataset',
