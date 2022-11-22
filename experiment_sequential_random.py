@@ -74,7 +74,7 @@ def main(dataset, rewire, n_trials, parallel, n_jobs, mu):
     resultspath = 'results/experiment_sequential_random/'
     mkdir(join(rootpath, resultspath))
 
-    max_rewire = 10
+    delta = 10
 
     base_grammars: dict[tuple[int, float], VRG] = {}
     joint_grammars: dict[tuple[int, int, float], VRG] = {}
@@ -87,14 +87,14 @@ def main(dataset, rewire, n_trials, parallel, n_jobs, mu):
             delayed(experiment)(curr_time, curr_graph, next_time, next_graph, p, mu)
             for (curr_time, curr_graph), (next_time, next_graph)
             in zip(time_graph_pairs[:-1], time_graph_pairs[1:])
-            for p in np.linspace(0, rewire, max_rewire)
+            for p in np.linspace(0, rewire, delta)
             for _ in range(n_trials)
         )
     else:
         results = [experiment(curr_time, curr_graph, next_time, next_graph, p, mu)
                    for (curr_time, curr_graph), (next_time, next_graph)
                    in zip(time_graph_pairs[:-1], time_graph_pairs[1:])
-                   for p in np.linspace(0, rewire, max_rewire)
+                   for p in np.linspace(0, rewire, delta)
                    for _ in range(n_trials)]
 
     for curr_time, next_time, p, base_grammar, joint_grammar, indep_grammar in results:
@@ -104,14 +104,14 @@ def main(dataset, rewire, n_trials, parallel, n_jobs, mu):
             base_grammars[(curr_time, p)] = [base_grammar]
 
         if (curr_time, p) in joint_grammars:
-            joint_grammars[(curr_time, next_time, p)] += joint_grammar
+            joint_grammars[(curr_time, next_time, p)] += [joint_grammar]
         else:
-            joint_grammars[(curr_time, next_time, p)] = joint_grammar
+            joint_grammars[(curr_time, next_time, p)] = [joint_grammar]
 
         if (curr_time, p) in indep_grammars:
-            indep_grammars[(curr_time, next_time, p)] += indep_grammar
+            indep_grammars[(curr_time, next_time, p)] += [indep_grammar]
         else:
-            indep_grammars[(curr_time, next_time, p)] = indep_grammar
+            indep_grammars[(curr_time, next_time, p)] = [indep_grammar]
 
     base_mdls = {key: [grammar.mdl() for grammar in collection]
                  for key, collection in base_grammars.items()}
