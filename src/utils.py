@@ -2,8 +2,10 @@ from contextlib import contextmanager
 import sys
 from os import makedirs, devnull
 
-from typing import Callable
+from typing import Callable, Union, Any
 from networkx import graph_edit_distance as ged, Graph
+
+from cnrg.Rule import PartRule
 
 
 @contextmanager
@@ -27,23 +29,109 @@ def mkdir(path):
     makedirs(path, exist_ok=True)
 
 
-def node_matcher(d1, d2):
-    return d1.keys() == d2.keys and \
-        (not('label' in d1) or d1['label'] == d2['label']) and \
-        (not('b_deg' in d1) or d1['b_deg'] == d2['b_deg'])
+def find(x: object, iterable: Union[list, dict]):
+    references = []
 
-    # if d1.keys() != d2.keys():
-    #     return False
+    if isinstance(iterable, list):
+        pass
 
-    # if 'label' in d1 and d1['label'] != d2['label']:
-    #     return False
+    if isinstance(iterable, list):
+        for idx, item in enumerate(iterable):
+            if item is x:
+                references += [idx]
+            elif isinstance(item, (list, dict)):
+                if ref := find(x, item):
+                    references += [(idx, ref)]  # type: ignore
+    elif isinstance(iterable, dict):
+        for key, value in iterable.items():
+            if value is x:
+                references += [key]
+            elif isinstance(value, (list, dict)):
+                if ref := find(x, value):
+                    references += [(key, ref)]  # type: ignore
+    return references
 
-    # if 'b_deg' in d1 and d1['b_deg'] != d2['b_deg']:
-    #     return False
 
-    # return True
+def replace(x: object, y: object, iterable: Union[list, dict, set]):
+    """
+        Replaces every instance of x by y in the iterable collection.
+    """
+    if isinstance(iterable, list):
+        for idx, item in enumerate(iterable):
+            if isinstance(item, (list, dict, set)):
+                replace(x, y, item)
+            elif item is x:
+                iterable[idx] = y
+    elif isinstance(iterable, dict):
+        for key, value in iterable.items():
+            if isinstance(value, (list, dict, set)):
+                replace(x, y, value)
+            elif value is x:
+                iterable[key] = y
+    elif isinstance(iterable, set):  # python sets cannot contain lists, dicts, or sets
+        for element in iterable:
+            if element is x:
+                iterable.remove(x)
+                iterable.add(y)
+                break
+    else:
+        raise NotImplementedError
 
 
-def graph_edit_distance(g1: Graph, g2: Graph, node_match: Callable = node_matcher, timeout: int = 5):
-    dist = ged(g1, g2, node_match=node_match, timeout=timeout)
+def node_match_(u, v):
+    return (
+        (
+            u['label'] == v['label']
+            if (('label' in u) and ('label' in v))
+            else ('label' in u) == ('label' in v)
+        ) and (
+            u['b_deg'] == v['b_deg']
+            if (('b_deg' in u) and ('b_deg' in v))
+            else ('b_deg' in u) == ('b_deg' in v)
+        )
+    )
+
+
+def edge_match_(e, f):
+    return (
+        e['weight'] == f['weight']
+        if (('weight' in e) and ('weight' in f))
+        else ('weight' in e) == ('weight' in f)
+    )
+
+
+def edge_subst_cost_(e, f):
+    return (
+        abs(e['weight'] - f['weight'])
+        if (('weight' in e) and ('weight' in f))
+        else 1
+    )
+
+
+def edge_del_cost_(e):
+    return (
+        e['weight']
+        if 'weight' in e
+        else 1
+    )
+
+
+def edge_ins_cost_(e):
+    return (
+        e['weight']
+        if 'weight' in e
+        else 1
+    )
+
+
+def graph_edit_distance(g1: Graph, g2: Graph,
+                        node_match: Callable = node_match_, edge_match: Callable = edge_match_,
+                        edge_subst_cost: Callable = edge_subst_cost_,
+                        edge_del_cost: Callable = edge_del_cost_, edge_ins_cost: Callable = edge_ins_cost_,
+                        timeout: int = 5):
+    dist = ged(g1, g2,
+               node_match=node_match, edge_match=edge_match,
+               edge_subst_cost=edge_subst_cost,
+               edge_del_cost=edge_del_cost, edge_ins_cost=edge_ins_cost,
+               timeout=timeout)
     return dist if dist is not None else g1.size() + g2.size()

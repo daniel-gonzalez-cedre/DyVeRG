@@ -11,16 +11,10 @@ sys.path.append('..')
 from cnrg.Rule import PartRule
 from cnrg.VRG import VRG
 from cnrg.Tree import create_tree
+from cnrg.LightMultiGraph import convert
 from cnrg.LightMultiGraph import LightMultiGraph as LMG
 from cnrg.extract import MuExtractor
 from cnrg.partitions import leiden, louvain
-
-
-def convert_LMG(g: nx.Graph):
-    g_lmg = LMG()
-    g_lmg.add_nodes_from(g.nodes())
-    g_lmg.add_edges_from(g.edges())
-    return g_lmg
 
 
 def decompose(g: nx.Graph, time: int = 0, mu: int = 4,
@@ -44,7 +38,7 @@ def decompose(g: nx.Graph, time: int = 0, mu: int = 4,
         S = min(min(key for key in subgrammar.rule_dict) for subgrammar in subgrammars)
         rhs = nx.Graph()
         rhs.add_nodes_from(map(chr, range(len(subgrammars))), b_deg=0, label=S)
-        root = PartRule(S - 1, rhs)
+        splitting_rule = PartRule(S - 1, rhs)
 
         for i, subgrammar in enumerate(subgrammars):
             if i == 0:
@@ -56,18 +50,18 @@ def decompose(g: nx.Graph, time: int = 0, mu: int = 4,
                         supergrammar.rule_tree[idx][1] += 1
                     else:
                         supergrammar.rule_tree[idx][1] = 0
-                        supergrammar.rule_tree[idx][2] = list(root.graph.nodes()).index(chr(i))
+                        supergrammar.rule_tree[idx][2] = list(splitting_rule.graph.nodes()).index(chr(i))
 
                 # shift the indices of the rule_source map
                 for idx in supergrammar.rule_source:
                     supergrammar.rule_source[idx] += 1
 
                 # append the rule tree, so that it is a branch under the home decomposition
-                supergrammar.rule_tree = [[root, None, None]] + supergrammar.rule_tree
+                supergrammar.rule_tree = [[splitting_rule, None, None]] + supergrammar.rule_tree
 
                 # incorporate the new root rule
-                supergrammar.rule_list += [root]
-                supergrammar.rule_dict[S] = [root]
+                supergrammar.rule_list += [splitting_rule]
+                supergrammar.rule_dict[S] = [splitting_rule]
             else:
                 offset = len(supergrammar.rule_tree)
 
@@ -77,7 +71,7 @@ def decompose(g: nx.Graph, time: int = 0, mu: int = 4,
                         subgrammar.rule_tree[idx][1] += offset
                     else:
                         subgrammar.rule_tree[idx][1] = 0
-                        subgrammar.rule_tree[idx][2] = list(root.graph.nodes()).index(chr(i))
+                        subgrammar.rule_tree[idx][2] = list(splitting_rule.graph.nodes()).index(chr(i))
 
                 # shift the indices of the rule_source map
                 for idx in subgrammar.rule_source:
@@ -135,6 +129,7 @@ def decompose(g: nx.Graph, time: int = 0, mu: int = 4,
 
     for rule in supergrammar.rule_list:
         rule.time = time
+        rule.time_changed = time
 
     return supergrammar
 
@@ -143,7 +138,7 @@ def decompose_component(g: nx.Graph, mu: int = 4,
                         clustering: str = 'leiden', gtype: str = 'mu_level_dl',
                         name: str = ''):
     if not isinstance(g, LMG):
-        g = convert_LMG(g)
+        g = convert(g)
 
     if clustering == 'leiden':
         clusters = leiden(g)

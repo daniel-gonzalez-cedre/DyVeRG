@@ -10,6 +10,7 @@ import networkx.algorithms.isomorphism as iso
 from tqdm import tqdm
 
 from cnrg.Rule import PartRule
+from src.utils import replace
 
 
 class VRG:
@@ -134,6 +135,11 @@ class VRG:
         vrg_copy.temporal_matrix = self.temporal_matrix.copy() if self.temporal_matrix is not None else None
 
         return vrg_copy
+
+    def replace_rule(self, old_rule, new_rule):
+        replace(old_rule, new_rule, self.rule_list)
+        replace(old_rule, new_rule, self.rule_dict)
+        replace(old_rule, new_rule, self.rule_tree)
 
     def __len__(self):
         return len(self.rule_list)

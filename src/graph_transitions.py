@@ -1,3 +1,4 @@
+import pdb
 import sys
 
 sys.path.append('../')
@@ -7,7 +8,7 @@ from tqdm import tqdm
 
 from cnrg.VRG import VRG
 from utils import silence
-from bookkeeping import decompose
+from decomposition import decompose
 from grammar_transitions import join_grammars
 from rule_transitions import mutate_rule_domestic, mutate_rule_diplomatic
 
