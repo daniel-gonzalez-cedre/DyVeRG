@@ -376,8 +376,8 @@ class MuExtractor(BaseExtractor):
                 rule_cost = None
             else:
                 rule, _ = create_rule(subtree=subtree, g=self.g, mode='part')
-                rule.calculate_cost()
-                rule_cost = rule.cost
+                rule.mdl()
+                rule_cost = rule.dl
 
             if self.type == 'mu_dl':
                 score = mu_score, rule_cost
@@ -474,8 +474,8 @@ class LocalExtractor(BaseExtractor):
             assert self.graph_dl is not None, 'Graph DL is not computed in tnode_score'
 
             rule, boundary_edges = create_rule(subtree=subtree, g=self.g, mode='part')
-            rule.calculate_cost()
-            rule_dl = rule.cost
+            rule.mdl()
+            rule_dl = rule.dl
 
             g_rule_dl = compress_graph(
                 g=self.g,
@@ -607,8 +607,8 @@ class GlobalExtractor(BaseExtractor):
 
         # compute the score of the record
         rule = self.grammar[record.rule_id]
-        rule.calculate_cost()
-        rule_dl = rule.cost
+        rule.mdl()
+        rule_dl = rule.dl
 
         score = (rule_dl + g_rule_dl) / g_dl
         record.score = score
