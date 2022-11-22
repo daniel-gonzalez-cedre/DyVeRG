@@ -114,7 +114,7 @@ def incorporate_rule(grammar: VRG, parent_rule: PartRule, new_rule: PartRule, wh
 
         for rule in grammar.rule_dict[new_rule.lhs]:
             # if new_rule == rule:
-            message, result = timeout(is_isomorphic, [new_rule, rule], patience=10)
+            message, result = timeout(is_isomorphic, [new_rule, rule], patience=120)
 
             # if isomorphism check times out, then pretend like it failed and move on
             if not message and result:
