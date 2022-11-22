@@ -161,7 +161,7 @@ if __name__ == '__main__':
                         dest='parallel',
                         help='run the experiment in parallel or not')
     parser.add_argument('-n', '--numjobs',
-                        default=55,
+                        default=40,
                         dest='n_jobs',
                         type=int,
                         help='the max number of parallel jobs to spawn')
