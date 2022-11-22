@@ -29,14 +29,14 @@ def perturb_graph(g: nx.Graph, p: float = 0.01) -> nx.Graph:
         return h
 
     num_edges = int(h.size() * p)
-    edge_sample = random.sample(h.edges(), num_edges)
+    edge_sample = random.sample(list(h.edges()), num_edges)  # casting to list to avoid deprecation warnings
 
     for old_u, old_v in edge_sample:
         h.remove_edge(old_u, old_v)
-        u, v = random.sample(h.nodes(), 2)
+        u, v = random.sample(list(h.nodes()), 2)  # casting to list to avoid deprecation warnings
 
         while (u, v) in h.edges():
-            u, v = random.sample(h.nodes(), 2)
+            u, v = random.sample(list(h.nodes()), 2)  # casting to list to avoid deprecation warnings
 
         h.add_edge(u, v)
 
