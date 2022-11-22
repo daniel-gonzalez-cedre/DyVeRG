@@ -5,12 +5,13 @@ refactored VRG
 # import copy
 # from typing import List, Dict
 
+from joblib import Parallel, delayed
 import numpy as np
 import networkx.algorithms.isomorphism as iso
 from tqdm import tqdm
 
 from cnrg.Rule import PartRule
-from src.utils import replace
+from src.utils import replace, graph_edit_distance
 
 
 class VRG:
@@ -65,47 +66,27 @@ class VRG:
             self.dl += rule.dl
         return self.dl
 
-    def conditional_matrix_ll(self, axis: str = 'col'):
-        assert axis in ['row', 'col']
-        rule_matrix = self.temporal_matrix.copy()
-        ll = 0
+    def minimum_edit_dist(self, rule: PartRule, parallel: bool = True, n_jobs: int = 4) -> int:
+        if rule.lhs in self.rule_dict:
+            candidates = [r for r in self.rule_dict[rule.lhs] if r is not rule]
+            penalty = 0
+        else:
+            candidates = [r for r in self.rule_list if r is not rule]
+            penalty = 1  # penalty for having to also modify the LHS symbol
 
-        for idx, _ in enumerate(self.rule_list):
-            if axis == 'col':
-                ax = rule_matrix[idx, :].copy()
-            else:
-                ax = rule_matrix[:, idx].copy()
+        if parallel:
+            edit_dists = Parallel(n_jobs=n_jobs)(
+                delayed(graph_edit_distance)(r.graph, rule.graph) for r in candidates
+            )
+        else:
+            edit_dists = [graph_edit_distance(r.graph, rule.graph) for r in candidates]
 
-            if len(ax[ax > 0]) > 0:
-                ax = ax / ax.sum()
-                ll += np.log(ax[ax > 0]).sum()
-            else:
-                pass
+        return int(min(edit_dists)) + penalty
 
-        return ll
-
-    # ignore this for now
-    # def compute_transition_matrix(self):
-    #     n = len(self.rule_list)
-    #     self.transition_matrix = np.zeros((n, n), dtype=float)
-
-    #     for child_idx, child_rule in tqdm(enumerate(self.rule_list), total=n):
-    #         for rule, source_idx, _ in self.rule_tree:
-    #             if source_idx is not None and child_rule == rule:
-    #                 parent_rule, _, _ = self.rule_tree[source_idx]
-    #                 parent_idx = self.rule_list.index(parent_rule)
-    #                 self.transition_matrix[parent_idx][child_idx] += 1
-
-    #     return
-
-    def init_temporal_matrix(self):
-        n = len(self.rule_list)
-        self.temporal_matrix = np.identity(n, dtype=float)
-
-        for idx, rule in enumerate(self.rule_list):
-            self.temporal_matrix[idx, idx] *= rule.frequency
-
-        return
+    def replace_rule(self, old_rule: PartRule, new_rule: PartRule):
+        replace(old_rule, new_rule, self.rule_list)
+        replace(old_rule, new_rule, self.rule_dict)
+        replace(old_rule, new_rule, self.rule_tree)
 
     def copy(self):
         bag = [rule.copy() for rule in self.rule_list]
@@ -126,11 +107,6 @@ class VRG:
         vrg_copy.temporal_matrix = self.temporal_matrix.copy() if self.temporal_matrix is not None else None
 
         return vrg_copy
-
-    def replace_rule(self, old_rule, new_rule):
-        replace(old_rule, new_rule, self.rule_list)
-        replace(old_rule, new_rule, self.rule_dict)
-        replace(old_rule, new_rule, self.rule_tree)
 
     def __len__(self):
         return len(self.rule_list)
@@ -205,3 +181,45 @@ class VRG:
         self.rule_list.append(rule)
         self.rule_dict[rule.lhs].append(rule)
         return rule.id
+
+    def init_temporal_matrix(self):
+        n = len(self.rule_list)
+        self.temporal_matrix = np.identity(n, dtype=float)
+
+        for idx, rule in enumerate(self.rule_list):
+            self.temporal_matrix[idx, idx] *= rule.frequency
+
+        return
+
+    # def conditional_matrix_ll(self, axis: str = 'col'):
+    #     assert axis in ['row', 'col']
+    #     rule_matrix = self.temporal_matrix.copy()
+    #     ll = 0
+
+    #     for idx, _ in enumerate(self.rule_list):
+    #         if axis == 'col':
+    #             ax = rule_matrix[idx, :].copy()
+    #         else:
+    #             ax = rule_matrix[:, idx].copy()
+
+    #         if len(ax[ax > 0]) > 0:
+    #             ax = ax / ax.sum()
+    #             ll += np.log(ax[ax > 0]).sum()
+    #         else:
+    #             pass
+
+    #     return ll
+
+    # ignore this for now
+    # def compute_transition_matrix(self):
+    #     n = len(self.rule_list)
+    #     self.transition_matrix = np.zeros((n, n), dtype=float)
+
+    #     for child_idx, child_rule in tqdm(enumerate(self.rule_list), total=n):
+    #         for rule, source_idx, _ in self.rule_tree:
+    #             if source_idx is not None and child_rule == rule:
+    #                 parent_rule, _, _ = self.rule_tree[source_idx]
+    #                 parent_idx = self.rule_list.index(parent_rule)
+    #                 self.transition_matrix[parent_idx][child_idx] += 1
+
+    #     return

@@ -110,24 +110,10 @@ def conjoin_grammars(home_grammar: VRG, away_grammar: VRG, parallel: bool = True
     for away_rule in away_grammar.rule_list:
         try:  # try to find a rule isomorphic to away_rule
             found_idx = home_grammar.rule_list.index(away_rule)
-            home_grammar.rule_list[found_idx].frequency += 1
+            home_grammar.rule_list[found_idx].frequency += away_rule.frequency
         except ValueError:  # no such rule found; away_rule must be new
-            candidates = [] if away_rule.lhs not in home_grammar.rule_dict else [rule
-                                                                                 for rule in home_grammar.rule_dict[away_rule.lhs]
-                                                                                 if rule is not away_rule]
-
-            if candidates:
-                if parallel:
-                    edit_dists = Parallel(n_jobs=4)(
-                        delayed(graph_edit_distance)(home_rule.graph, away_rule.graph)
-                        for home_rule in candidates
-                    )
-                else:
-                    edit_dists = [graph_edit_distance(home_rule.graph, away_rule.graph)
-                                  for home_rule in candidates]
-                away_rule.edit_dist = int(min(edit_dists))
-            else:
-                away_rule.edit_dist = 0
+            edit_dist = home_grammar.minimum_edit_dist(away_rule)
+            away_rule.edit_dist = edit_dist
 
             home_grammar.num_rules += 1
             home_grammar.rule_list += [away_rule]
@@ -141,10 +127,8 @@ def conjoin_grammars(home_grammar: VRG, away_grammar: VRG, parallel: bool = True
     home_grammar.rule_source |= away_grammar.rule_source
     home_grammar.which_rule_source |= away_grammar.which_rule_source
 
-    # rule_source does not need to be modified because splitting_rule is not a leaf rule
-    # which_rule_source does not need to be modified for the same reason
-    if not existed:
-        # incorporate the new splitting rule
+    # rule_source & which_rule_source do not need to be modified because splitting_rule is not a leaf rule
+    if not existed:  # incorporate the new splitting rule
         home_grammar.num_rules += 1
         home_grammar.rule_list += [splitting_rule]
         home_grammar.rule_dict[S] = [splitting_rule]
