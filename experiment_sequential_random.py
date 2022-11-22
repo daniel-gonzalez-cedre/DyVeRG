@@ -69,7 +69,7 @@ def experiment(curr_time: int, curr_graph: nx.Graph,
 
 
 # TODO: implement saving intermediate results in case we need to stop the code
-def main(dataset, parallel, n_jobs, rewire, mu):
+def main(dataset, rewire, n_trials, parallel, n_jobs, mu):
     rootpath = git.Repo(getcwd(), search_parent_directories=True).git.rev_parse("--show-toplevel")
     resultspath = 'results/experiment_sequential_random/'
     mkdir(join(rootpath, resultspath))
@@ -88,30 +88,43 @@ def main(dataset, parallel, n_jobs, rewire, mu):
             for (curr_time, curr_graph), (next_time, next_graph)
             in zip(time_graph_pairs[:-1], time_graph_pairs[1:])
             for p in np.linspace(0, rewire, max_rewire)
+            for _ in range(n_trials)
         )
     else:
         results = [experiment(curr_time, curr_graph, next_time, next_graph, p, mu)
                    for (curr_time, curr_graph), (next_time, next_graph)
                    in zip(time_graph_pairs[:-1], time_graph_pairs[1:])
-                   for p in np.linspace(0, rewire, max_rewire)]
+                   for p in np.linspace(0, rewire, max_rewire)
+                   for _ in range(n_trials)]
 
     for curr_time, next_time, p, base_grammar, joint_grammar, indep_grammar in results:
-        base_grammars[(curr_time, p)] = base_grammar
-        joint_grammars[(curr_time, next_time, p)] = joint_grammar
-        indep_grammars[(curr_time, next_time, p)] = indep_grammar
+        if (curr_time, p) in base_grammars:
+            base_grammars[(curr_time, p)] += [base_grammar]
+        else:
+            base_grammars[(curr_time, p)] = [base_grammar]
 
-    base_mdls = {key: grammar.mdl()
-                 for key, grammar in base_grammars.items()}
+        if (curr_time, p) in joint_grammars:
+            joint_grammars[(curr_time, next_time, p)] += joint_grammar
+        else:
+            joint_grammars[(curr_time, next_time, p)] = joint_grammar
 
-    joint_mdls = {key: grammar.mdl()
-                  for key, grammar in joint_grammars.items()}
-    indep_mdls = {key: grammar.mdl()
-                  for key, grammar in indep_grammars.items()}
+        if (curr_time, p) in indep_grammars:
+            indep_grammars[(curr_time, next_time, p)] += indep_grammar
+        else:
+            indep_grammars[(curr_time, next_time, p)] = indep_grammar
 
-    joint_lls = {key: grammar.ll()
-                 for key, grammar in joint_grammars.items()}
-    indep_lls = {key: grammar.ll()
-                 for key, grammar in indep_grammars.items()}
+    base_mdls = {key: [grammar.mdl() for grammar in collection]
+                 for key, collection in base_grammars.items()}
+
+    joint_mdls = {key: [grammar.mdl() for grammar in collection]
+                  for key, collection in joint_grammars.items()}
+    indep_mdls = {key: [grammar.mdl() for grammar in collection]
+                  for key, collection in indep_grammars.items()}
+
+    joint_lls = {key: [grammar.ll() for grammar in collection]
+                 for key, collection in joint_grammars.items()}
+    indep_lls = {key: [grammar.ll() for grammar in collection]
+                 for key, collection in indep_grammars.items()}
 
     with open(join(rootpath, resultspath, f'{dataset}_base.grammars'), 'wb') as outfile:
         pickle.dump(base_grammars, outfile)
@@ -122,32 +135,35 @@ def main(dataset, parallel, n_jobs, rewire, mu):
 
     with open(join(rootpath, resultspath, f'{dataset}_base.mdls'), 'w') as outfile:
         outfile.write('time,p,mdl\n')
-        for (time, p), mdl in base_mdls.items():
-            outfile.write(f'{time},{p},{mdl}\n')
+        for (time, p), mdls in base_mdls.items():
+            for mdl in mdls:
+                outfile.write(f'{time},{p},{mdl}\n')
 
     with open(join(rootpath, resultspath, f'{dataset}_joint.mdls'), 'w') as outfile:
         outfile.write('curr_time,next_time,p,mdl\n')
-        for (curr_time, next_time, p), mdl in joint_mdls.items():
-            outfile.write(f'{curr_time},{next_time},{p},{mdl}\n')
+        for (curr_time, next_time, p), mdls in joint_mdls.items():
+            for mdl in mdls:
+                outfile.write(f'{curr_time},{next_time},{p},{mdl}\n')
     with open(join(rootpath, resultspath, f'{dataset}_indep.mdls'), 'w') as outfile:
         outfile.write('curr_time,next_time,p,mdl\n')
-        for (curr_time, next_time, p), mdl in indep_mdls.items():
-            outfile.write(f'{curr_time},{next_time},{p},{mdl}\n')
+        for (curr_time, next_time, p), mdls in indep_mdls.items():
+            for mdl in mdls:
+                outfile.write(f'{curr_time},{next_time},{p},{mdl}\n')
 
     with open(join(rootpath, resultspath, f'{dataset}_joint.lls'), 'w') as outfile:
         outfile.write('curr_time,next_time,p,ll\n')
-        for (curr_time, next_time, p), ll in joint_lls.items():
-            outfile.write(f'{curr_time},{next_time},{p},{ll}\n')
+        for (curr_time, next_time, p), lls in joint_lls.items():
+            for ll in lls:
+                outfile.write(f'{curr_time},{next_time},{p},{ll}\n')
     with open(join(rootpath, resultspath, f'{dataset}_indep.lls'), 'w') as outfile:
         outfile.write('curr_time,next_time,p,ll\n')
-        for (curr_time, next_time, p), ll in indep_lls.items():
-            outfile.write(f'{curr_time},{next_time},{p},{ll}\n')
+        for (curr_time, next_time, p), lls in indep_lls.items():
+            for ll in lls:
+                outfile.write(f'{curr_time},{next_time},{p},{ll}\n')
 
 
+# python experiment_sequential_random.py -d <<dataset>> -p -n <<# of jobs>> -r <<rewire %>> -m <<mu>>
 if __name__ == '__main__':
-    """
-        python experiment_sequential_random.py -d <<dataset>> -p -n <<# of jobs>> -r <<rewire %>> -m <<mu>>
-    """
     parser = ArgumentParser()
     parser.add_argument('-d', '--dataset',
                         default='facebook-links',
@@ -155,25 +171,30 @@ if __name__ == '__main__':
                         type=str,
                         choices=['facebook-links', 'email-dnc', 'email-eucore', 'email-enron'],
                         help='select a dataset from ["facebook-links", "email-dnc", "email-eucore", "email-enron"]')
-    parser.add_argument('-p', '--parallel',
-                        action='store_true',
-                        default=False,
-                        dest='parallel',
-                        help='run the experiment in parallel or not')
-    parser.add_argument('-n', '--numjobs',
-                        default=40,
-                        dest='n_jobs',
-                        type=int,
-                        help='the max number of parallel jobs to spawn')
     parser.add_argument('-r', '--rewire',
                         default=0.2,
                         dest='rewire',
                         type=float,
                         help='the max percentage of edges to rewire')
+    parser.add_argument('-n', '--num',
+                        default=5,
+                        dest='n_trials',
+                        type=int,
+                        help='the number of times to run each experiment')
+    parser.add_argument('-p', '--parallel',
+                        action='store_true',
+                        default=False,
+                        dest='parallel',
+                        help='run the experiment in parallel or not')
+    parser.add_argument('-j', '--jobs',
+                        default=40,
+                        dest='n_jobs',
+                        type=int,
+                        help='the max number of parallel jobs to spawn')
     parser.add_argument('-m', '--mu',
                         default=4,
                         dest='mu',
                         type=int,
                         help='select a value for the μ hyperparameter for CNRG')
     args = parser.parse_args()
-    main(args.dataset, args.parallel, args.n_jobs, args.rewire, args.mu)
+    main(args.dataset, args.rewire, args.n_trials, args.parallel, args.n_jobs, args.mu)
