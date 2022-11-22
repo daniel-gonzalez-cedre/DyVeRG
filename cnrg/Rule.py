@@ -12,13 +12,13 @@ class BaseRule:
     Base class for Rule
     """
 
-    __slots__ = "lhs", "graph", "level", "cost", "frequency", "id", "non_terminals", "subtree", "time", "time_changed", "edit_cost"
+    __slots__ = "lhs", "graph", "level", "dl", "frequency", "id", "non_terminals", "subtree", "time", "time_changed", "edit_dist"
 
-    def __init__(self, lhs, graph, level=0, cost=0, frequency=1, id=None, time=None, edit_cost=0):
+    def __init__(self, lhs, graph, level=0, dl=0, frequency=1, id=None, time=None, edit_dist=0):
         self.lhs = lhs  # the left hand side: the number of boundary edges
         self.graph = convert(graph)  # the right hand side subgraph
         self.level = level  # level of discovery in the tree (the root is at 0)
-        self.cost = cost  # the cost of encoding the rule using MDL (in bits)
+        self.dl = dl  # the description length of encoding the rule (in bits)
         self.frequency = frequency  # frequency of occurrence
         self.id = id
         self.time = time
@@ -29,7 +29,7 @@ class BaseRule:
         # for _, d in self.graph.nodes(data=True):
         #     if 'label' in d:
         #         self.non_terminals.append(d['label'])
-        self.edit_cost: int = edit_cost
+        self.edit_dist: int = edit_dist
 
     # approximate equality using Weisfeiler-Lehman graph hashing
     def hash_equals(self, other):
@@ -103,11 +103,11 @@ class BaseRule:
             lhs=self.lhs,
             graph=self.graph.copy(),
             level=self.level,
-            cost=self.cost,
+            dl=self.dl,
             frequency=self.frequency,
             id=self.id,
             time=self.time,
-            edit_cost=self.edit_cost
+            edit_dist=self.edit_dist
         )
         copy_rule.time_changed = self.time_changed
         return copy_rule
@@ -150,20 +150,8 @@ class FullRule(BaseRule):
     """
     __slots__ = 'internal_nodes', 'edges_covered'
 
-    def __init__(
-        self,
-        lhs,
-        graph,
-        internal_nodes,
-        level=0,
-        cost=0,
-        frequency=1,
-        edges_covered=None,
-        id=None,
-        time=None,
-        edit_cost=0
-    ):
-        super().__init__(lhs=lhs, graph=graph, level=level, cost=cost, frequency=frequency, time=time, edit_cost=edit_cost)
+    def __init__(self, lhs, graph, internal_nodes, level=0, dl=0, frequency=1, edges_covered=None, id=None, time=None, edit_dist=0):
+        super().__init__(lhs=lhs, graph=graph, level=level, dl=dl, frequency=frequency, time=time, edit_dist=edit_dist)
         self.internal_nodes = internal_nodes  # the set of internal nodes
         self.edges_covered = edges_covered  # edges in the original graph that's covered by the rule
         self.subtree = None
@@ -173,13 +161,13 @@ class FullRule(BaseRule):
             lhs=self.lhs,
             graph=self.graph.copy(),
             level=self.level,
-            cost=self.cost,
+            dl=self.dl,
             frequency=self.frequency,
             internal_nodes=self.internal_nodes,
             edges_covered=self.edges_covered,
             id=self.id,
             time=self.time,
-            edit_cost=self.edit_cost
+            edit_dist=self.edit_dist
         )
         copy_rule.time_changed = self.time_changed
         return copy_rule
@@ -189,24 +177,24 @@ class FullRule(BaseRule):
             lhs=self.lhs,
             graph=self.graph.copy(),
             level=self.level,
-            cost=self.cost,
+            dl=self.dl,
             frequency=self.frequency,
             internal_nodes=self.internal_nodes,
             edges_covered=self.edges_covered,
             id=self.id,
             time=self.time,
-            edit_cost=self.edit_cost
+            edit_dist=self.edit_dist
         )
         copy_rule.time_changed = self.time_changed
         return copy_rule
 
-    def calculate_cost(self):
+    def mdl(self):
         """
         Updates the MDL cost of the RHS. l_u is the number of unique entities in the graph.
         We have two types of nodes (internal and external) and one type of edge
         :return:
         """
-        self.cost = (
+        self.dl = (
             MDL.gamma_code(max(0, self.lhs) + 1) +
             MDL.graph_dl(self.graph) +
             MDL.gamma_code(self.frequency + 1)
@@ -264,16 +252,16 @@ class PartRule(BaseRule):
     """
     Rule class for Partial option
     """
-    def __init__(self, lhs, graph, level=0, cost=0, frequency=1, id=None, time=None, edit_cost=0):
+    def __init__(self, lhs, graph, level=0, dl=0, frequency=1, id=None, time=None, edit_dist=0):
         super().__init__(
             lhs=lhs,
             graph=graph,
             level=level,
-            cost=cost,
+            dl=dl,
             frequency=frequency,
             id=id,
             time=time,
-            edit_cost=edit_cost
+            edit_dist=edit_dist
         )
         self.subtree = None
 
@@ -282,11 +270,11 @@ class PartRule(BaseRule):
             lhs=self.lhs,
             graph=self.graph.copy(),
             level=self.level,
-            cost=self.cost,
+            dl=self.dl,
             frequency=self.frequency,
             id=self.id,
             time=self.time,
-            edit_cost=self.edit_cost
+            edit_dist=self.edit_dist
         )
         copy_rule.time_changed = self.time_changed
         return copy_rule
@@ -296,11 +284,11 @@ class PartRule(BaseRule):
             lhs=self.lhs,
             graph=self.graph.copy(),
             level=self.level,
-            cost=self.cost,
+            dl=self.dl,
             frequency=self.frequency,
             id=self.id,
             time=self.time,
-            edit_cost=self.edit_cost
+            edit_dist=self.edit_dist
         )
         copy_rule.time_changed = self.time_changed
         return copy_rule
@@ -321,7 +309,7 @@ class PartRule(BaseRule):
 
         nx.relabel_nodes(self.graph, mapping=mapping, copy=False)
 
-    def calculate_cost(self):
+    def mdl(self):
         '''
         Calculates the MDL for the rule. This includes the encoding of boundary degrees of the nodes.
         l_u = 2 (because we have one type of nodes and one type of edge)
@@ -334,7 +322,7 @@ class PartRule(BaseRule):
         # for node, data in self.graph.nodes(data=True):
         #     if 'label' in data:  # it's a non-terminal
         #         l_u = 3
-        self.cost = (
+        self.dl = (
             MDL.gamma_code(max(0, self.lhs) + 1) +
             MDL.graph_dl(self.graph) +
             MDL.gamma_code(self.frequency + 1) +
@@ -351,11 +339,11 @@ class NoRule(PartRule):
             lhs=self.lhs,
             graph=self.graph.copy(),
             level=self.level,
-            cost=self.cost,
+            dl=self.dl,
             frequency=self.frequency,
             id=self.id,
             time=self.time,
-            edit_cost=self.edit_cost
+            edit_dist=self.edit_dist
         )
         copy_rule.time_changed = self.time_changed
         return copy_rule
@@ -365,23 +353,23 @@ class NoRule(PartRule):
             lhs=self.lhs,
             graph=self.graph.copy(),
             level=self.level,
-            cost=self.cost,
+            dl=self.dl,
             frequency=self.frequency,
             id=self.id,
             time=self.time,
-            edit_cost=self.edit_cost
+            edit_dist=self.edit_dist
         )
         copy_rule.time_changed = self.time_changed
         return copy_rule
 
-    def calculate_cost(self):
+    def mdl(self):
         """
         Calculates the MDL for the rule. This just includes encoding the graph.
         l_u = 2 (because we have one type of nodes and one type of edge)
         :return:
         """
-        self.cost = (
-            MDL.gamma_code(max(0, self.lhs) + 1)
-            + MDL.graph_dl(self.graph)
-            + MDL.gamma_code(self.frequency + 1)
+        self.dl = (
+            MDL.gamma_code(max(0, self.lhs) + 1) +
+            MDL.graph_dl(self.graph) +
+            MDL.gamma_code(self.frequency + 1)
         )
