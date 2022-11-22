@@ -110,7 +110,7 @@ def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph,
     # for u, v in tqdm(edge_deletions, desc='deletions', leave=True):
     #     charted_grammar = update_rule_domestic(charted_grammar, u, v, 'del')
 
-    charted_grammar.calculate_cost()
+    charted_grammar.mdl()
     print(charted_grammar)
 
     return charted_grammar

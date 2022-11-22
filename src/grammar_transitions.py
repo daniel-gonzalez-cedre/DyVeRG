@@ -125,9 +125,9 @@ def conjoin_grammars(home_grammar: VRG, away_grammar: VRG, parallel: bool = True
                 else:
                     edit_dists = [graph_edit_distance(home_rule.graph, away_rule.graph)
                                   for home_rule in candidates]
-                away_rule.edit_cost = int(min(edit_dists))
+                away_rule.edit_dist = int(min(edit_dists))
             else:
-                away_rule.edit_cost = 0
+                away_rule.edit_dist = 0
 
             home_grammar.num_rules += 1
             home_grammar.rule_list += [away_rule]
@@ -262,9 +262,9 @@ def suture_grammars(home_grammar: VRG, away_grammar: VRG, parallel: bool = True)
                 else:
                     edit_dists = [graph_edit_distance(home_rule.graph, away_rule.graph)
                                   for home_rule in candidates]
-                away_rule.edit_cost = int(min(edit_dists))
+                away_rule.edit_dist = int(min(edit_dists))
             else:
-                away_rule.edit_cost = 0
+                away_rule.edit_dist = 0
 
             home_grammar.num_rules += 1
             home_grammar.rule_list += [away_rule]
@@ -302,7 +302,5 @@ def suture_grammars(home_grammar: VRG, away_grammar: VRG, parallel: bool = True)
     # the node sets should be disjoint, so this is fine
     home_grammar.rule_source |= away_grammar.rule_source
     home_grammar.which_rule_source |= away_grammar.which_rule_source
-
-    # home_grammar.recalculate_cost()
 
     return home_grammar

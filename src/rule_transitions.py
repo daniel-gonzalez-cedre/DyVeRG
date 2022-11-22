@@ -8,7 +8,7 @@ from cnrg.VRG import VRG
 from cnrg.Rule import PartRule
 
 from decomposition import ancestor, common_ancestor
-from utils import find
+from utils import find, timeout
 
 
 def mutate_rule_domestic(grammar: VRG, u: int, v: int, mode: str, time: int) -> VRG:
@@ -105,25 +105,28 @@ def incorporate_rule(grammar: VRG, parent_rule: PartRule, new_rule: PartRule, wh
                      decouple: bool = False, mode: str = 'iso'):
     assert mode in ['iso', 'hash']
 
-    # TODO: implement a timeout fallback to `hash` in case `iso` is taking too long
+    def is_isomorphic(r1, r2):
+        return r1 == r2
+
     # check to see if this rule already exists in the grammar
     if mode == 'iso':
-        # parent_idx = grammar.rule_list.index(parent_rule)
         parent_idx = find(parent_rule, grammar.rule_list)[0]
 
         for rule in grammar.rule_dict[new_rule.lhs]:
-            if new_rule == rule:
+            # if new_rule == rule:
+            message, result = timeout(is_isomorphic, [new_rule, rule], patience=10)
+
+            # if isomorphism check times out, then pretend like it failed and move on
+            if not message and result:
                 rule.frequency += 1
                 grammar.rule_tree[which_parent][0] = rule
                 grammar.temporal_matrix[parent_idx, find(rule, grammar.rule_list)[0]] += 1
                 return
 
-        # if new_rule in grammar.rule_dict[new_rule.lhs]:
-        #     new_idx = grammar.rule_list.index(new_rule)
-        #     grammar.rule_list[new_idx].frequency += 1
-        #     grammar.rule_tree[which_parent][0] = grammar.rule_list[new_idx]
-        #     grammar.temporal_matrix[parent_idx, new_idx] += 1
-        #     return
+            # if timed out, mark this rule
+            if message:
+                new_rule.timed_out = True
+                print(message)
 
     if mode == 'hash':  # need to evaluate whether or not to deprecate this mode
         for parent_idx, other_rule in enumerate(grammar.rule_list):
@@ -138,7 +141,7 @@ def incorporate_rule(grammar: VRG, parent_rule: PartRule, new_rule: PartRule, wh
                 return
 
     # this rule does not already exist in the grammar
-    new_rule.edit_cost += 1
+    new_rule.edit_dist += 1
     if decouple:  # if new_rule modifies a rule learned at previous timestep
         new_idx = len(grammar.rule_list)  # the index corresponding to the new rule
         grammar.temporal_matrix = np.append(grammar.temporal_matrix,

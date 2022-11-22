@@ -1,11 +1,12 @@
-from contextlib import contextmanager
+from signal import SIGALRM, ITIMER_REAL, setitimer, signal
+from traceback import format_exc
+
 import sys
+from contextlib import contextmanager
 from os import makedirs, devnull
 
-from typing import Callable, Union, Any
+from typing import Callable, Union
 from networkx import graph_edit_distance as ged, Graph
-
-from cnrg.Rule import PartRule
 
 
 @contextmanager
@@ -23,6 +24,34 @@ def silence(enabled=True):
                 sys.stderr = old_stderr
     else:
         yield
+
+
+def timeout(func: Callable, args: Union[list, tuple] = None, kwargs: dict = None,
+            patience: Union[int, float] = 120):
+    """
+        Runs func on the given arguments until either a result is procured or the patience runs out.
+
+        Positional arguments:
+            func: [a] -> [b] = the function to call
+            args: Union[list, tuple] = an unpackable of positional arguments to feed to func
+            kwargs: dict = a dict of keyword arguments to feed to func
+
+        Keyword arguments:
+            patience: Union[int, float] = the amount of seconds to wait for func to produce a result
+
+        Returns:
+            a tuple (message, None) if the function times out, otherwise (None, result)
+    """
+    try:
+        signal(SIGALRM, lambda x, y: (_ for _ in ()).throw(TimeoutError))
+        setitimer(ITIMER_REAL, patience)
+        return None, func(*(args or ()), **(kwargs or {}))
+    except TimeoutError:
+        return f'{func.__name__} interrupted after {patience} seconds running on {args}', None
+    except Exception as e:
+        raise Exception(f'{func.__name__} crashed when run on {args}') from e
+    finally:
+        setitimer(ITIMER_REAL, 0)
 
 
 def mkdir(path):

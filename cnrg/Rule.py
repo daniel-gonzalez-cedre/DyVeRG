@@ -12,9 +12,9 @@ class BaseRule:
     Base class for Rule
     """
 
-    __slots__ = "lhs", "graph", "level", "dl", "frequency", "id", "non_terminals", "subtree", "time", "time_changed", "edit_dist"
+    __slots__ = "lhs", "graph", "level", "dl", "frequency", "id", "non_terminals", "subtree", "time", "time_changed", "edit_dist", "timed_out"
 
-    def __init__(self, lhs, graph, level=0, dl=0, frequency=1, id=None, time=None, edit_dist=0):
+    def __init__(self, lhs, graph, level=0, dl=0, frequency=1, id=None, time=None, edit_dist=0, timed_out: bool = False):
         self.lhs = lhs  # the left hand side: the number of boundary edges
         self.graph = convert(graph)  # the right hand side subgraph
         self.level = level  # level of discovery in the tree (the root is at 0)
@@ -30,6 +30,7 @@ class BaseRule:
         #     if 'label' in d:
         #         self.non_terminals.append(d['label'])
         self.edit_dist: int = edit_dist
+        self.timed_out: bool = timed_out
 
     # approximate equality using Weisfeiler-Lehman graph hashing
     def hash_equals(self, other):
@@ -107,7 +108,8 @@ class BaseRule:
             frequency=self.frequency,
             id=self.id,
             time=self.time,
-            edit_dist=self.edit_dist
+            edit_dist=self.edit_dist,
+            timed_out=self.timed_out
         )
         copy_rule.time_changed = self.time_changed
         return copy_rule
@@ -167,7 +169,8 @@ class FullRule(BaseRule):
             edges_covered=self.edges_covered,
             id=self.id,
             time=self.time,
-            edit_dist=self.edit_dist
+            edit_dist=self.edit_dist,
+            timed_out=self.timed_out
         )
         copy_rule.time_changed = self.time_changed
         return copy_rule
@@ -183,7 +186,8 @@ class FullRule(BaseRule):
             edges_covered=self.edges_covered,
             id=self.id,
             time=self.time,
-            edit_dist=self.edit_dist
+            edit_dist=self.edit_dist,
+            timed_out=self.timed_out
         )
         copy_rule.time_changed = self.time_changed
         return copy_rule
@@ -274,7 +278,8 @@ class PartRule(BaseRule):
             frequency=self.frequency,
             id=self.id,
             time=self.time,
-            edit_dist=self.edit_dist
+            edit_dist=self.edit_dist,
+            timed_out=self.timed_out
         )
         copy_rule.time_changed = self.time_changed
         return copy_rule
@@ -288,7 +293,8 @@ class PartRule(BaseRule):
             frequency=self.frequency,
             id=self.id,
             time=self.time,
-            edit_dist=self.edit_dist
+            edit_dist=self.edit_dist,
+            timed_out=self.timed_out
         )
         copy_rule.time_changed = self.time_changed
         return copy_rule
@@ -343,7 +349,8 @@ class NoRule(PartRule):
             frequency=self.frequency,
             id=self.id,
             time=self.time,
-            edit_dist=self.edit_dist
+            edit_dist=self.edit_dist,
+            timed_out=self.timed_out
         )
         copy_rule.time_changed = self.time_changed
         return copy_rule
@@ -357,7 +364,8 @@ class NoRule(PartRule):
             frequency=self.frequency,
             id=self.id,
             time=self.time,
-            edit_dist=self.edit_dist
+            edit_dist=self.edit_dist,
+            timed_out=self.timed_out
         )
         copy_rule.time_changed = self.time_changed
         return copy_rule

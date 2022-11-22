@@ -61,7 +61,7 @@ class VRG:
     def mdl(self):
         self.dl = 0
         for rule in self.rule_list:
-            rule.calculate_dl()
+            rule.mdl()
             self.dl += rule.dl
         return self.dl
 
@@ -140,7 +140,7 @@ class VRG:
 
     def __str__(self):
         if self.dl == 0:
-            self.calculate_dl()
+            self.mdl()
         st = (
             f'graph: {self.name}, mu: {self.mu}, type: {self.type} clustering: {self.clustering} rules: {len(self.rule_list):_d}'
             f'({self.num_rules:_d}) mdl: {round(self.dl, 3):_g} bits'
@@ -205,10 +205,3 @@ class VRG:
         self.rule_list.append(rule)
         self.rule_dict[rule.lhs].append(rule)
         return rule.id
-
-    def calculate_dl(self):
-        self.dl = 0
-        for rule in self.rule_list:
-            rule.mdl()
-            self.dl += rule.dl
-        return self.dl
