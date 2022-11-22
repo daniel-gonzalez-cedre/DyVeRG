@@ -69,12 +69,10 @@ def experiment(curr_time: int, curr_graph: nx.Graph,
 
 
 # TODO: implement saving intermediate results in case we need to stop the code
-def main(dataset, rewire, n_trials, parallel, n_jobs, mu):
+def main(dataset, rewire, delta, n_trials, parallel, n_jobs, mu):
     rootpath = git.Repo(getcwd(), search_parent_directories=True).git.rev_parse("--show-toplevel")
     resultspath = 'results/experiment_sequential_random/'
     mkdir(join(rootpath, resultspath))
-
-    delta = 10
 
     base_grammars: dict[tuple[int, float], VRG] = {}
     joint_grammars: dict[tuple[int, int, float], VRG] = {}
@@ -165,8 +163,8 @@ def main(dataset, rewire, n_trials, parallel, n_jobs, mu):
 # python experiment_sequential_random.py -d <<dataset>> -p -n <<# of jobs>> -r <<rewire %>> -m <<mu>>
 if __name__ == '__main__':
     parser = ArgumentParser()
-    parser.add_argument('-d', '--dataset',
-                        default='facebook-links',
+    parser.add_argument('dataset',
+                        default='email-eucore',
                         dest='dataset',
                         type=str,
                         choices=['facebook-links', 'email-dnc', 'email-eucore', 'email-enron'],
@@ -176,6 +174,11 @@ if __name__ == '__main__':
                         dest='rewire',
                         type=float,
                         help='the max percentage of edges to rewire')
+    parser.add_argument('-d', '--delta',
+                        default=10,
+                        dest='delta',
+                        type=int,
+                        help='the amount of intermediate rewires between 0 and `rewire`')
     parser.add_argument('-n', '--num',
                         default=5,
                         dest='n_trials',
@@ -197,4 +200,4 @@ if __name__ == '__main__':
                         type=int,
                         help='select a value for the μ hyperparameter for CNRG')
     args = parser.parse_args()
-    main(args.dataset, args.rewire, args.n_trials, args.parallel, args.n_jobs, args.mu)
+    main(args.dataset, args.rewire, args.delta, args.n_trials, args.parallel, args.n_jobs, args.mu)
