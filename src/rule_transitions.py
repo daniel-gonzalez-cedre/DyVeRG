@@ -16,30 +16,14 @@ def assimilate(new_rule: PartRule, grammar: VRG):
         for old_rule in grammar.rule_dict[new_rule.lhs]:
             if new_rule is not old_rule:
                 if (f := is_rule_isomorphic(new_rule, old_rule)):
-                    # f_inv = {fx: x for x, fx in f.items()}
                     for x in new_rule.mapping:
                         old_rule.mapping[x] = f[new_rule.mapping[x]]
 
+                    old_rule.edit_dist = min(old_rule.edit_dist, new_rule.edit_dist)  # TODO: think about this
                     old_rule.frequency += new_rule.frequency
                     old_rule.subtree |= new_rule.subtree
 
-                    # lhs, dict_idx = grammar.find_rule(new_rule, where='rule_dict')
-                    # del grammar.rule_dict[lhs][dict_idx]
-
-                    # if len(grammar.rule_dict[lhs]) == 0:
-                    #     del grammar.rule_dict[lhs]
-
-                    # list_idx = grammar.find_rule(new_rule, where='rule_list')
-                    # del grammar.rule_list[list_idx]
-
                     grammar.replace_rule(new_rule, old_rule, f)
-                    # for x in old_rule.mapping:
-                    #     new_rule.mapping[x] = f_inv[old_rule.mapping[x]]
-
-                    # new_rule.frequency += old_rule.frequency
-                    # new_rule.subtree |= old_rule.subtree
-                    # grammar.replace_rule(old_rule, new_rule, f)
-
                     break
             else:
                 found = True
@@ -53,9 +37,6 @@ def assimilate(new_rule: PartRule, grammar: VRG):
 
 
 def modify_descendants(nts: str, rule_idx: int, grammar: VRG, time: int):
-    # children = [(cidx, r) for cidx, (r, pidx, anode) in enumerate(grammar.rule_tree)
-    #             if pidx == parent_idx and anode == ancestor_node]
-
     for child_idx, child_rule in grammar.get_children_of(nts, rule_idx):
         if child_rule.frequency == 1:
             modified_rule = child_rule
@@ -70,8 +51,8 @@ def modify_descendants(nts: str, rule_idx: int, grammar: VRG, time: int):
                 del grammar.rule_dict[lhs]
         else:
             modified_rule = child_rule.copy()
+            modified_rule.edit_dist = 0
             modified_rule.frequency = 1
-            modified_rule.copied = True
             child_rule.frequency -= 1
             grammar.rule_tree[child_idx][0] = modified_rule
 
@@ -91,11 +72,12 @@ def modify_descendants(nts: str, rule_idx: int, grammar: VRG, time: int):
         assimilate(modified_rule, grammar)
 
 
+# TODO: update docstring instructions
 def mutate_rule():
     raise NotImplementedError
 
 
-def mutate_rule_domestic(grammar: VRG, u: int, v: int, time: int, mode: str = 'add') -> VRG:
+def mutate_rule_domestic(grammar: VRG, u: int, v: int, time: int, mode: str = 'add'):
     """
         Given an edge event (u, v), where both u and v are already known to the grammar G:
             1. Find the lowest rule R that covers both u and v simultaneously
@@ -130,6 +112,7 @@ def mutate_rule_domestic(grammar: VRG, u: int, v: int, time: int, mode: str = 'a
             del grammar.rule_dict[lhs]
     else:
         mutated_rule = parent_rule.copy()
+        mutated_rule.edit_dist = 0
         mutated_rule.frequency = 1
         parent_rule.frequency -= 1
         grammar.rule_tree[parent_idx][0] = mutated_rule
@@ -154,10 +137,9 @@ def mutate_rule_domestic(grammar: VRG, u: int, v: int, time: int, mode: str = 'a
         raise AssertionError(f'<<mode>> must be either "add" or "del"; found mode={mode} instead')
 
     assimilate(mutated_rule, grammar)
-    # return mutated_rule, parent_rule
 
 
-def mutate_rule_diplomatic(grammar: VRG, u: int, v: int, time: int) -> VRG:
+def mutate_rule_diplomatic(grammar: VRG, u: int, v: int, time: int):
     """
         Given an edge event (u, v), where u ∈ G but v ∉ G:
             1. Find the lowest rule R that covers u
@@ -206,4 +188,3 @@ def mutate_rule_diplomatic(grammar: VRG, u: int, v: int, time: int) -> VRG:
     grammar.covering_idx[v] = grammar.covering_idx[u]  # rule_source now points to the same location in the rule_tree for u and v
 
     assimilate(mutated_rule, grammar)
-    # return mutated_rule, parent_rule

@@ -31,7 +31,7 @@ class BaseRule:
         Class properties:
             mdl = the description length of encoding the rule (in bits)
             dl = the description length of encoding the rule (in bits)
-            non_terminals = list of nonterminal symbols on this rule's right-hand side
+            nonterminals = list of nonterminal symbols on this rule's right-hand side
     '''
 
     __slots__ = (
@@ -56,7 +56,7 @@ class BaseRule:
         self.timed_out = timed_out
 
     @property
-    def non_terminals(self):
+    def nonterminals(self):
         return [d['label'] for _, d in self.graph.nodes(data=True) if 'label' in d]
 
     @property
@@ -90,16 +90,16 @@ class BaseRule:
 
     def __str__(self):
         st = f'({self.idn}) {self.lhs} -> (n = {self.graph.order()}, m = {self.graph.size()})'
-        if len(self.non_terminals) != 0:  # if it has non-terminals, print the sizes
-            st += 'nt: {' + ','.join(map(str, self.non_terminals)) + '}'
+        if len(self.nonterminals) != 0:  # if it has non-terminals, print the sizes
+            st += 'nt: {' + ','.join(map(str, self.nonterminals)) + '}'
         if self.frequency > 1:  # if freq > 1, show it in square brackets
             st += f'[{self.frequency}]'
         return st
 
     def __repr__(self):
         st = f'{self.lhs} -> ({self.graph.order()}, {self.graph.size()})'
-        if len(self.non_terminals) != 0:  # if it has non-terminals, print the sizes
-            st += '{' + ','.join(map(str, self.non_terminals)) + '}'
+        if len(self.nonterminals) != 0:  # if it has non-terminals, print the sizes
+            st += '{' + ','.join(map(str, self.nonterminals)) + '}'
         if self.frequency > 1:  # if freq > 1, show it in square brackets
             st += f'[{self.frequency}]'
         return st

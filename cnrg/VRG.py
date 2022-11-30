@@ -98,7 +98,17 @@ class VRG:
 
     @property
     def ll(self) -> float:
-        return np.log(1 / (1 + sum(rule.edit_dist for rule in self.rule_list)))
+        return np.log(self.likelihood)
+
+    # the more modifications were required accommodate new rules, the lower the likelihood
+    @property
+    def likelihood(self) -> float:
+        return 1 / (1 + self.cost)  # adding 1 to the denominator avoids division by zero and ensures ∈ (0, 1]
+
+    # total cost (in terms of edit operations) incurred to dynamically augment this grammar
+    @property
+    def cost(self) -> float:
+        return sum(rule.edit_dist for rule in self.rule_list)
 
     def minimum_edit_dist(self, rule: BaseRule, parallel: bool = True, n_jobs: int = 4) -> int:
         if rule.lhs in self.rule_dict:
