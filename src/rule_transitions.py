@@ -1,5 +1,5 @@
 import sys
-import numpy as np
+import random
 
 sys.path.append('../')
 
@@ -7,10 +7,95 @@ from cnrg.VRG import VRG
 from cnrg.Rule import PartRule
 
 from decomposition import ancestor, common_ancestor
-from utils import find, timeout
+from utils import is_rule_isomorphic
 
 
-def mutate_rule_domestic(grammar: VRG, u: int, v: int, mode: str, time: int) -> VRG:
+def assimilate(new_rule: PartRule, grammar: VRG):
+    if new_rule.lhs in grammar.rule_dict:
+        found = False
+        for old_rule in grammar.rule_dict[new_rule.lhs]:
+            if new_rule is not old_rule:
+                if (f := is_rule_isomorphic(new_rule, old_rule)):
+                    # f_inv = {fx: x for x, fx in f.items()}
+                    for x in new_rule.mapping:
+                        old_rule.mapping[x] = f[new_rule.mapping[x]]
+
+                    old_rule.frequency += new_rule.frequency
+                    old_rule.subtree |= new_rule.subtree
+
+                    # lhs, dict_idx = grammar.find_rule(new_rule, where='rule_dict')
+                    # del grammar.rule_dict[lhs][dict_idx]
+
+                    # if len(grammar.rule_dict[lhs]) == 0:
+                    #     del grammar.rule_dict[lhs]
+
+                    # list_idx = grammar.find_rule(new_rule, where='rule_list')
+                    # del grammar.rule_list[list_idx]
+
+                    grammar.replace_rule(new_rule, old_rule, f)
+                    # for x in old_rule.mapping:
+                    #     new_rule.mapping[x] = f_inv[old_rule.mapping[x]]
+
+                    # new_rule.frequency += old_rule.frequency
+                    # new_rule.subtree |= old_rule.subtree
+                    # grammar.replace_rule(old_rule, new_rule, f)
+
+                    break
+            else:
+                found = True
+        else:
+            if not found:
+                grammar.rule_dict[new_rule.lhs] += [new_rule]
+                grammar.rule_list += [new_rule]
+    else:
+        grammar.rule_dict[new_rule.lhs] = [new_rule]
+        grammar.rule_list += [new_rule]
+
+
+def modify_descendants(nts: str, rule_idx: int, grammar: VRG, time: int):
+    # children = [(cidx, r) for cidx, (r, pidx, anode) in enumerate(grammar.rule_tree)
+    #             if pidx == parent_idx and anode == ancestor_node]
+
+    for child_idx, child_rule in grammar.get_children_of(nts, rule_idx):
+        if child_rule.frequency == 1:
+            modified_rule = child_rule
+
+            list_idx = grammar.find_rule(child_rule, where='rule_list')
+            del grammar.rule_list[list_idx]
+
+            lhs, dict_idx = grammar.find_rule(child_rule, where='rule_dict')
+            del grammar.rule_dict[lhs][dict_idx]
+
+            if len(grammar.rule_dict[lhs]) == 0:
+                del grammar.rule_dict[lhs]
+        else:
+            modified_rule = child_rule.copy()
+            modified_rule.frequency = 1
+            modified_rule.copied = True
+            child_rule.frequency -= 1
+            grammar.rule_tree[child_idx][0] = modified_rule
+
+        (v, d), = random.sample(modified_rule.graph.nodes(data=True), 1)
+        d['b_deg'] += 1
+
+        if 'label' in d:
+            d['label'] += 1
+            modified_rule.edit_dist += 1  # cost of relabeling a node
+
+            modify_descendants(v, child_idx, grammar, time)
+
+        modified_rule.lhs += 1
+        modified_rule.edit_dist += 2  # cost of relabeling a node and changing the RHS
+        modified_rule.time_changed = time
+
+        assimilate(modified_rule, grammar)
+
+
+def mutate_rule():
+    raise NotImplementedError
+
+
+def mutate_rule_domestic(grammar: VRG, u: int, v: int, time: int, mode: str = 'add') -> VRG:
     """
         Given an edge event (u, v), where both u and v are already known to the grammar G:
             1. Find the lowest rule R that covers both u and v simultaneously
@@ -18,7 +103,7 @@ def mutate_rule_domestic(grammar: VRG, u: int, v: int, mode: str, time: int) -> 
             3. Merge the modified R' back into G
             4. If R was learned at time t: remove R from G; otherwise, preserve R
 
-        Positional arguments:
+        Required arguments:
             grammar: VRG = the vertex replacement grammar
             u: int = a node covered by the grammar
             v: int = a node covered by the grammar
@@ -28,26 +113,48 @@ def mutate_rule_domestic(grammar: VRG, u: int, v: int, mode: str, time: int) -> 
         Returns:
             The grammar with the mutated rule in it.
     """
-    parent_rule, which_parent, which_children = common_ancestor({u, v}, grammar)
-    which_u = which_children[u]
-    which_v = which_children[v]
-    ancestor_u = list(parent_rule.graph.nodes())[which_u]
-    ancestor_v = list(parent_rule.graph.nodes())[which_v]
+    parent_rule, parent_idx, ancestor_nodes = common_ancestor({u, v}, grammar)
+    ancestor_u = ancestor_nodes[u]
+    ancestor_v = ancestor_nodes[v]
 
-    new_rule = parent_rule.copy()
-    new_rule.time_changed = time
+    if parent_rule.frequency == 1:
+        mutated_rule = parent_rule
+
+        list_idx = grammar.find_rule(parent_rule, where='rule_list')
+        del grammar.rule_list[list_idx]
+
+        lhs, dict_idx = grammar.find_rule(parent_rule, where='rule_dict')
+        del grammar.rule_dict[lhs][dict_idx]
+
+        if len(grammar.rule_dict[lhs]) == 0:
+            del grammar.rule_dict[lhs]
+    else:
+        mutated_rule = parent_rule.copy()
+        mutated_rule.frequency = 1
+        parent_rule.frequency -= 1
+        grammar.rule_tree[parent_idx][0] = mutated_rule
+
+    mutated_rule.edit_dist += 1  # cost of adding/removing an edge
+    mutated_rule.time_changed = time
+
     if mode == 'add':
-        new_rule.graph.add_edge(ancestor_u, ancestor_v)
+        mutated_rule.graph.add_edge(ancestor_u, ancestor_v)
+
+        for ancestor_x in (ancestor_u, ancestor_v):
+            if 'label' in mutated_rule.graph.nodes[ancestor_x]:  # if we modified a nonterminal, propagate that change downstream
+                mutated_rule.edit_dist += 1  # cost of relabeling a node
+                mutated_rule.graph.nodes[ancestor_x]['label'] += 1  # one more edge incident on this symbol
+                modify_descendants(ancestor_x, parent_idx, grammar, time)
     elif mode == 'del':
         try:
-            new_rule.graph.remove_edge(ancestor_u, ancestor_v)
+            mutated_rule.graph.remove_edge(ancestor_u, ancestor_v)
         except Exception:
             print(f'the connection {ancestor_u} --- {ancestor_v} cannot be further severed')
     else:
         raise AssertionError(f'<<mode>> must be either "add" or "del"; found mode={mode} instead')
 
-    incorporate_rule(grammar, parent_rule, new_rule, which_parent, 1)
-    return grammar
+    assimilate(mutated_rule, grammar)
+    # return mutated_rule, parent_rule
 
 
 def mutate_rule_diplomatic(grammar: VRG, u: int, v: int, time: int) -> VRG:
@@ -58,7 +165,7 @@ def mutate_rule_diplomatic(grammar: VRG, u: int, v: int, time: int) -> VRG:
             3. Merge the modified R' back into G
             4. If R was learned at time t: remove R from G; otherwise, preserve R
 
-        Positional arguments:
+        Required arguments:
             grammar: VRG = the vertex replacement grammar
             u: int = a node covered by the grammar
             v: int = a node not covered by the grammar
@@ -67,83 +174,36 @@ def mutate_rule_diplomatic(grammar: VRG, u: int, v: int, time: int) -> VRG:
         Returns:
             The grammar with the mutated rule in it.
     """
-    parent_rule, which_parent, which_u = ancestor(u, grammar)
-    ancestor_u = list(parent_rule.graph.nodes())[which_u]
+    parent_rule, parent_idx, ancestor_u = ancestor(u, grammar)
 
-    new_rule = parent_rule.copy()
-    new_rule.time_changed = time
-    new_rule.graph.add_node(v, b_deg=0)
-    new_rule.graph.add_edge(ancestor_u, v)
+    if parent_rule.frequency == 1:
+        mutated_rule = parent_rule
 
-    grammar.rule_source[v] = grammar.rule_source[u]  # rule_source now points to the same location in the rule_tree for u and v
-    grammar.which_rule_source[v] = list(new_rule.graph.nodes()).index(v)  # compute the pointer for v in the NEW rule's RHS
+        list_idx = grammar.find_rule(parent_rule, where='rule_list')
+        del grammar.rule_list[list_idx]
 
-    incorporate_rule(grammar, parent_rule, new_rule, which_parent, 2)
-    return grammar
+        lhs, dict_idx = grammar.find_rule(parent_rule, where='rule_dict')
+        del grammar.rule_dict[lhs][dict_idx]
 
+        if len(grammar.rule_dict[lhs]) == 0:
+            del grammar.rule_dict[lhs]
+    else:
+        mutated_rule = parent_rule.copy()
+        mutated_rule.frequency = 1
+        parent_rule.frequency -= 1
+        grammar.rule_tree[parent_idx][0] = mutated_rule
 
-def incorporate_rule(grammar: VRG, parent_rule: PartRule, new_rule: PartRule, which_parent: int, penalty: int):
-    assert penalty in [1, 2]
+    mutated_rule.edit_dist += 2  # cost of adding a node and an edge
+    mutated_rule.time_changed = time
+    mutated_rule.graph.add_node(v, b_deg=0, look='at me')
+    mutated_rule.graph.add_edge(ancestor_u, v)
 
-    # check to see if this rule already exists in the grammar
-    parent_idx = find(parent_rule, grammar.rule_list)[0]
+    if 'label' in mutated_rule.graph.nodes[ancestor_u]:  # if we modified a nonterminal, propagate that change downstream
+        mutated_rule.edit_dist += 1  # cost of relabeling a node
+        mutated_rule.graph.nodes[ancestor_u]['label'] += 1  # one more edge incident on this symbol
+        modify_descendants(ancestor_u, parent_idx, grammar, time)
 
-    if new_rule.lhs in grammar.rule_dict:
-        for rule in grammar.rule_dict[new_rule.lhs]:
-            message, is_isomorphic = timeout(lambda x, y: x == y, [new_rule, rule], patience=120)
+    grammar.covering_idx[v] = grammar.covering_idx[u]  # rule_source now points to the same location in the rule_tree for u and v
 
-            # if new_rule is isomorphic to a rule that already exists, merge them
-            if not message and is_isomorphic:
-                rule.frequency += 1
-                grammar.rule_tree[which_parent][0] = rule
-                grammar.temporal_matrix[parent_idx, find(rule, grammar.rule_list)[0]] += 1
-                return
-
-            # if the isomorphism check times out, mark this rule and find the edit distance
-            if message:
-                edit_dist = grammar.minimum_edit_dist(new_rule)
-                new_rule.edit_dist = edit_dist - penalty
-                new_rule.timed_out = True
-                print(message)
-
-    # this rule does not already exist in the grammar
-    new_rule.edit_dist += penalty
-    grammar.replace_rule(parent_rule, new_rule)
-    return
-
-
-def deprecated():
-    raise NotImplementedError
-
-    # if mode == 'hash':  # need to evaluate whether or not to deprecate this mode
-    #     for parent_idx, other_rule in enumerate(grammar.rule_list):
-    #         if parent_rule.hash_equals(other_rule):
-    #             break
-
-    #     for new_idx, other_rule in enumerate(grammar.rule_list):
-    #         if new_rule.hash_equals(other_rule):
-    #             grammar.rule_list[new_idx].frequency += 1
-    #             grammar.rule_tree[which_parent][0] = grammar.rule_list[new_idx]
-    #             grammar.temporal_matrix[parent_idx, new_idx] += 1  # pylint: disable=undefined-loop-variable
-    #             return
-
-    # if decouple:  # if new_rule modifies a rule learned at previous timestep
-    #     new_idx = len(grammar.rule_list)  # the index corresponding to the new rule
-    #     grammar.temporal_matrix = np.append(grammar.temporal_matrix,
-    #                                         np.zeros((1, new_idx)),
-    #                                         axis=0)
-    #     grammar.temporal_matrix = np.append(grammar.temporal_matrix,
-    #                                         np.zeros((new_idx + 1, 1)),
-    #                                         axis=1)
-
-    #     grammar.rule_list.append(new_rule)
-    #     grammar.rule_tree[which_parent][0] = new_rule
-
-    #     if new_rule.lhs in grammar.rule_dict:
-    #         grammar.rule_dict[new_rule.lhs].append(new_rule)
-    #     else:
-    #         grammar.rule_dict[new_rule.lhs] = [new_rule]
-
-    #     grammar.temporal_matrix[parent_idx, new_idx] += 1
-    # else:
-    #     grammar.replace_rule(parent_rule, new_rule)
+    assimilate(mutated_rule, grammar)
+    # return mutated_rule, parent_rule

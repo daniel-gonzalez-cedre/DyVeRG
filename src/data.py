@@ -5,10 +5,14 @@ import git
 import networkx as nx
 
 
-def load_data(dataname: str = 'email-dnc', lookback: int = 0) -> list[tuple[int, nx.Graph]]:
+def load_data(dataname: str = 'email-dnc', lookback: int = 0, override=False) -> list[tuple[int, nx.Graph]]:
     assert dataname in ['email-dnc', 'email-eucore', 'email-enron', 'facebook-links']
 
-    rootpath = git.Repo(getcwd(), search_parent_directories=True).git.rev_parse("--show-toplevel")
+    if not override:
+        rootpath = git.Repo(getcwd(), search_parent_directories=True).git.rev_parse("--show-toplevel")
+    else:
+        rootpath = '/Users/danielgonzalez/repos/DyVeRG/'
+
     datapath = f'{rootpath}/data/{dataname}/{dataname}_processed.edgelist'
 
     with open(join(rootpath, datapath), 'r') as infile:

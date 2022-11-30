@@ -293,10 +293,10 @@ def get_dendrogram(embeddings, method='best', metric='euclidean'):
 
     def print_tree(node):
         if node.is_leaf():  # single leaf
-            return [labels[node.id]]
+            return [labels[node.idn]]
 
         if node.left.is_leaf() and node.right.is_leaf():  # combine two leaves into one
-            return [[labels[node.left.id]], [labels[node.right.id]]]
+            return [[labels[node.left.idn]], [labels[node.right.idn]]]
 
         left_list = print_tree(node.left)
         right_list = print_tree(node.right)

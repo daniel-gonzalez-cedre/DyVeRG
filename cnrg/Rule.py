@@ -1,32 +1,71 @@
-# import numpy as np
+from typing import Any
+
 import networkx as nx
 import networkx.algorithms.isomorphism as iso
 
 # import cnrg.MDL as MDL
 from cnrg import MDL
 from cnrg.LightMultiGraph import convert
+from cnrg.LightMultiGraph import LightMultiGraph as LMG
 
 
 class BaseRule:
-    """
-    Base class for Rule
-    """
+    '''
+        Prototypical rule in a vertex-replacement graph grammar
 
-    __slots__ = "lhs", "graph", "level", "dl", "frequency", "id", "non_terminals", "subtree", "time", "time_changed", "edit_dist", "timed_out"
+        Class attributes:
+            lhs = the left-hand side nonterminal symbol
+            graph = the right-hand side graph
+            level = level of discovery during extraction (the root is at 0)
+            frequency = the number of times this rule was extracted (up to isomorphism)
+            idn = the index in the grammar's rule_list referring to this rule
+            time = the timestamp when this rule was extracted
+            time_changed = the most recent timestamp when this rule was modified
+            subtree = the original names of the nodes this rule was extracted from
+            mapping = dict mapping ``original_node_names`` -> ``rule_node_names``
+            edit_dist = the minimum graph edit distance between this rule and all other rules in the grammar
+                        == 0 if this rule was added during the course of learning a static grammar
+                        >= 0 if this rule was added by merging two grammars or modifying a previous rule
+            timed_out = a flag indicating whether or not the edit_dist computation timed out at any point for this rule
 
-    def __init__(self, lhs, graph, level=0, dl=0, frequency=1, id=None, time=None, edit_dist=0, timed_out: bool = False):
-        self.lhs = lhs  # the left hand side: the number of boundary edges
-        self.graph = convert(graph)  # the right hand side subgraph
-        self.level = level  # level of discovery in the tree (the root is at 0)
-        self.dl = dl  # the description length of encoding the rule (in bits)
-        self.frequency = frequency  # frequency of occurrence
-        self.id = id
+        Class properties:
+            mdl = the description length of encoding the rule (in bits)
+            dl = the description length of encoding the rule (in bits)
+            non_terminals = list of nonterminal symbols on this rule's right-hand side
+    '''
+
+    __slots__ = (
+        'lhs', 'graph', 'level', 'frequency', 'idn',
+        'subtree', 'mapping', 'time', 'time_changed',
+        'edit_dist', 'timed_out'
+    )
+
+    def __init__(self, lhs: int, graph: nx.Graph, level: int = 0, frequency: int = 1, idn: int = None,
+                 time: int = None, subtree: set[int] = None, mapping: dict[int, Any] = None,
+                 edit_dist: int = 0, timed_out: bool = False):
+        self.lhs = lhs
+        self.graph: LMG = convert(graph)
+        self.level = level
+        self.frequency = frequency
+        self.idn = idn
         self.time = time
         self.time_changed = time
-        self.non_terminals = [d['label'] for _, d in self.graph.nodes(data=True) if 'label' in d]
-        self.subtree = None  # store original vertex ids (subgraph-to-subgraph dynamics)
-        self.edit_dist: int = edit_dist
-        self.timed_out: bool = timed_out
+        self.subtree = subtree if subtree is not None else set()
+        self.mapping = mapping if mapping is not None else {}
+        self.edit_dist = edit_dist
+        self.timed_out = timed_out
+
+    @property
+    def non_terminals(self):
+        return [d['label'] for _, d in self.graph.nodes(data=True) if 'label' in d]
+
+    @property
+    def mdl(self) -> float:
+        return self.dl
+
+    @property
+    def dl(self) -> float:
+        raise NotImplementedError
 
     # approximate equality using Weisfeiler-Lehman graph hashing
     def hash_equals(self, other):
@@ -49,26 +88,20 @@ class BaseRule:
 
         return hash1 == hash2
 
-        # return (self.lhs == other.lhs) and (nx.weisfeiler_lehman_graph_hash(self.graph) == nx.weisfeiler_lehman_graph_hash(other.graph))
-
     def __str__(self):
-        st = '({}) {} -> (n = {}, m = {})'.format(self.id, self.lhs, self.graph.order(), self.graph.size())
-        # print non-terminals if present
-
+        st = f'({self.idn}) {self.lhs} -> (n = {self.graph.order()}, m = {self.graph.size()})'
         if len(self.non_terminals) != 0:  # if it has non-terminals, print the sizes
             st += 'nt: {' + ','.join(map(str, self.non_terminals)) + '}'
-
         if self.frequency > 1:  # if freq > 1, show it in square brackets
-            st += '[{}]'.format(self.frequency)
+            st += f'[{self.frequency}]'
         return st
 
     def __repr__(self):
-        st = '{} -> ({}, {})'.format(self.lhs, self.graph.order(), self.graph.size())
-
+        st = f'{self.lhs} -> ({self.graph.order()}, {self.graph.size()})'
         if len(self.non_terminals) != 0:  # if it has non-terminals, print the sizes
             st += '{' + ','.join(map(str, self.non_terminals)) + '}'
         if self.frequency > 1:  # if freq > 1, show it in square brackets
-            st += '[{}]'.format(self.frequency)
+            st += f'[{self.frequency}]'
         return st
 
     # isomorphism-based equality checking
@@ -95,15 +128,16 @@ class BaseRule:
         # g = nx.freeze(self.graph)
         # return hash((self.lhs, g))
 
-    def __deepcopy__(self, memodict={}):
+    def copy(self):
         copy_rule = BaseRule(
             lhs=self.lhs,
             graph=self.graph.copy(),
             level=self.level,
-            dl=self.dl,
             frequency=self.frequency,
-            id=self.id,
+            idn=self.idn,
             time=self.time,
+            subtree=self.subtree.copy(),
+            mapping=self.mapping.copy(),
             edit_dist=self.edit_dist,
             timed_out=self.timed_out
         )
@@ -148,12 +182,11 @@ class FullRule(BaseRule):
     """
     __slots__ = 'internal_nodes', 'edges_covered'
 
-    def __init__(self, lhs, graph, internal_nodes, level=0, dl=0, frequency=1, edges_covered=None, id=None, time=None, edit_dist=0, timed_out: bool = False):
+    def __init__(self, lhs, graph, internal_nodes, level=0, frequency=1, edges_covered=None, idn=None, time=None, edit_dist=0, timed_out: bool = False):
         super().__init__(
             lhs=lhs,
             graph=graph,
             level=level,
-            dl=dl,
             frequency=frequency,
             time=time,
             edit_dist=edit_dist,
@@ -161,53 +194,31 @@ class FullRule(BaseRule):
         )
         self.internal_nodes = internal_nodes  # the set of internal nodes
         self.edges_covered = edges_covered  # edges in the original graph that's covered by the rule
-        self.subtree = None
 
-    def __deepcopy__(self, memodict={}):
-        copy_rule = FullRule(
-            lhs=self.lhs,
-            graph=self.graph.copy(),
-            level=self.level,
-            dl=self.dl,
-            frequency=self.frequency,
-            internal_nodes=self.internal_nodes,
-            edges_covered=self.edges_covered,
-            id=self.id,
-            time=self.time,
-            edit_dist=self.edit_dist,
-            timed_out=self.timed_out
-        )
-        copy_rule.time_changed = self.time_changed
-        return copy_rule
+    @property
+    def dl(self) -> float:
+        """
+        Updates the MDL cost of the RHS. l_u is the number of unique entities in the graph.
+        We have two types of nodes (internal and external) and one type of edge
+        :return:
+        """
+        return MDL.gamma_code(max(0, self.lhs) + 1) + MDL.graph_dl(self.graph) + MDL.gamma_code(self.frequency + 1)
 
     def copy(self):
         copy_rule = FullRule(
             lhs=self.lhs,
             graph=self.graph.copy(),
             level=self.level,
-            dl=self.dl,
             frequency=self.frequency,
-            internal_nodes=self.internal_nodes,
-            edges_covered=self.edges_covered,
-            id=self.id,
+            internal_nodes=self.internal_nodes.copy(),
+            edges_covered=self.edges_covered.copy(),
+            idn=self.idn,
             time=self.time,
             edit_dist=self.edit_dist,
             timed_out=self.timed_out
         )
         copy_rule.time_changed = self.time_changed
         return copy_rule
-
-    def mdl(self):
-        """
-        Updates the MDL cost of the RHS. l_u is the number of unique entities in the graph.
-        We have two types of nodes (internal and external) and one type of edge
-        :return:
-        """
-        self.dl = (
-            MDL.gamma_code(max(0, self.lhs) + 1) +
-            MDL.graph_dl(self.graph) +
-            MDL.gamma_code(self.frequency + 1)
-        )
 
     def generalize_rhs(self):
         """
@@ -216,19 +227,20 @@ class FullRule(BaseRule):
         :param self: RHS subgraph
         :return:
         """
-        mapping = {}
+        self.mapping = {}
         internal_node_counter = 'a'
         boundary_node_counter = 0
 
         for n in self.internal_nodes:
-            mapping[n] = internal_node_counter
+            self.mapping[n] = internal_node_counter
             internal_node_counter = chr(ord(internal_node_counter) + 1)
 
         for n in [x for x in self.graph.nodes() if x not in self.internal_nodes]:
-            mapping[n] = boundary_node_counter
+            self.mapping[n] = boundary_node_counter
             boundary_node_counter += 1
-        self.graph = nx.relabel_nodes(self.graph, mapping=mapping)
-        self.internal_nodes = {mapping[n] for n in self.internal_nodes}
+
+        self.graph = nx.relabel_nodes(self.graph, mapping=self.mapping)
+        self.internal_nodes = {self.mapping[n] for n in self.internal_nodes}
 
     def contract_rhs(self):
         """
@@ -261,44 +273,48 @@ class PartRule(BaseRule):
     """
     Rule class for Partial option
     """
-    def __init__(self, lhs, graph, level=0, dl=0, frequency=1, id=None, time=None, edit_dist=0, timed_out=False):
+    def __init__(self, lhs: int, graph: nx.Graph, level: int = 0, dl: int = 0, frequency: int = 1, idn: int = None,
+                 time: int = None, subtree: set[int] = None, mapping: dict[int, str] = None,
+                 edit_dist: int = 0, timed_out: bool = False):
         super().__init__(
             lhs=lhs,
             graph=graph,
             level=level,
-            dl=dl,
             frequency=frequency,
-            id=id,
+            idn=idn,
             time=time,
+            subtree=subtree,
+            mapping=mapping,
             edit_dist=edit_dist,
             timed_out=timed_out
         )
-        self.subtree = None
 
-    def __deepcopy__(self, memodict={}):
-        copy_rule = PartRule(
-            lhs=self.lhs,
-            graph=self.graph.copy(),
-            level=self.level,
-            dl=self.dl,
-            frequency=self.frequency,
-            id=self.id,
-            time=self.time,
-            edit_dist=self.edit_dist,
-            timed_out=self.timed_out
-        )
-        copy_rule.time_changed = self.time_changed
-        return copy_rule
+    @property
+    def dl(self) -> float:
+        """
+        Calculates the MDL for the rule. This includes the encoding of boundary degrees of the nodes.
+        l_u = 2 (because we have one type of nodes and one type of edge)
+        :return:
+        """
+        b_deg = nx.get_node_attributes(self.graph, 'b_deg')
+        assert len(b_deg) > 0, 'invalid b_deg'
+        max_boundary_degree = max(b_deg.values())
+        # l_u = 2
+        # for node, data in self.graph.nodes(data=True):
+        #     if 'label' in data:  # it's a non-terminal
+        #         l_u = 3
+        return MDL.gamma_code(max(0, self.lhs) + 1) + MDL.graph_dl(self.graph) + MDL.gamma_code(self.frequency + 1) + self.graph.order() * MDL.gamma_code(max_boundary_degree + 1)
 
     def copy(self):
         copy_rule = PartRule(
             lhs=self.lhs,
             graph=self.graph.copy(),
             level=self.level,
-            dl=self.dl,
             frequency=self.frequency,
-            id=self.id,
+            idn=self.idn,
             time=self.time,
+            subtree=self.subtree.copy(),
+            mapping=self.mapping.copy(),
             edit_dist=self.edit_dist,
             timed_out=self.timed_out
         )
@@ -312,48 +328,28 @@ class PartRule(BaseRule):
         :param self: RHS subgraph
         :return:
         """
-        mapping = {}
+        self.mapping = {}
         internal_node_counter = 'a'
 
         for n in self.graph.nodes():
-            mapping[n] = internal_node_counter
+            self.mapping[n] = internal_node_counter
             internal_node_counter = chr(ord(internal_node_counter) + 1)
 
-        nx.relabel_nodes(self.graph, mapping=mapping, copy=False)
-
-    def mdl(self):
-        '''
-        Calculates the MDL for the rule. This includes the encoding of boundary degrees of the nodes.
-        l_u = 2 (because we have one type of nodes and one type of edge)
-        :return:
-        '''
-        b_deg = nx.get_node_attributes(self.graph, 'b_deg')
-        assert len(b_deg) > 0, 'invalid b_deg'
-        max_boundary_degree = max(b_deg.values())
-        # l_u = 2
-        # for node, data in self.graph.nodes(data=True):
-        #     if 'label' in data:  # it's a non-terminal
-        #         l_u = 3
-        self.dl = (
-            MDL.gamma_code(max(0, self.lhs) + 1) +
-            MDL.graph_dl(self.graph) +
-            MDL.gamma_code(self.frequency + 1) +
-            self.graph.order() * MDL.gamma_code(max_boundary_degree + 1)
-        )
+        nx.relabel_nodes(self.graph, mapping=self.mapping, copy=False)
 
 
 class NoRule(PartRule):
     """
     Class for no_info
     """
-    def __deepcopy__(self, memodict={}):
+
+    def copy(self):
         copy_rule = NoRule(
             lhs=self.lhs,
             graph=self.graph.copy(),
             level=self.level,
-            dl=self.dl,
             frequency=self.frequency,
-            id=self.id,
+            idn=self.idn,
             time=self.time,
             edit_dist=self.edit_dist,
             timed_out=self.timed_out
@@ -361,29 +357,11 @@ class NoRule(PartRule):
         copy_rule.time_changed = self.time_changed
         return copy_rule
 
-    def copy(self, memodict={}):
-        copy_rule = NoRule(
-            lhs=self.lhs,
-            graph=self.graph.copy(),
-            level=self.level,
-            dl=self.dl,
-            frequency=self.frequency,
-            id=self.id,
-            time=self.time,
-            edit_dist=self.edit_dist,
-            timed_out=self.timed_out
-        )
-        copy_rule.time_changed = self.time_changed
-        return copy_rule
-
-    def mdl(self):
+    @property
+    def dl(self) -> float:
         """
         Calculates the MDL for the rule. This just includes encoding the graph.
         l_u = 2 (because we have one type of nodes and one type of edge)
         :return:
         """
-        self.dl = (
-            MDL.gamma_code(max(0, self.lhs) + 1) +
-            MDL.graph_dl(self.graph) +
-            MDL.gamma_code(self.frequency + 1)
-        )
+        return MDL.gamma_code(max(0, self.lhs) + 1) + MDL.graph_dl(self.graph) + MDL.gamma_code(self.frequency + 1)

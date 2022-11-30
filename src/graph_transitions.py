@@ -1,4 +1,3 @@
-import pdb
 import sys
 
 sys.path.append('../')
@@ -56,7 +55,7 @@ def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph,
                             if (u in territory) or (v in territory)}
 
                 for u, v in frontier:
-                    assert u in charted_grammar.rule_source and v in territory_grammar.rule_source
+                    assert u in charted_grammar.covering_idx and v in territory_grammar.covering_idx
 
                 charted_grammar = join_grammars(charted_grammar, territory_grammar, frontier)
 
@@ -83,7 +82,7 @@ def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph,
                 else:
                     raise AssertionError(f'{u}, {v}')
 
-    charted_grammar.init_temporal_matrix()
+    # charted_grammar.init_temporal_matrix()
 
     conquered = set(home_graph.nodes())
     changes = edges_domestic | edges_diplomatic
@@ -91,12 +90,13 @@ def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph,
     # handle the edge additions
     while len(changes) > 0:
         for u, v in tqdm(changes, desc='additions', leave=True):
+
             if u in conquered and v in conquered:
-                charted_grammar = mutate_rule_domestic(charted_grammar, u, v, 'add', time)
+                mutate_rule_domestic(charted_grammar, u, v, time, mode='add')
             elif u in conquered and v not in conquered:
-                charted_grammar = mutate_rule_diplomatic(charted_grammar, u, v, time)
+                mutate_rule_diplomatic(charted_grammar, u, v, time)
             elif u not in conquered and v in conquered:
-                charted_grammar = mutate_rule_diplomatic(charted_grammar, v, u, time)
+                mutate_rule_diplomatic(charted_grammar, v, u, time)
             else:
                 raise AssertionError(f'{u}, {v}')
 
@@ -110,5 +110,7 @@ def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph,
     # for u, v in tqdm(edge_deletions, desc='deletions', leave=True):
     #     charted_grammar = update_rule_domestic(charted_grammar, u, v, 'del')
 
-    charted_grammar.mdl()
+    for idx, rule in enumerate(charted_grammar.rule_list):
+        rule.idn = idx
+
     return charted_grammar

@@ -35,8 +35,8 @@ class LightMultiGraph(nx.Graph):
 
     def add_edge(self, u_of_edge, v_of_edge, attr_dict=None, **attr):
         u, v = (u_of_edge, v_of_edge)
-        edge_colors = None
-        edge_color = None
+        colors = None
+        color = None
         attr_records = None
 
         if attr_dict is not None and 'weight' in attr_dict:
@@ -51,32 +51,30 @@ class LightMultiGraph(nx.Graph):
         elif attr is not None and 'attr_records' in attr:
             attr_records = attr['attr_records']
 
-        if attr_dict is not None and 'edge_colors' in attr_dict:
-            edge_colors = attr_dict['edge_colors']
-        elif attr is not None and 'edge_colors' in attr:
-            edge_colors = attr['edge_colors']
-        elif attr_dict is not None and 'edge_color' in attr_dict:
-            edge_color = attr_dict['edge_color']
-        elif attr is not None and 'edge_color' in attr:
-            edge_color = attr['edge_color']
+        if attr_dict is not None and 'colors' in attr_dict:
+            colors = attr_dict['colors']
+        elif attr is not None and 'colors' in attr:
+            colors = attr['colors']
+        elif attr_dict is not None and 'color' in attr_dict:
+            color = attr_dict['color']
+        elif attr is not None and 'color' in attr:
+            color = attr['color']
 
         if self.has_edge(u, v):  # edge already exists
             self[u][v]['weight'] += wt
-            if edge_colors is not None:
-                self[u][v]['edge_colors'] += edge_colors
-            if edge_color is not None:
-                self[u][v]['edge_color'] = edge_color
+            if colors is not None:
+                self[u][v]['colors'] += colors
+            elif color is not None:
+                self[u][v]['colors'] = [color]
             if attr_records is not None:
                 self[u][v]["attr_records"] += attr_records
         else:
-            if edge_colors is not None:
-                super().add_edge(u, v, weight=wt, edge_colors=edge_colors)
-            elif edge_color is not None:
-                super().add_edge(u, v, weight=wt, edge_color=edge_color)
+            if colors is not None:
+                super().add_edge(u, v, weight=wt, colors=colors)
+            elif color is not None:
+                super().add_edge(u, v, weight=wt, colors=[color])
             elif attr_records is not None:
-                super().add_edge(
-                    u, v, weight=wt, attr_records=attr_records
-                )
+                super().add_edge(u, v, weight=wt, attr_records=attr_records)
             else:
                 super().add_edge(u, v, weight=wt)
 
@@ -89,7 +87,7 @@ class LightMultiGraph(nx.Graph):
                 u, v = e
                 dd = {}  # doesnt need edge_attr_dict_factory
             else:
-                raise nx.NetworkXError('Edge tuple %s must be a 2-tuple or 3-tuple.' % (e,))
+                raise nx.NetworkXError(f'Edge tuple {e} must be a 2-tuple or 3-tuple.')
             if attr_dict is not None:
                 self.add_edge(u, v, attr_dict={**dd, **attr_dict}, **attr)
             else:
@@ -102,8 +100,10 @@ class LightMultiGraph(nx.Graph):
             super().remove_edge(u, v)
 
     def number_of_edges(self, u=None, v=None):
-        if u is None:
-            return self.size()
+        if u is None and v is None:
+            return self.size()  # number of edges in the graph
+        if u is None or v is None:
+            return 0  # nonsense
         try:
             return self[u][v]['weight']
         except KeyError:

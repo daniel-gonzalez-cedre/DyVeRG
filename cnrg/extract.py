@@ -2,14 +2,14 @@
 VRG extraction
 """
 import abc
-import logging
-from typing import List, Tuple, Dict, Set, Any, Union
 import math
-from time import time
-import networkx as nx
-from tqdm import tqdm
-import itertools
 import pickle
+import itertools
+# import logging
+from typing import List, Tuple, Dict, Set, Any, Union
+
+from tqdm import tqdm
+import networkx as nx
 
 # import sys
 # sys.path.append('..')
@@ -17,7 +17,7 @@ import pickle
 
 from cnrg.LightMultiGraph import LightMultiGraph
 from cnrg.MDL import graph_dl
-from cnrg.Rule import FullRule, NoRule, PartRule
+from cnrg.Rule import BaseRule, FullRule, PartRule, NoRule
 from cnrg.globals import find_boundary_edges
 from cnrg.part_info import set_boundary_degrees
 from cnrg.Tree import TreeNode
@@ -27,17 +27,17 @@ from cnrg.VRG import VRG
 class Record:
     __slots__ = (
         'tnodes_list',
-        'rule_id',
+        'rule_idn',
         'frequency',
         'boundary_edges_list',
         'subtree_list',
         'score'
     )
 
-    def __init__(self, rule_id: int):
+    def __init__(self, rule_idn: int):
         self.tnodes_list: List[TreeNode] = []
-        self.rule_id: int = rule_id
-        self.frequency: int = 0  # number of times we have seen this rule_id
+        self.rule_idn: int = rule_idn
+        self.frequency: int = 0  # number of times we have seen this rule_idn
         self.boundary_edges_list: List[Set[Tuple[int, int]]] = []
         self.subtree_list: List[Set[int]] = []
         self.score = None  # score of the rule
@@ -55,14 +55,14 @@ class Record:
         st = ''
         if self.frequency == 0:
             st += '[x] '
-        st += f'{self.rule_id} > {self.tnodes_list}'
+        st += f'{self.rule_idn} > {self.tnodes_list}'
         return st
 
     def __str__(self):
         st = ''
         if self.frequency == 0:
             st += '[x] '
-        st += f'{self.rule_id} > {self.tnodes_list} {round(self.score, 3)}'
+        st += f'{self.rule_idn} > {self.tnodes_list} {round(self.score, 3)}'
         return st
 
 
@@ -85,7 +85,7 @@ def create_rule(subtree: Set[int], g: LightMultiGraph, mode: str) -> Tuple[PartR
         rule.contract_rhs()  # contract and generalize
 
     elif mode == 'part':  # in the partial boundary info, we need to set the boundary degrees
-        rule = PartRule(lhs=len(boundary_edges), graph=sg)
+        rule = PartRule(lhs=len(boundary_edges), graph=sg, subtree=subtree)
         set_boundary_degrees(g, rule.graph)
         rule.generalize_rhs()
 
@@ -93,8 +93,6 @@ def create_rule(subtree: Set[int], g: LightMultiGraph, mode: str) -> Tuple[PartR
         rule = NoRule(lhs=len(boundary_edges), graph=sg)
         rule.generalize_rhs()
 
-    # store original vertex ids (subgraph-to-subgraph dynamics)
-    rule.subtree = subtree
     return rule, boundary_edges
 
 
@@ -116,12 +114,12 @@ def compress_graph(g: LightMultiGraph, subtree: Set[int], boundary_edges: Any, p
         # compute the boundary edges
         boundary_edges = find_boundary_edges(g, subtree)
 
-    removed_edges = set()
-    removed_nodes = set()
+    removed_edges: set[tuple[int, int]] = set()
+    removed_nodes: set[int] = set()
     # step 1: remove the nodes from subtree, keep track of the removed edges
     if not permanent:
-        removed_edges = list(g.subgraph(subtree).edges(data=True))
-        removed_nodes = list(g.subgraph(subtree).nodes(data=True))
+        removed_edges: list[tuple[int, int]] = list(g.subgraph(subtree).edges(data=True))
+        removed_nodes: list[int] = list(g.subgraph(subtree).nodes(data=True))
     g.remove_nodes_from(subtree)
     new_node = min(subtree)
 
@@ -172,18 +170,18 @@ def compress_graph(g: LightMultiGraph, subtree: Set[int], boundary_edges: Any, p
 
 
 class BaseExtractor(abc.ABC):
-    # __slots__ = 'type', 'g', 'root', 'tnode_to_score', 'grammar', 'mu'
+    # __slots__ = 'gtype', 'g', 'root', 'tnode_to_score', 'grammar', 'mu'
 
-    def __init__(self, g: LightMultiGraph, type: str, root: TreeNode, grammar: VRG, mu: int) -> None:
-        assert type in (
+    def __init__(self, g: LightMultiGraph, gtype: str, root: TreeNode, grammar: VRG, mu: int) -> None:
+        assert gtype in (
             'local_dl',
             'global_dl',
             'mu_random',
             'mu_level',
             'mu_dl',
             'mu_level_dl'
-        ), f'Invalid mode: {type}'
-        self.type = type
+        ), f'Invalid mode: {gtype}'
+        self.gtype = gtype
         self.g = g  # the graph
         self.root = root
         self.tnode_to_score: Dict[TreeNode, Any] = {}
@@ -192,7 +190,7 @@ class BaseExtractor(abc.ABC):
         self.extracted_sequence = []  # stores list of rules in the order they were extracted
 
     def __str__(self) -> str:
-        st = f'Type: {self.type}, mu: {self.mu}'
+        st = f'Type: {self.gtype}, mu: {self.mu}'
         return st
 
     def __repr__(self) -> str:
@@ -218,8 +216,8 @@ class BaseExtractor(abc.ABC):
         active_nodes = set(self.g.nodes())
         stack: List[TreeNode] = [start_tnode]
         nodes_visited = 0
-        total_tree_nodes = len([child for child in start_tnode.children if isinstance(child, str)]) + 1  # +1 for root
-        is_global_extractor = hasattr(self, 'rule_id_to_record')
+        # total_tree_nodes = len([child for child in start_tnode.children if isinstance(child, str)]) + 1  # +1 for root
+        is_global_extractor = hasattr(self, 'rule_idn_to_record')
 
         # logging.warning('Updating the tree')
         # with tqdm(total=100, bar_format='{l_bar}{bar}|[{elapsed}<{remaining}]', ncols=50) as pbar:
@@ -229,14 +227,15 @@ class BaseExtractor(abc.ABC):
             subtree = tnode.leaves & active_nodes
 
             if is_global_extractor:  # this is true for GlobalExtractor objects only
-                self.rule_id_to_record: Dict[int, Record]
+                self.rule_idn_to_record: Dict[int, Record]
 
                 rule, boundary_edges = create_rule(subtree=subtree, g=self.g, mode='part')
-                rule_id = self.grammar.add_rule(rule)  # adds the rule to the grammar only if it's new, updates otherwise
+                rule_idn = self.grammar.add_rule(rule)  # adds the rule to the grammar only if it's new, updates otherwise
 
-                if rule_id not in self.rule_id_to_record:
-                    self.rule_id_to_record[rule_id] = Record(rule_id=rule_id)
-                self.rule_id_to_record[rule_id].update(
+                if rule_idn not in self.rule_idn_to_record:
+                    self.rule_idn_to_record[rule_idn] = Record(rule_idn=rule_idn)
+
+                self.rule_idn_to_record[rule_idn].update(
                     boundary_edges=boundary_edges,
                     subtree=subtree,
                     tnode=tnode
@@ -266,7 +265,7 @@ class BaseExtractor(abc.ABC):
         new_tnode_key = min(tnode_leaves)
         old_tnode_key = tnode.key
         tnode_children = tnode.children
-        is_global_extractor = hasattr(self, 'rule_id_to_record')
+        is_global_extractor = hasattr(self, 'rule_idn_to_record')
 
         tnode = tnode.parent
         while tnode is not None:
@@ -312,24 +311,16 @@ class BaseExtractor(abc.ABC):
         """
         generates the grammar
         """
-        start_time = time()
         num_nodes = self.g.order()
 
-        is_global_extractor = hasattr(self, 'final_grammar')
-        # tqdm.write(f'Extracting grammar name:{self.grammar.name} mu:{self.grammar.mu} type:{self.grammar.type} clustering:{self.grammar.clustering}')
         with tqdm(total=100, bar_format='{l_bar}{bar}|[{elapsed}<{remaining}]', ncols=50) as pbar:
             while True:
                 rule = self.extract_rule()
                 assert nx.is_connected(self.g), 'graph is disconnected'
                 assert rule is not None
-                logging.debug(f'new rule: {rule}')
 
+                rule = self.grammar.add_rule(rule)
                 self.extracted_sequence += [rule]
-
-                if is_global_extractor:
-                    self.final_grammar.add_rule(rule)
-                else:
-                    self.grammar.add_rule(rule)
 
                 percent = (1 - (self.g.order() - 1) / (num_nodes - 1)) * 100 if num_nodes > 1 else 100
                 curr_progress = percent - pbar.n
@@ -338,14 +329,10 @@ class BaseExtractor(abc.ABC):
                     assert self.g.order() == 1, 'Graph not correctly compressed'
                     break
 
-        if is_global_extractor:
-            self.grammar = self.final_grammar
-        # logging.warning(f'{self.grammar} generated in {round(time() - start_time, 3)} secs\n')
-
 
 class MuExtractor(BaseExtractor):
-    def __init__(self, g: LightMultiGraph, type: str, root: TreeNode, grammar: VRG, mu: int):
-        super().__init__(g=g, type=type, root=root, grammar=grammar, mu=mu)
+    def __init__(self, g: LightMultiGraph, gtype: str, root: TreeNode, grammar: VRG, mu: int):
+        super().__init__(g=g, gtype=gtype, root=root, grammar=grammar, mu=mu)
         self.update_subtree_scores(start_tnode=self.root)  # initializes the scores
 
     def tnode_score(self, tnode: TreeNode, subtree: Set[int]) -> Union[float, Tuple[float, int], Tuple[float, int, float]]:
@@ -367,21 +354,20 @@ class MuExtractor(BaseExtractor):
         else:
             mu_score = 0  # no penalty
 
-        if self.type == 'mu_random':
+        if self.gtype == 'mu_random':
             score = mu_score  # |mu - nleaf|
-        elif self.type == 'mu_level':
+        elif self.gtype == 'mu_level':
             score = mu_score, tnode.level  # |mu - nleaf|, level of the tnode
-        elif 'dl' in self.type:  # compute cost only if description length is used for scores
+        elif 'dl' in self.gtype:  # compute cost only if description length is used for scores
             if diff > 0:  # don't bother creating the rule
                 rule_cost = None
             else:
-                rule, _ = create_rule(subtree=subtree, g=self.g, mode='part')
-                rule.mdl()
-                rule_cost = rule.dl
+                temp_rule, _ = create_rule(subtree=subtree, g=self.g, mode='part')
+                rule_cost = temp_rule.mdl
 
-            if self.type == 'mu_dl':
+            if self.gtype == 'mu_dl':
                 score = mu_score, rule_cost
-            elif self.type == 'mu_level_dl':
+            elif self.gtype == 'mu_level_dl':
                 score = mu_score, tnode.level, rule_cost
 
         assert score is not None, 'score is None'
@@ -402,44 +388,35 @@ class MuExtractor(BaseExtractor):
             del self.tnode_to_score[child]
         tnode.make_leaf(new_key=new_key)
 
-    def extract_rule(self) -> PartRule:
+    def extract_rule(self) -> BaseRule:
         """
         Step 1: get best tnode
         Step 2: create rule, add to grammar
         Step 3: compress graph, update tree
         :return:
         """
-        best_tnode, score = self.get_best_tnode_and_score()
-        logging.debug(f'\nbest tnode: {best_tnode}, score: {score}')
-        subtree = best_tnode.leaves & set(self.g.nodes())
 
-        # for link prediction:
-            # all nonterminals (rules) of subgraph need to update new rule as parent for tree traversal
-            # terminals need to point to rule as their source
+        best_tnode, _ = self.get_best_tnode_and_score()
+        # logging.debug(f'\nbest tnode: {best_tnode}, score: {score}')
+        subtree = best_tnode.leaves & set(self.g.nodes())
 
         rule, boundary_edges = create_rule(subtree=subtree, g=self.g, mode='part')
 
-        # add rule to rule tree
-        # format: [rule, parent_index, which_child]
+        # add rule to the decomposition: [rule, parent_index, ancestor_node]
         self.grammar.rule_tree.append([rule, None, None])
-        index = len(self.grammar.rule_tree) - 1
+        this_idx = len(self.grammar.rule_tree) - 1
 
         # !!! CRITICAL SECTOR !!!
-        # for real vertices, map to the rule that they belong to which child they are of parent rule
-        ch_i = 0
         for x, d in self.g.subgraph(subtree).nodes(data=True):
-            if 'label' not in d:
-                self.grammar.rule_source[x] = index
-                self.grammar.which_rule_source[x] = ch_i
-            else:
-                # for nonterminals, update them to point to their parent and which child they are
-                ch_ind = self.grammar.comp_map[x]
-                self.grammar.rule_tree[ch_ind][1] = index
-                self.grammar.rule_tree[ch_ind][2] = ch_i
-            ch_i += 1
+            if 'label' in d:  # if x is a nonterminal symbol
+                child_idx = self.grammar.comp_map[x]  # find the rule corresponding to x
+                self.grammar.rule_tree[child_idx][1] = this_idx  # make this rule the parent of that rule
+                self.grammar.rule_tree[child_idx][2] = rule.mapping[x]  # map that child rule to this RHS node
+                self.grammar.push_down_branch(self.grammar.rule_tree[child_idx][0])  # increase descendants' levels
+            else:  # if x is a regular node
+                self.grammar.covering_idx[x] = this_idx  # associate that node with this rule in the decomposition
 
-        # map compressed node to index in rule tree
-        self.grammar.comp_map[min(subtree)] = index
+        self.grammar.comp_map[min(subtree)] = this_idx  # map compressed node to this index in the decomposition
         # !!! CRITICAL SECTOR !!!
 
         compress_graph(g=self.g, subtree=subtree, boundary_edges=boundary_edges, permanent=True)
@@ -454,12 +431,12 @@ class LocalExtractor(BaseExtractor):
     """
     # __slots__ = ('__dict__', 'graph_dl', )
 
-    def __init__(self, g: LightMultiGraph, type: str, root: TreeNode, grammar: VRG, mu: int):
-        super().__init__(g=g, type=type, root=root, grammar=grammar, mu=mu)
+    def __init__(self, g: LightMultiGraph, gtype: str, root: TreeNode, grammar: VRG, mu: int):
+        super().__init__(g=g, gtype=gtype, root=root, grammar=grammar, mu=mu)
         self.graph_dl = graph_dl(self.g)  # during extraction, compute it once for all the rules because the graph doesn't change
         self.update_subtree_scores(start_tnode=self.root)
 
-    def tnode_score(self, tnode: TreeNode, subtree: Set[int]) -> None:
+    def tnode_score(self, tnode: TreeNode, subtree: Set[int]) -> float:
         """
         scores a tnode based on DL
         for the extractor, lower scores are better - so we use the inverse of the score ,i.e.,
@@ -473,9 +450,8 @@ class LocalExtractor(BaseExtractor):
         else:
             assert self.graph_dl is not None, 'Graph DL is not computed in tnode_score'
 
-            rule, boundary_edges = create_rule(subtree=subtree, g=self.g, mode='part')
-            rule.mdl()
-            rule_dl = rule.dl
+            temp_rule, boundary_edges = create_rule(subtree=subtree, g=self.g, mode='part')
+            rule_dl = temp_rule.mdl
 
             g_rule_dl = compress_graph(
                 g=self.g,
@@ -512,7 +488,7 @@ class LocalExtractor(BaseExtractor):
         """
         self.graph_dl = graph_dl(self.g)
         best_tnode, score = self.get_best_tnode_and_score()
-        logging.debug(f'best tnode: {best_tnode}, score: {round(score, 3)}')
+        # logging.debug(f'best tnode: {best_tnode}, score: {round(score, 3)}')
         subtree = best_tnode.leaves & set(self.g.nodes())
 
         rule, boundary_edges = create_rule(subtree=subtree, g=self.g, mode='part')
@@ -524,27 +500,27 @@ class LocalExtractor(BaseExtractor):
 
 
 class GlobalExtractor(BaseExtractor):
-    def __init__(self, g: LightMultiGraph, type: str, root: TreeNode, grammar: VRG, mu: int):
-        super().__init__(g=g, type=type, root=root, grammar=grammar, mu=mu)
+    def __init__(self, g: LightMultiGraph, gtype: str, root: TreeNode, grammar: VRG, mu: int):
+        super().__init__(g=g, gtype=gtype, root=root, grammar=grammar, mu=mu)
         self.final_grammar = grammar.copy()
         self.graph_dl: float = graph_dl(self.g)  # during extraction, compute it once for all the rules because the graph doesn't change
         self.tnode_to_rule: Dict[TreeNode, PartRule] = {}  # maps each tree node to a rule
-        self.rule_id_to_record: Dict[int, Record] = {}  # maps each rule (via rule id) to a record object
+        self.rule_idn_to_record: Dict[int, Record] = {}  # maps each rule (via rule idn) to a record object
 
         self.update_subtree_scores(start_tnode=self.root)
         self.update_all_record_scores()  # this updates the scores of the records
-        logging.debug('Grammar initialized')
+        # logging.debug('Grammar initialized')
 
     def tnode_score(self, tnode: TreeNode, subtree: Set[int]) -> Any:
         return None  # there is no need for tnode score in this case
 
     def get_best_record(self) -> Record:
-        assert len(self.rule_id_to_record) > 0, 'Empty records, extraction failed'
-        return min(self.rule_id_to_record.values(), key=lambda rec: rec.score)
+        assert len(self.rule_idn_to_record) > 0, 'Empty records, extraction failed'
+        return min(self.rule_idn_to_record.values(), key=lambda rec: rec.score)
 
     def update_tree(self, tnode: TreeNode) -> None:
         """
-        update the tnode and the corresponding rule_id_to_record and tnode_to_rule data structures
+        update the tnode and the corresponding rule_idn_to_record and tnode_to_rule data structures
         :param tnode:
         :return:
         """
@@ -565,7 +541,7 @@ class GlobalExtractor(BaseExtractor):
         """
         # step 1: get best record
         best_record = self.get_best_record()
-        best_rule = self.grammar[best_record.rule_id]
+        best_rule = self.grammar[best_record.rule_idn]
 
         # tqdm.write(f'{best_record.tnodes_list}, {best_record.subtree_list}, {best_rule}')
 
@@ -584,7 +560,7 @@ class GlobalExtractor(BaseExtractor):
             assert self.g.order() == 1, 'Improper extraction, since the graph has > 1 nodes'
         else:
             # reset the data structures
-            self.rule_id_to_record = {}
+            self.rule_idn_to_record = {}
             self.tnode_to_rule = {}
             self.grammar.reset()
 
@@ -606,9 +582,8 @@ class GlobalExtractor(BaseExtractor):
             )
 
         # compute the score of the record
-        rule = self.grammar[record.rule_id]
-        rule.mdl()
-        rule_dl = rule.dl
+        rule = self.grammar[record.rule_idn]
+        rule_dl = rule.mdl
 
         score = (rule_dl + g_rule_dl) / g_dl
         record.score = score
@@ -621,8 +596,8 @@ class GlobalExtractor(BaseExtractor):
         """
         g_dl = graph_dl(self.g)  # initial graph dl
 
-        for record in self.rule_id_to_record.values():
-            rule = self.grammar[record.rule_id]
+        for record in self.rule_idn_to_record.values():
+            rule = self.grammar[record.rule_idn]
 
             # the rule is larger than mu
             if rule.graph.order() > self.mu:
@@ -633,13 +608,38 @@ class GlobalExtractor(BaseExtractor):
             self.set_record_score(record, g_dl=g_dl)
         return
 
+    def generate_grammar(self) -> None:
+        """
+        generates the grammar
+        """
+        num_nodes = self.g.order()
+
+        with tqdm(total=100, bar_format='{l_bar}{bar}|[{elapsed}<{remaining}]', ncols=50) as pbar:
+            while True:
+                rule = self.extract_rule()
+                assert nx.is_connected(self.g), 'graph is disconnected'
+                assert rule is not None
+                # logging.debug(f'new rule: {rule}')
+
+                rule = self.final_grammar.add_rule(rule)
+                self.extracted_sequence += [rule]
+
+                percent = (1 - (self.g.order() - 1) / (num_nodes - 1)) * 100 if num_nodes > 1 else 100
+                curr_progress = percent - pbar.n
+                pbar.update(curr_progress)
+                if rule.lhs == 0:  # we are compressing the root, so that's the end
+                    assert self.g.order() == 1, 'Graph not correctly compressed'
+                    break
+
+        self.grammar = self.final_grammar
+
 
 if __name__ == '__main__':
     name_ = 'lesmis'
     outdir_ = 'output'
     # clustering = 'leiden'
     clustering_ = 'cond'
-    type_ = 'mu_level'
+    gtype_ = 'mu_level'
     mu_ = 3
 
     h__ = nx.Graph()
@@ -669,11 +669,11 @@ if __name__ == '__main__':
         root_ = pickle.load(infile)
         print(root_)
 
-    grammar_ = VRG(clustering=clustering_, type=type, name=name_, mu=mu_)
+    grammar_ = VRG(clustering=clustering_, gtype=gtype, name=name_, mu=mu_)
 
-    # extractor = MuExtractor(g=h, type=type, mu=mu, grammar=grammar, root=root)
-    # extractor = LocalExtractor(g=h, type=type, mu=mu, grammar=grammar, root=root)
-    extractor = GlobalExtractor(g=h_, type=type_, mu=mu_, grammar=grammar_, root=root_)
+    # extractor = MuExtractor(g=h, gtype=gtype, mu=mu, grammar=grammar, root=root)
+    # extractor = LocalExtractor(g=h, gtype=gtype, mu=mu, grammar=grammar, root=root)
+    extractor = GlobalExtractor(g=h_, gtype=gtype_, mu=mu_, grammar=grammar_, root=root_)
 
     key2node_ = {}
     s_ = [extractor.root]

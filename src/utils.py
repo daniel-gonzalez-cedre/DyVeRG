@@ -5,8 +5,11 @@ import sys
 from contextlib import contextmanager
 from os import makedirs, devnull
 
-from typing import Callable, Union
+from typing import Callable, Iterator, Union
 from networkx import graph_edit_distance as ged, Graph
+import networkx.algorithms.isomorphism as iso
+
+from cnrg.Rule import BaseRule
 
 
 @contextmanager
@@ -58,20 +61,17 @@ def mkdir(path):
     makedirs(path, exist_ok=True)
 
 
-def find(x: object, iterable: Union[list, dict]):
+# find all occurrences of an object (e.g., a rule) in a grammar (rule_list, rule_dict, or rule_tree)
+def find(x: object, iterable: Union[list, dict]) -> Union[list[int], list[tuple[int, int]]]:
     references = []
-
-    if isinstance(iterable, list):
-        pass
-
-    if isinstance(iterable, list):
+    if isinstance(iterable, list):  # either rule_list or rule_tree
         for idx, item in enumerate(iterable):
-            if item is x:
+            if item is x:  # rule_list
                 references += [idx]
-            elif isinstance(item, (list, dict)):
+            elif isinstance(item, (list, dict)):  # rule_tree
                 if ref := find(x, item):
                     references += [(idx, ref)]  # type: ignore
-    elif isinstance(iterable, dict):
+    elif isinstance(iterable, dict):  # rule_dict
         for key, value in iterable.items():
             if value is x:
                 references += [key]
@@ -157,10 +157,36 @@ def graph_edit_distance(g1: Graph, g2: Graph,
                         node_match: Callable = node_match_, edge_match: Callable = edge_match_,
                         edge_subst_cost: Callable = edge_subst_cost_,
                         edge_del_cost: Callable = edge_del_cost_, edge_ins_cost: Callable = edge_ins_cost_,
-                        timeout: int = 5):
+                        patience: int = 5):
     dist = ged(g1, g2,
                node_match=node_match, edge_match=edge_match,
                edge_subst_cost=edge_subst_cost,
                edge_del_cost=edge_del_cost, edge_ins_cost=edge_ins_cost,
-               timeout=timeout)
+               timeout=patience)
     return dist if dist is not None else g1.size() + g2.size()
+
+
+def graph_isomorphisms(g1: Graph, g2: Graph) -> Iterator[dict]:
+    nm = iso.categorical_node_match('label', '')  # does not take into account b_deg on nodes
+    em = iso.numerical_edge_match('weight', 1.0)  # pylint: disable=not-callable
+    gm = iso.GraphMatcher(g1, g2, node_match=nm, edge_match=em)
+    for f in gm.match():
+        yield f
+
+
+def rule_isomorphisms(r1: BaseRule, r2: BaseRule) -> Iterator[dict]:
+    if r1.lhs == r2.lhs:
+        for f in graph_isomorphisms(r1.graph, r2.graph):
+            yield f
+
+
+def is_graph_isomorphic(g1: Graph, g2: Graph) -> Union[dict, None]:
+    for f in graph_isomorphisms(g1, g2):
+        return f
+    return None
+
+
+def is_rule_isomorphic(r1: BaseRule, r2: BaseRule) -> Union[dict, None]:
+    if r1.lhs == r2.lhs:
+        return is_graph_isomorphic(r1.graph, r2.graph)
+    return None
