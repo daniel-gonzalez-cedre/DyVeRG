@@ -4,3 +4,5 @@ __pycache__
 .DS_Store
 .ipynb_checkpoints
 notebooks/.ipynb_checkpoints
+backup_results/
+*.grammars
