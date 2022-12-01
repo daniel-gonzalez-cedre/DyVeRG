@@ -41,6 +41,8 @@ def experiment(trial: int, time_graph_pairs: list[tuple[int, nx.Graph]], mu: int
         indep_grammars[(time, next_time)] = indep_grammar
 
         time = next_time
+        prev_joint_grammar = joint_grammar
+        prev_indep_grammar = indep_grammar
         cumulative_graph = nx.compose(cumulative_graph, next_graph)
 
     return trial, base_grammar, joint_grammars, indep_grammars
@@ -49,7 +51,7 @@ def experiment(trial: int, time_graph_pairs: list[tuple[int, nx.Graph]], mu: int
 # TODO: implement saving intermediate results in case we need to stop the code
 def main(dataset, n_trials, parallel, n_jobs, mu):
     rootpath = git.Repo(getcwd(), search_parent_directories=True).git.rev_parse("--show-toplevel")
-    resultspath = 'results/experiment_sequential_random/'
+    resultspath = 'results/experiment_saturation/'
     mkdir(join(rootpath, resultspath))
 
     base_grammars: dict[int, VRG] = {}
