@@ -75,9 +75,9 @@ def main(dataset, rewire, delta, n_trials, parallel, n_jobs, mu):
     resultspath = 'results/experiment_sequential_random/'
     mkdir(join(rootpath, resultspath))
 
-    base_grammars: dict[tuple[int, float], VRG] = {}
-    joint_grammars: dict[tuple[int, int, float], VRG] = {}
-    indep_grammars: dict[tuple[int, int, float], VRG] = {}
+    base_grammars: dict[tuple[int, int, float], VRG] = {}
+    joint_grammars: dict[tuple[int, int, int, float], VRG] = {}
+    indep_grammars: dict[tuple[int, int, int, float], VRG] = {}
 
     time_graph_pairs: list[tuple[int, nx.Graph]] = load_data(dataset)
 
@@ -86,13 +86,13 @@ def main(dataset, rewire, delta, n_trials, parallel, n_jobs, mu):
             delayed(experiment)(trial, curr_time, curr_graph, next_time, next_graph, p, mu)
             for (curr_time, curr_graph), (next_time, next_graph) in zip(time_graph_pairs[:-1], time_graph_pairs[1:])
             for p in np.linspace(0, rewire, delta)
-            for trial in range(n_trials)
+            for trial in range(1, n_trials + 1)
         )
     else:
         results = [experiment(trial, curr_time, curr_graph, next_time, next_graph, p, mu)
                    for (curr_time, curr_graph), (next_time, next_graph) in zip(time_graph_pairs[:-1], time_graph_pairs[1:])
                    for p in np.linspace(0, rewire, delta)
-                   for trial in range(n_trials)]
+                   for trial in range(1, n_trials + 1)]
 
     for trial, curr_time, next_time, p, base_grammar, joint_grammar, indep_grammar in results:
         base_grammars[(trial, curr_time, p)] = base_grammar
