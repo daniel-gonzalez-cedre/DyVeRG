@@ -118,6 +118,9 @@ class VRG:
             candidates = [r for r in self.rule_list if r is not rule]
             penalty = 1  # penalty for having to also modify the LHS symbol
 
+        if len(candidates) == 0:
+            return 0
+
         if parallel:
             edit_dists = Parallel(n_jobs=n_jobs)(
                 delayed(graph_edit_distance)(r.graph, rule.graph) for r in candidates
@@ -126,6 +129,27 @@ class VRG:
             edit_dists = [graph_edit_distance(r.graph, rule.graph) for r in candidates]
 
         return int(min(edit_dists)) + penalty
+
+    def is_in(self, r: BaseRule, where: str) -> bool:
+        assert where in ['rule_list', 'list',
+                         'rule_dict', 'dict',
+                         'rule_tree', 'tree', 'decomposition']
+        where = where.strip().split('_')[-1]
+
+        if where == 'list':
+            for rule in self.rule_list:
+                if rule is r:
+                    return True
+        elif where == 'dict':
+            for rules in self.rule_dict.values():
+                for rule in rules:
+                    if rule is r:
+                        return True
+        else:
+            for rule, _, _ in self.rule_tree:
+                if rule is r:
+                    return True
+        return False
 
     # find a reference to a rule somewhere in this grammar
     def find_rule(self, rule: BaseRule, where: str) -> Union[int, tuple[int, int], list[int]]:
@@ -137,17 +161,12 @@ class VRG:
         if where == 'list':
             refs = find(rule, self.rule_list)
             here, = refs if refs else [[]]
-
         elif where == 'dict':
             refs = find(rule, self.rule_dict)
             (lhs, idxs), = refs if refs else (((), ()),)
             here = (lhs, *idxs)
-
-        elif where in ('tree', 'decomposition'):
-            here = [idx for idx, _ in find(rule, self.rule_tree)]
-
         else:
-            here = []
+            here = [idx for idx, _ in find(rule, self.rule_tree)]
 
         return here
 

@@ -1,82 +1,13 @@
 import sys
-import random
 
 sys.path.append('../')
 
 from cnrg.VRG import VRG
-from cnrg.Rule import PartRule
 
-from decomposition import ancestor, common_ancestor
-from utils import is_rule_isomorphic
-
-
-def assimilate(new_rule: PartRule, grammar: VRG):
-    if new_rule.lhs in grammar.rule_dict:
-        found = False
-        for old_rule in grammar.rule_dict[new_rule.lhs]:
-            if new_rule is not old_rule:
-                if (f := is_rule_isomorphic(new_rule, old_rule)):
-                    for x in new_rule.mapping:
-                        old_rule.mapping[x] = f[new_rule.mapping[x]]
-
-                    old_rule.edit_dist = min(old_rule.edit_dist, new_rule.edit_dist)  # TODO: think about this
-                    old_rule.frequency += new_rule.frequency
-                    old_rule.subtree |= new_rule.subtree
-
-                    grammar.replace_rule(new_rule, old_rule, f)
-                    break
-            else:
-                found = True
-        else:
-            if not found:
-                grammar.rule_dict[new_rule.lhs] += [new_rule]
-                grammar.rule_list += [new_rule]
-    else:
-        grammar.rule_dict[new_rule.lhs] = [new_rule]
-        grammar.rule_list += [new_rule]
-
-
-def modify_descendants(nts: str, rule_idx: int, grammar: VRG, time: int):
-    for child_idx, child_rule in grammar.get_children_of(nts, rule_idx):
-        if child_rule.frequency == 1:
-            modified_rule = child_rule
-
-            list_idx = grammar.find_rule(child_rule, where='rule_list')
-            del grammar.rule_list[list_idx]
-
-            lhs, dict_idx = grammar.find_rule(child_rule, where='rule_dict')
-            del grammar.rule_dict[lhs][dict_idx]
-
-            if len(grammar.rule_dict[lhs]) == 0:
-                del grammar.rule_dict[lhs]
-        else:
-            modified_rule = child_rule.copy()
-            modified_rule.edit_dist = 0
-            modified_rule.frequency = 1
-            child_rule.frequency -= 1
-            grammar.rule_tree[child_idx][0] = modified_rule
-
-        (v, d), = random.sample(modified_rule.graph.nodes(data=True), 1)
-        d['b_deg'] += 1
-
-        if 'label' in d:
-            d['label'] += 1
-            modified_rule.edit_dist += 1  # cost of relabeling a node
-
-            modify_descendants(v, child_idx, grammar, time)
-
-        modified_rule.lhs += 1
-        modified_rule.edit_dist += 2  # cost of relabeling a node and changing the RHS
-        modified_rule.time_changed = time
-
-        assimilate(modified_rule, grammar)
+from decomposition import assimilate_rule, ancestor, common_ancestor, propagate_descendants
 
 
 # TODO: update docstring instructions
-def mutate_rule():
-    raise NotImplementedError
-
-
 def mutate_rule_domestic(grammar: VRG, u: int, v: int, time: int, mode: str = 'add'):
     """
         Given an edge event (u, v), where both u and v are already known to the grammar G:
@@ -127,7 +58,7 @@ def mutate_rule_domestic(grammar: VRG, u: int, v: int, time: int, mode: str = 'a
             if 'label' in mutated_rule.graph.nodes[ancestor_x]:  # if we modified a nonterminal, propagate that change downstream
                 mutated_rule.edit_dist += 1  # cost of relabeling a node
                 mutated_rule.graph.nodes[ancestor_x]['label'] += 1  # one more edge incident on this symbol
-                modify_descendants(ancestor_x, parent_idx, grammar, time)
+                propagate_descendants(ancestor_x, parent_idx, grammar, time)
     elif mode == 'del':
         try:
             mutated_rule.graph.remove_edge(ancestor_u, ancestor_v)
@@ -136,7 +67,7 @@ def mutate_rule_domestic(grammar: VRG, u: int, v: int, time: int, mode: str = 'a
     else:
         raise AssertionError(f'<<mode>> must be either "add" or "del"; found mode={mode} instead')
 
-    assimilate(mutated_rule, grammar)
+    assimilate_rule(mutated_rule, grammar)
 
 
 def mutate_rule_diplomatic(grammar: VRG, u: int, v: int, time: int):
@@ -183,8 +114,8 @@ def mutate_rule_diplomatic(grammar: VRG, u: int, v: int, time: int):
     if 'label' in mutated_rule.graph.nodes[ancestor_u]:  # if we modified a nonterminal, propagate that change downstream
         mutated_rule.edit_dist += 1  # cost of relabeling a node
         mutated_rule.graph.nodes[ancestor_u]['label'] += 1  # one more edge incident on this symbol
-        modify_descendants(ancestor_u, parent_idx, grammar, time)
+        propagate_descendants(ancestor_u, parent_idx, grammar, time)
 
     grammar.covering_idx[v] = grammar.covering_idx[u]  # rule_source now points to the same location in the rule_tree for u and v
 
-    assimilate(mutated_rule, grammar)
+    assimilate_rule(mutated_rule, grammar)
