@@ -62,11 +62,11 @@ def main(dataset, n_trials, parallel, n_jobs, mu):
 
     if parallel:
         results = Parallel(n_jobs=n_jobs)(
-            delayed(experiment)(trial, time_graph_pairs[:3], mu)
+            delayed(experiment)(trial, time_graph_pairs, mu)
             for trial in range(n_trials)
         )
     else:
-        results = [experiment(trial, time_graph_pairs[:3], mu)
+        results = [experiment(trial, time_graph_pairs, mu)
                    for trial in range(n_trials)]
 
     for trial, base_grammar, joint_dict, indep_dict in results:
