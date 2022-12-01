@@ -50,7 +50,8 @@ def perturb_graph(g: nx.Graph, p: float = 0.01) -> nx.Graph:
     return h
 
 
-def experiment(curr_time: int, curr_graph: nx.Graph,
+def experiment(trial: int,
+               curr_time: int, curr_graph: nx.Graph,
                next_time: int, next_graph: nx.Graph,
                p: float, mu: int):
     base_grammar = decompose(curr_graph, time=curr_time, mu=mu)
@@ -65,7 +66,7 @@ def experiment(curr_time: int, curr_graph: nx.Graph,
                                    perturbed_graph,
                                    next_time,
                                    mode='i')
-    return curr_time, next_time, p, base_grammar, joint_grammar, indep_grammar
+    return trial, curr_time, next_time, p, base_grammar, joint_grammar, indep_grammar
 
 
 # TODO: implement saving intermediate results in case we need to stop the code
@@ -82,45 +83,29 @@ def main(dataset, rewire, delta, n_trials, parallel, n_jobs, mu):
 
     if parallel:
         results = Parallel(n_jobs=n_jobs)(
-            delayed(experiment)(curr_time, curr_graph, next_time, next_graph, p, mu)
+            delayed(experiment)(trial, curr_time, curr_graph, next_time, next_graph, p, mu)
             for (curr_time, curr_graph), (next_time, next_graph) in zip(time_graph_pairs[:-1], time_graph_pairs[1:])
             for p in np.linspace(0, rewire, delta)
-            for _ in range(n_trials)
+            for trial in range(n_trials)
         )
     else:
-        results = [experiment(curr_time, curr_graph, next_time, next_graph, p, mu)
+        results = [experiment(trial, curr_time, curr_graph, next_time, next_graph, p, mu)
                    for (curr_time, curr_graph), (next_time, next_graph) in zip(time_graph_pairs[:-1], time_graph_pairs[1:])
                    for p in np.linspace(0, rewire, delta)
-                   for _ in range(n_trials)]
+                   for trial in range(n_trials)]
 
-    for curr_time, next_time, p, base_grammar, joint_grammar, indep_grammar in results:
-        if (curr_time, p) in base_grammars:
-            base_grammars[(curr_time, p)] += [base_grammar]
-        else:
-            base_grammars[(curr_time, p)] = [base_grammar]
+    for trial, curr_time, next_time, p, base_grammar, joint_grammar, indep_grammar in results:
+        base_grammars[(trial, curr_time, p)] = base_grammar
+        joint_grammars[(trial, curr_time, next_time, p)] = joint_grammar
+        indep_grammars[(trial, curr_time, next_time, p)] = indep_grammar
 
-        if (curr_time, p) in joint_grammars:
-            joint_grammars[(curr_time, next_time, p)] += [joint_grammar]
-        else:
-            joint_grammars[(curr_time, next_time, p)] = [joint_grammar]
+    base_mdls = {key: grammar.mdl for key, grammar in base_grammars.items()}
 
-        if (curr_time, p) in indep_grammars:
-            indep_grammars[(curr_time, next_time, p)] += [indep_grammar]
-        else:
-            indep_grammars[(curr_time, next_time, p)] = [indep_grammar]
+    joint_mdls = {key: grammar.mdl for key, grammar in joint_grammars.items()}
+    indep_mdls = {key: grammar.mdl for key, grammar in indep_grammars.items()}
 
-    base_mdls = {key: [grammar.mdl for grammar in collection]
-                 for key, collection in base_grammars.items()}
-
-    joint_mdls = {key: [grammar.mdl for grammar in collection]
-                  for key, collection in joint_grammars.items()}
-    indep_mdls = {key: [grammar.mdl for grammar in collection]
-                  for key, collection in indep_grammars.items()}
-
-    joint_lls = {key: [grammar.ll for grammar in collection]
-                 for key, collection in joint_grammars.items()}
-    indep_lls = {key: [grammar.ll for grammar in collection]
-                 for key, collection in indep_grammars.items()}
+    joint_lls = {key: grammar.ll for key, grammar in joint_grammars.items()}
+    indep_lls = {key: grammar.ll for key, grammar in indep_grammars.items()}
 
     with open(join(rootpath, resultspath, f'{dataset}_base.grammars'), 'wb') as outfile:
         pickle.dump(base_grammars, outfile)
@@ -130,32 +115,28 @@ def main(dataset, rewire, delta, n_trials, parallel, n_jobs, mu):
         pickle.dump(indep_grammars, outfile)
 
     with open(join(rootpath, resultspath, f'{dataset}_base.mdls'), 'w') as outfile:
-        outfile.write('time,p,mdl\n')
-        for (time, p), mdls in base_mdls.items():
+        outfile.write('trial,time,p,mdl\n')
+        for (trial, time, p), mdls in base_mdls.items():
             for mdl in mdls:
-                outfile.write(f'{time},{p},{mdl}\n')
+                outfile.write(f'{trial},{time},{p},{mdl}\n')
 
     with open(join(rootpath, resultspath, f'{dataset}_joint.mdls'), 'w') as outfile:
-        outfile.write('t1,t2,p,mdl\n')
-        for (t1, t2, p), mdls in joint_mdls.items():
-            for mdl in mdls:
-                outfile.write(f'{t1},{t2},{p},{mdl}\n')
+        outfile.write('trial,time1,time2,p,mdl\n')
+        for (trial, time1, time2, p), mdl in joint_mdls.items():
+            outfile.write(f'{trial},{time1},{time2},{p},{mdl}\n')
     with open(join(rootpath, resultspath, f'{dataset}_indep.mdls'), 'w') as outfile:
-        outfile.write('t1,t2,p,mdl\n')
-        for (t1, t2, p), mdls in indep_mdls.items():
-            for mdl in mdls:
-                outfile.write(f'{t1},{t2},{p},{mdl}\n')
+        outfile.write('trial,time1,time2,p,mdl\n')
+        for (trial, time1, time2, p), mdl in indep_mdls.items():
+            outfile.write(f'{trial},{time1},{time2},{p},{mdl}\n')
 
     with open(join(rootpath, resultspath, f'{dataset}_joint.lls'), 'w') as outfile:
-        outfile.write('t1,t2,p,ll\n')
-        for (t1, t2, p), lls in joint_lls.items():
-            for ll in lls:
-                outfile.write(f'{t1},{t2},{p},{ll}\n')
+        outfile.write('trial,time1,time2,p,ll\n')
+        for (trial, time1, time2, p), ll in joint_lls.items():
+            outfile.write(f'{trial},{time1},{time2},{p},{ll}\n')
     with open(join(rootpath, resultspath, f'{dataset}_indep.lls'), 'w') as outfile:
-        outfile.write('t1,t2,p,ll\n')
-        for (t1, t2, p), lls in indep_lls.items():
-            for ll in lls:
-                outfile.write(f'{t1},{t2},{p},{ll}\n')
+        outfile.write('trial,time1,time2,p,ll\n')
+        for (trial, time1, time2, p), ll in indep_lls.items():
+            outfile.write(f'{trial},{time1},{time2},{p},{ll}\n')
 
 
 # python experiment_sequential_random.py [dataset] -d [delta] -r [rewire] -n [# trials] -p -j [# jobs] -m [mu]
