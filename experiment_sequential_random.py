@@ -136,26 +136,26 @@ def main(dataset, rewire, delta, n_trials, parallel, n_jobs, mu):
                 outfile.write(f'{time},{p},{mdl}\n')
 
     with open(join(rootpath, resultspath, f'{dataset}_joint.mdls'), 'w') as outfile:
-        outfile.write('curr_time,next_time,p,mdl\n')
-        for (curr_time, next_time, p), mdls in joint_mdls.items():
+        outfile.write('t1,t2,p,mdl\n')
+        for (t1, t2, p), mdls in joint_mdls.items():
             for mdl in mdls:
-                outfile.write(f'{curr_time},{next_time},{p},{mdl}\n')
+                outfile.write(f'{t1},{t2},{p},{mdl}\n')
     with open(join(rootpath, resultspath, f'{dataset}_indep.mdls'), 'w') as outfile:
-        outfile.write('curr_time,next_time,p,mdl\n')
-        for (curr_time, next_time, p), mdls in indep_mdls.items():
+        outfile.write('t1,t2,p,mdl\n')
+        for (t1, t2, p), mdls in indep_mdls.items():
             for mdl in mdls:
-                outfile.write(f'{curr_time},{next_time},{p},{mdl}\n')
+                outfile.write(f'{t1},{t2},{p},{mdl}\n')
 
     with open(join(rootpath, resultspath, f'{dataset}_joint.lls'), 'w') as outfile:
-        outfile.write('curr_time,next_time,p,ll\n')
-        for (curr_time, next_time, p), lls in joint_lls.items():
+        outfile.write('t1,t2,p,ll\n')
+        for (t1, t2, p), lls in joint_lls.items():
             for ll in lls:
-                outfile.write(f'{curr_time},{next_time},{p},{ll}\n')
+                outfile.write(f'{t1},{t2},{p},{ll}\n')
     with open(join(rootpath, resultspath, f'{dataset}_indep.lls'), 'w') as outfile:
-        outfile.write('curr_time,next_time,p,ll\n')
-        for (curr_time, next_time, p), lls in indep_lls.items():
+        outfile.write('t1,t2,p,ll\n')
+        for (t1, t2, p), lls in indep_lls.items():
             for ll in lls:
-                outfile.write(f'{curr_time},{next_time},{p},{ll}\n')
+                outfile.write(f'{t1},{t2},{p},{ll}\n')
 
 
 # python experiment_sequential_random.py [dataset] -d [delta] -r [rewire] -n [# trials] -p -j [# jobs] -m [mu]
