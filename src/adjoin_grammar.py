@@ -5,7 +5,7 @@ sys.path.append('..')
 from joblib import Parallel, delayed
 
 from cnrg.VRG import VRG
-from decomposition import create_splitting_rule, assimilate_rules, ancestor, common_ancestor, propagate_ancestors
+from decomposition import create_splitting_rule, assimilate_rules, ancestor, common_ancestor, propagate_ancestors, propagate_descendants
 
 
 def conjoin_grammars(host_grammar: VRG, parasite_grammar: VRG, frontier: set[tuple[int, int]]) -> VRG:
@@ -55,7 +55,7 @@ def incise_grammars(host_grammar: VRG, parasite_grammar: VRG, frontier: set[tupl
             host_grammar.rule_list += [splitting_rule]
             host_grammar.rule_dict[splitting_rule.lhs] = splitting_rule
         else:  # splitting rule already exists
-            splitting_rule, attachment_idx = host_grammar.root
+            attachment_idx, splitting_rule = host_grammar.root
             parasite_node = chr(ord(max(splitting_rule.graph.nodes())) + 1)
 
             # splitting_rule.graph.add_node(parasite_node, b_deg=0, label=min(lhs for lhs in parasite_grammar.rule_dict))
@@ -74,9 +74,14 @@ def incise_grammars(host_grammar: VRG, parasite_grammar: VRG, frontier: set[tupl
         # add the nonterminal symbol and connect it to the rest of this root
         parasite_node = chr(ord(max(attachment_rule.graph.nodes())) + 1)
         attachment_rule.graph.add_node(parasite_node, b_deg=0, label=parasite_grammar.root_rule.lhs)
+
         for u, _ in frontier:
             ancestor_u = ancestor_children[u]
             attachment_rule.graph.add_edge(ancestor_u, parasite_node)
+
+            for node in (ancestor_u, parasite_node):
+                if 'label' in attachment_rule.graph.nodes[node]:
+                    propagate_descendants(node, attachment_idx, host_grammar)
 
     return host_grammar, parasite_grammar, attachment_idx, parasite_node
 
@@ -84,25 +89,30 @@ def incise_grammars(host_grammar: VRG, parasite_grammar: VRG, frontier: set[tupl
 # when the frontier is nonempty
 def suture_grammars(host_grammar: VRG, parasite_grammar: VRG, attachment_idx: int, parasite_node: str, parallel: bool = True) -> VRG:
     offset = len(host_grammar.rule_tree)
-    # merge_rules(host_grammar, parasite_grammar, parallel=parallel)
     assimilate_rules(host_grammar, parasite_grammar, parallel=parallel)
-
-    # point the old root to the attachment site
-    parasite_root_idx = parasite_grammar.root_idx
-    parasite_grammar.rule_tree[parasite_root_idx][1] = attachment_idx
-    parasite_grammar.rule_tree[parasite_root_idx][2] = parasite_node
 
     # shift the indices of the parasite decomposition
     for idx, (_, parent_idx, ancestor_node) in enumerate(parasite_grammar.rule_tree):
         if parent_idx is not None and ancestor_node is not None:
             parasite_grammar.rule_tree[idx][1] += offset
 
+    # point the old root to the attachment site
+    parasite_root_idx = parasite_grammar.root_idx
+    parasite_grammar.rule_tree[parasite_root_idx][1] = attachment_idx
+    parasite_grammar.rule_tree[parasite_root_idx][2] = parasite_node
+
     # shift the indices of the parasite covering_idx map
     for node in parasite_grammar.covering_idx:
         parasite_grammar.covering_idx[node] += offset
 
     # append the sub-decomposition to the super-decomposition
-    host_grammar.rule_tree += parasite_grammar.rule_tree
+    # host_grammar.rule_tree += parasite_grammar.rule_tree
+    for node in parasite_grammar.rule_tree:
+        host_grammar.rule_tree.append(node)
+
+    for _, pidx, _ in host_grammar.rule_tree:
+        if pidx:
+            assert pidx <= len(host_grammar.rule_tree)
 
     assert len(host_grammar.covering_idx.keys() & parasite_grammar.covering_idx.keys()) == 0
 

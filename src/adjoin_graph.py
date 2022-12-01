@@ -25,15 +25,18 @@ def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph,
     edge_additions = set(away_graph.edges()) - set(home_graph.edges())
     # edge_deletions = set(home_graph.edges()) - set(away_graph.edges())
 
-    edges_domestic = {(u, v) for u, v in edge_additions
-                      if u in home_graph.nodes() and v in home_graph.nodes()}
-    edges_diplomatic = {(u, v) for u, v in edge_additions
-                        if bool(u in home_graph.nodes()) != bool(v in home_graph.nodes())}
-    edges_foreign = {(u, v) for u, v in edge_additions
-                     if u not in home_graph.nodes() and v not in home_graph.nodes()}
+    edges_domestic = {(u, v)
+                      for u, v in edge_additions
+                      if (u in home_graph) and (v in home_graph)}
+    edges_diplomatic = {(u, v)
+                        for u, v in edge_additions
+                        if bool(u in home_graph) != bool(v in home_graph)}
+    edges_foreign = {(u, v)
+                     for u, v in edge_additions
+                     if (u not in home_graph) and (v not in home_graph)}
 
-    # orient the edges (u, v) so that u ∈ home and v ∈ away
-    edges_diplomatic = {(u if u in home_graph.nodes() else v, v if v not in home_graph.nodes() else u)
+    # orient the diplomatic edges (u, v) so that u ∈ home and v ∈ away
+    edges_diplomatic = {(u if u in home_graph else v, v if v not in home_graph else u)
                         for u, v in edges_diplomatic}
 
     if mode in ['joint', 'j']:
@@ -100,20 +103,23 @@ def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph,
     # handle the edge additions
     while len(changes) > 0:
         for u, v in tqdm(changes, desc='additions', leave=True):
-
-            if u in conquered and v in conquered:
-                mutate_rule_domestic(charted_grammar, u, v, time, mode='add')
-            elif u in conquered and v not in conquered:
-                mutate_rule_diplomatic(charted_grammar, u, v, time)
-            elif u not in conquered and v in conquered:
-                mutate_rule_diplomatic(charted_grammar, v, u, time)
+            if not charted_grammar.is_edge_connected(u, v):
+                charted_grammar.penalty += 1
             else:
-                raise AssertionError(f'{u}, {v}')
+                if u in charted_grammar.covering_idx and v in charted_grammar.covering_idx:
+                    mutate_rule_domestic(charted_grammar, u, v, time, mode='add')
+                elif u in charted_grammar.covering_idx and v not in charted_grammar.covering_idx:
+                    mutate_rule_diplomatic(charted_grammar, u, v, time)
+                elif u not in charted_grammar.covering_idx and v in charted_grammar.covering_idx:
+                    mutate_rule_diplomatic(charted_grammar, v, u, time)
+                else:
+                    raise AssertionError(f'{u}, {v}')
 
         for u, v in changes:
             conquered |= {u, v}
 
-        changes = {(u, v) for u, v in edges_foreign if u in conquered or v in conquered}
+        changes = {(u, v) for u, v in edges_foreign
+                   if u in conquered or v in conquered}
         edges_foreign -= changes
 
     # handle the edge deletions

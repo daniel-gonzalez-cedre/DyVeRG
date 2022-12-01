@@ -53,7 +53,8 @@ class VRG:
     __slots__ = (
         'gtype', 'clustering', 'name', 'mu', 'rule_list', 'rule_dict',
         'rule_tree', 'covering_idx', 'comp_map',
-        'transition_matrix', 'temporal_matrix'
+        'transition_matrix', 'temporal_matrix',
+        'penalty', 'amplifier'
     )
 
     def __init__(self, gtype: str, clustering: str, name: str, mu: int):
@@ -69,12 +70,14 @@ class VRG:
         self.comp_map: dict[int, int] = {}
         self.transition_matrix = None
         self.temporal_matrix = None
+        self.penalty: float = 0
+        self.amplifier: float = 100
 
     @property
     def root(self) -> tuple[int, BaseRule]:
         for idx, (r, pidx, anode) in enumerate(self.rule_tree):
             if pidx is None and anode is None:
-                assert r.lhs == min(nts for nts in self.rule_dict)
+                # assert r.lhs == min(nts for nts in self.rule_dict)
                 return idx, r
         raise AssertionError('decomposition does not have a root!')
 
@@ -103,7 +106,7 @@ class VRG:
     # the more modifications were required accommodate new rules, the lower the likelihood
     @property
     def likelihood(self) -> float:
-        return 1 / (1 + self.cost)  # adding 1 to the denominator avoids division by zero and ensures ∈ (0, 1]
+        return 1 / (1 + self.cost + self.amplifier * self.penalty)  # adding 1 to the denominator avoids division by zero and ensures ∈ (0, 1]
 
     # total cost (in terms of edit operations) incurred to dynamically augment this grammar
     @property
@@ -130,7 +133,10 @@ class VRG:
 
         return int(min(edit_dists)) + penalty
 
-    def is_in(self, r: BaseRule, where: str) -> bool:
+    def is_edge_connected(self, u: int, v: int) -> bool:
+        return u in self.covering_idx or v in self.covering_idx
+
+    def is_in(self, r: BaseRule, where: str = 'list') -> bool:
         assert where in ['rule_list', 'list',
                          'rule_dict', 'dict',
                          'rule_tree', 'tree', 'decomposition']
@@ -214,7 +220,11 @@ class VRG:
 
             while parent_idx is not None:
                 level += 1
-                parent_idx = self.rule_tree[parent_idx][1]
+                try:
+                    parent_idx = self.rule_tree[parent_idx][1]
+                except:
+                    import pdb
+                    pdb.set_trace()
 
             levels += [level]
         return levels

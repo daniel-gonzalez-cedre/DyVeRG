@@ -106,16 +106,20 @@ def mutate_rule_diplomatic(grammar: VRG, u: int, v: int, time: int):
         parent_rule.frequency -= 1
         grammar.rule_tree[parent_idx][0] = mutated_rule
 
+    ancestor_v = chr(ord(max(mutated_rule.graph.nodes())) + 1)
+    # mutated_rule.mapping[v] = ancestor_v
+
     mutated_rule.edit_dist += 2  # cost of adding a node and an edge
     mutated_rule.time_changed = time
-    mutated_rule.graph.add_node(v, b_deg=0, look='at me')
-    mutated_rule.graph.add_edge(ancestor_u, v)
+    mutated_rule.graph.add_node(ancestor_v, b_deg=0, look='at me')
+    mutated_rule.graph.add_edge(ancestor_u, ancestor_v)
 
     if 'label' in mutated_rule.graph.nodes[ancestor_u]:  # if we modified a nonterminal, propagate that change downstream
         mutated_rule.edit_dist += 1  # cost of relabeling a node
         mutated_rule.graph.nodes[ancestor_u]['label'] += 1  # one more edge incident on this symbol
         propagate_descendants(ancestor_u, parent_idx, grammar, time)
 
-    grammar.covering_idx[v] = grammar.covering_idx[u]  # rule_source now points to the same location in the rule_tree for u and v
+    grammar.covering_idx[v] = parent_idx  # rule_source now points to the same location in the rule_tree for u and v
 
-    assimilate_rule(mutated_rule, grammar)
+    assimilated_rule, f = assimilate_rule(mutated_rule, grammar)
+    assimilated_rule.mapping[v] = f[ancestor_v]

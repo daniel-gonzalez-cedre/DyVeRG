@@ -56,22 +56,6 @@ def assimilate_rules(host_grammar: VRG, parasite_grammar: VRG, parallel: bool = 
         assimilated_rule, f = assimilate_rule(parasite_rule, host_grammar, parallel=parallel, compute_ged=True)
         parasite_grammar.replace_rule(parasite_rule, assimilated_rule, f)
 
-    # sanity check
-    for parasite_rule in parasite_grammar.rule_list:
-        assert host_grammar.is_in(parasite_rule, where='rule_list')
-        assert host_grammar.is_in(parasite_rule, where='rule_dict')
-
-    # sanity check
-    for parasite_rules in parasite_grammar.rule_dict.values():
-        for parasite_rule in parasite_rules:
-            assert host_grammar.is_in(parasite_rule, where='rule_list')
-            assert host_grammar.is_in(parasite_rule, where='rule_dict')
-
-    # sanity check
-    for parasite_rule, _, _ in parasite_grammar.rule_tree:
-        assert host_grammar.is_in(parasite_rule, where='rule_list')
-        assert host_grammar.is_in(parasite_rule, where='rule_dict')
-
 
 def ancestor(u: int, grammar: VRG) -> tuple[PartRule, int, str]:
     parent_idx = grammar.covering_idx[u]  # points to which entry in rule_tree contains this rule
@@ -151,7 +135,7 @@ def propagate_ancestors(node: str, rule_idx: int, grammar: VRG, time: int = None
     assimilate_rule(modified_rule, grammar)
 
 
-def propagate_descendants(nts: str, rule_idx: int, grammar: VRG, time: int):
+def propagate_descendants(nts: str, rule_idx: int, grammar: VRG, time: int = None):
     for child_idx, child_rule in grammar.get_children_of(nts, rule_idx):
         if child_rule.frequency == 1:
             modified_rule = child_rule
@@ -182,7 +166,9 @@ def propagate_descendants(nts: str, rule_idx: int, grammar: VRG, time: int):
 
         modified_rule.lhs += 1
         modified_rule.edit_dist += 2  # cost of relabeling a node and changing the RHS
-        modified_rule.time_changed = time
+
+        if time:
+            modified_rule.time_changed = time
 
         assimilate_rule(modified_rule, grammar)
 
@@ -223,27 +209,7 @@ def decompose(g: nx.Graph, time: int = 0, mu: int = 4, clustering: str = 'leiden
                 offset = len(supergrammar.rule_tree)
 
                 # merge in new rules that are duplicates of old rules
-                subtree = subgrammar.rule_tree.copy()
-                for idx, (subrule, _, _) in enumerate(subtree):
-                    if not supergrammar.find_rule(subrule, where='rule_list'):
-                        for superrule in supergrammar.rule_dict[subrule.lhs]:
-                            if f := is_rule_isomorphic(subrule, superrule):
-                                superrule.frequency += subrule.frequency
-                                superrule.subtree |= subrule.subtree
-
-                                for u in subrule.mapping:
-                                    superrule.mapping[u] = f[subrule.mapping[u]]
-
-                                subgrammar.replace_rule(subrule, superrule, f)
-
-                                break
-                        else:
-                            supergrammar.rule_list += [subrule]
-
-                            if subrule.lhs in supergrammar.rule_dict:
-                                supergrammar.rule_dict[subrule.lhs] += [subrule]
-                            else:
-                                supergrammar.rule_dict[subrule.lhs] = [subrule]
+                assimilate_rules(supergrammar, subgrammar)
 
                 # shift the indices of the sub-decomposition
                 for idx, (_, parent_idx, ancestor_node) in enumerate(subgrammar.rule_tree):
@@ -253,12 +219,12 @@ def decompose(g: nx.Graph, time: int = 0, mu: int = 4, clustering: str = 'leiden
                     else:
                         subgrammar.rule_tree[idx][1] += offset
 
+                # append the sub-decomposition to the super-decomposition
+                supergrammar.rule_tree += subgrammar.rule_tree
+
                 # shift the indices of the covering_idx map
                 for node in subgrammar.covering_idx:
                     subgrammar.covering_idx[node] += offset
-
-                # append the sub-decomposition to the super-decomposition
-                supergrammar.rule_tree += subgrammar.rule_tree
 
                 assert len(supergrammar.covering_idx.keys() & subgrammar.covering_idx.keys()) == 0
                 supergrammar.covering_idx |= subgrammar.covering_idx
