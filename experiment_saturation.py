@@ -77,14 +77,14 @@ def main(dataset, n_trials, parallel, n_jobs, mu):
     base_mdls = {key: grammar.mdl
                  for key, grammar in base_grammars.items()}
 
-    joint_mdls = {key: {subkey: grammar.mdl for subkey, grammar in joint_dict}
+    joint_mdls = {key: {subkey: grammar.mdl for subkey, grammar in joint_dict.items()}
                   for key, joint_dict in joint_grammars.items()}
-    indep_mdls = {key: {subkey: grammar.mdl for subkey, grammar in indep_dict}
+    indep_mdls = {key: {subkey: grammar.mdl for subkey, grammar in indep_dict.items()}
                   for key, indep_dict in indep_grammars.items()}
 
-    joint_lls = {key: {subkey: grammar.ll for subkey, grammar in joint_dict}
+    joint_lls = {key: {subkey: grammar.ll for subkey, grammar in joint_dict.items()}
                  for key, joint_dict in joint_grammars.items()}
-    indep_lls = {key: {subkey: grammar.ll for subkey, grammar in indep_dict}
+    indep_lls = {key: {subkey: grammar.ll for subkey, grammar in indep_dict.items()}
                  for key, indep_dict in indep_grammars.items()}
 
     with open(join(rootpath, resultspath, f'{dataset}_base.grammars'), 'wb') as outfile:
