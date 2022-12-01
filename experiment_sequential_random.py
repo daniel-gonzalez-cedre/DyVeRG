@@ -83,15 +83,13 @@ def main(dataset, rewire, delta, n_trials, parallel, n_jobs, mu):
     if parallel:
         results = Parallel(n_jobs=n_jobs)(
             delayed(experiment)(curr_time, curr_graph, next_time, next_graph, p, mu)
-            for (curr_time, curr_graph), (next_time, next_graph)
-            in zip(time_graph_pairs[:-1], time_graph_pairs[1:])
+            for (curr_time, curr_graph), (next_time, next_graph) in zip(time_graph_pairs[:-1], time_graph_pairs[1:])
             for p in np.linspace(0, rewire, delta)
             for _ in range(n_trials)
         )
     else:
         results = [experiment(curr_time, curr_graph, next_time, next_graph, p, mu)
-                   for (curr_time, curr_graph), (next_time, next_graph)
-                   in zip(time_graph_pairs[:-1], time_graph_pairs[1:])
+                   for (curr_time, curr_graph), (next_time, next_graph) in zip(time_graph_pairs[:-1], time_graph_pairs[1:])
                    for p in np.linspace(0, rewire, delta)
                    for _ in range(n_trials)]
 
