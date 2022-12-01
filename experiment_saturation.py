@@ -62,11 +62,11 @@ def main(dataset, n_trials, parallel, n_jobs, mu):
 
     if parallel:
         results = Parallel(n_jobs=n_jobs)(
-            delayed(experiment)(trial, time_graph_pairs, mu)
+            delayed(experiment)(trial, time_graph_pairs[:3], mu)
             for trial in range(n_trials)
         )
     else:
-        results = [experiment(trial, time_graph_pairs, mu)
+        results = [experiment(trial, time_graph_pairs[:3], mu)
                    for trial in range(n_trials)]
 
     for trial, base_grammar, joint_dict, indep_dict in results:
@@ -77,15 +77,15 @@ def main(dataset, n_trials, parallel, n_jobs, mu):
     base_mdls = {key: grammar.mdl
                  for key, grammar in base_grammars.items()}
 
-    joint_mdls = {key: {subkey: grammar.mdl for subkey, grammar in joint_dict.items()}
-                  for key, joint_dict in joint_grammars.items()}
-    indep_mdls = {key: {subkey: grammar.mdl for subkey, grammar in indep_dict.items()}
-                  for key, indep_dict in indep_grammars.items()}
+    joint_mdls = {trial: {(t1, t2): grammar.mdl for (t1, t2), grammar in joint_dict.items()}
+                  for trial, joint_dict in joint_grammars.items()}
+    indep_mdls = {trial: {(t1, t2): grammar.mdl for (t1, t2), grammar in indep_dict.items()}
+                  for trial, indep_dict in indep_grammars.items()}
 
-    joint_lls = {key: {subkey: grammar.ll for subkey, grammar in joint_dict.items()}
-                 for key, joint_dict in joint_grammars.items()}
-    indep_lls = {key: {subkey: grammar.ll for subkey, grammar in indep_dict.items()}
-                 for key, indep_dict in indep_grammars.items()}
+    joint_lls = {trial: {(t1, t2): grammar.ll for (t1, t2), grammar in joint_dict.items()}
+                 for trial, joint_dict in joint_grammars.items()}
+    indep_lls = {trial: {(t1, t2): grammar.ll for (t1, t2), grammar in indep_dict.items()}
+                 for trial, indep_dict in indep_grammars.items()}
 
     with open(join(rootpath, resultspath, f'{dataset}_base.grammars'), 'wb') as outfile:
         pickle.dump(base_grammars, outfile)
@@ -102,23 +102,23 @@ def main(dataset, n_trials, parallel, n_jobs, mu):
     with open(join(rootpath, resultspath, f'{dataset}_joint.mdls'), 'w') as outfile:
         outfile.write('trial,t1,t2,mdl\n')
         for trial, mdls in joint_mdls.items():
-            for (t1, t2), mdl in mdls:
+            for (t1, t2), mdl in mdls.items():
                 outfile.write(f'{trial},{t1},{t2},{mdl}\n')
     with open(join(rootpath, resultspath, f'{dataset}_indep.mdls'), 'w') as outfile:
         outfile.write('trial,t1,t2,mdl\n')
         for trial, mdls in indep_mdls.items():
-            for (t1, t2), mdl in mdls:
+            for (t1, t2), mdl in mdls.items():
                 outfile.write(f'{trial},{t1},{t2},{mdl}\n')
 
     with open(join(rootpath, resultspath, f'{dataset}_joint.lls'), 'w') as outfile:
         outfile.write('trial,t1,t2,ll\n')
         for trial, lls in joint_lls.items():
-            for (t1, t2), ll in lls:
+            for (t1, t2), ll in lls.items():
                 outfile.write(f'{trial},{t1},{t2},{ll}\n')
     with open(join(rootpath, resultspath, f'{dataset}_indep.lls'), 'w') as outfile:
         outfile.write('trial,t1,t2,ll\n')
         for trial, lls in indep_lls.items():
-            for (t1, t2), ll in lls:
+            for (t1, t2), ll in lls.items():
                 outfile.write(f'{trial},{t1},{t2},{ll}\n')
 
 
