@@ -17,7 +17,7 @@ from cnrg.VRG import VRG
 from src.utils import mkdir
 from src.data import load_data
 from src.decomposition import decompose
-from src.graph_transitions import update_grammar
+from src.adjoin_graph import update_grammar
 
 
 # g: the graph to perturb
@@ -111,17 +111,17 @@ def main(dataset, rewire, delta, n_trials, parallel, n_jobs, mu):
         else:
             indep_grammars[(curr_time, next_time, p)] = [indep_grammar]
 
-    base_mdls = {key: [grammar.mdl() for grammar in collection]
+    base_mdls = {key: [grammar.mdl for grammar in collection]
                  for key, collection in base_grammars.items()}
 
-    joint_mdls = {key: [grammar.mdl() for grammar in collection]
+    joint_mdls = {key: [grammar.mdl for grammar in collection]
                   for key, collection in joint_grammars.items()}
-    indep_mdls = {key: [grammar.mdl() for grammar in collection]
+    indep_mdls = {key: [grammar.mdl for grammar in collection]
                   for key, collection in indep_grammars.items()}
 
-    joint_lls = {key: [grammar.ll() for grammar in collection]
+    joint_lls = {key: [grammar.ll for grammar in collection]
                  for key, collection in joint_grammars.items()}
-    indep_lls = {key: [grammar.ll() for grammar in collection]
+    indep_lls = {key: [grammar.ll for grammar in collection]
                  for key, collection in indep_grammars.items()}
 
     with open(join(rootpath, resultspath, f'{dataset}_base.grammars'), 'wb') as outfile:
