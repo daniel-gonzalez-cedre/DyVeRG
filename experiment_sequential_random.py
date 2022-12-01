@@ -116,9 +116,8 @@ def main(dataset, rewire, delta, n_trials, parallel, n_jobs, mu):
 
     with open(join(rootpath, resultspath, f'{dataset}_base.mdls'), 'w') as outfile:
         outfile.write('trial,time,p,mdl\n')
-        for (trial, time, p), mdls in base_mdls.items():
-            for mdl in mdls:
-                outfile.write(f'{trial},{time},{p},{mdl}\n')
+        for (trial, time, p), mdl in base_mdls.items():
+            outfile.write(f'{trial},{time},{p},{mdl}\n')
 
     with open(join(rootpath, resultspath, f'{dataset}_joint.mdls'), 'w') as outfile:
         outfile.write('trial,time1,time2,p,mdl\n')
