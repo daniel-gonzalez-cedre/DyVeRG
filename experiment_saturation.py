@@ -22,26 +22,26 @@ from src.adjoin_graph import update_grammar
 
 def experiment(trial: int, time_graph_pairs: list[tuple[int, nx.Graph]], mu: int) -> tuple[int, VRG, dict[tuple[int, int], VRG], dict[tuple[int, int], VRG]]:
     base_time, base_graph = time_graph_pairs[0]
-    prev_time, graph = time_graph_pairs[1]
-    cumulative_graph = nx.compose(base_graph, graph)
+    time, graph = time_graph_pairs[1]
 
     base_grammar = decompose(base_graph, time=base_time, mu=mu)
 
-    prev_joint_grammar = update_grammar(base_grammar, cumulative_graph, graph, prev_time, mode='j')
-    joint_grammars = {(base_time, prev_time): prev_joint_grammar}
+    prev_joint_grammar = update_grammar(base_grammar, base_graph, graph, time, mode='j')
+    joint_grammars = {(base_time, time): prev_joint_grammar}
 
-    prev_indep_grammar = update_grammar(base_grammar, cumulative_graph, graph, prev_time, mode='i')
-    indep_grammars = {(base_time, prev_time): prev_indep_grammar}
+    prev_indep_grammar = update_grammar(base_grammar, base_graph, graph, time, mode='i')
+    indep_grammars = {(base_time, time): prev_indep_grammar}
 
-    for time, graph in time_graph_pairs[2:]:
-        joint_grammar = update_grammar(prev_joint_grammar, cumulative_graph, graph, time, mode='j')
-        joint_grammars[(prev_time, time)] = joint_grammar
+    cumulative_graph = nx.compose(base_graph, graph)
+    for next_time, next_graph in time_graph_pairs[2:]:
+        joint_grammar = update_grammar(prev_joint_grammar, cumulative_graph, next_graph, next_time, mode='j')
+        joint_grammars[(time, next_time)] = joint_grammar
 
-        indep_grammar = update_grammar(prev_indep_grammar, cumulative_graph, graph, time, mode='i')
-        indep_grammars[(prev_time, time)] = indep_grammar
+        indep_grammar = update_grammar(prev_indep_grammar, cumulative_graph, next_graph, next_time, mode='i')
+        indep_grammars[(time, next_time)] = indep_grammar
 
-        prev_time = time
-        cumulative_graph = nx.compose(cumulative_graph, graph)
+        time = next_time
+        cumulative_graph = nx.compose(cumulative_graph, next_graph)
 
     return trial, base_grammar, joint_grammars, indep_grammars
 
