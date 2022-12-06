@@ -95,7 +95,6 @@ def common_ancestor(nodes: Collection[int], grammar: VRG) -> tuple[PartRule, int
     for u in nodes:
         if len(node_ancestors[u]) == 0:
             ancestor_nodes[u] = ancestor_rule.mapping[u]
-            # ancestor_nodes[u] = grammar.which_rule_source[u]
         else:
             pre_ancestor_idx = node_ancestors[u][node_ancestors[u].index(least_common_ancestor) - 1]
             ancestor_u = grammar.rule_tree[pre_ancestor_idx][2]

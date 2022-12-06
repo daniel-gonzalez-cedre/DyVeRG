@@ -157,8 +157,8 @@ def compress_graph(g: LightMultiGraph, subtree: Set[int], boundary_edges: Any, p
                 d = {'weight': 1}
             if 'attr_records' in d.keys():
                 g.add_edge(u, v, weight=d['weight'], attr_records=d['attr_records'])
-            elif 'edge_colors' in d.keys():
-                g.add_edge(u, v, weight=d['weight'], edge_colors=d['edge_colors'])
+            elif 'colors' in d.keys():
+                g.add_edge(u, v, weight=d['weight'], colors=d['colors'])
             else:
                 g.add_edge(u, v, weight=d['weight'])
 

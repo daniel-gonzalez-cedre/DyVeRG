@@ -89,9 +89,9 @@ class BaseRule:
         return hash1 == hash2
 
     def __str__(self):
-        st = f'({self.idn}) {self.lhs} -> (n = {self.graph.order()}, m = {self.graph.size()})'
+        st = f'{self.lhs} -> (n = {self.graph.order()}, m = {self.graph.size()})'
         if len(self.nonterminals) != 0:  # if it has non-terminals, print the sizes
-            st += 'nt: {' + ','.join(map(str, self.nonterminals)) + '}'
+            st += ' nt: {' + ','.join(map(str, self.nonterminals)) + '}'
         if self.frequency > 1:  # if freq > 1, show it in square brackets
             st += f'[{self.frequency}]'
         return st

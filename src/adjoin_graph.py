@@ -13,10 +13,14 @@ from adjoin_rule import mutate_rule_domestic, mutate_rule_diplomatic
 
 
 def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph,
-                   time: int, mode: str = 'joint', mu: int = None):
+                   time: int, mode: str = 'joint', mu: int = None, amnesia: bool = False):
     """ docstring goes here """
     if mu is None:
         mu = grammar.mu
+
+    if amnesia:
+        away_graph = nx.relabel_nodes(away_graph, {v: v + max(home_graph.nodes())
+                                                   for v in away_graph.nodes()})
 
     assert mode in ['joint', 'j', 'independent', 'indep', 'i']
 

@@ -1,5 +1,4 @@
-import pdb
-import logging
+# import logging
 import random
 from typing import List, Dict, Tuple, Any
 
@@ -82,7 +81,11 @@ def _generate_graph(rule_dict: Dict[int, List[PartRule]], upper_bound: int) -> A
         # logging.debug(f'firing rule {rule.idn}, selecting node {nts} with label: {lhs}')
         rule_ordering.append(rule.idn)
         broken_edges = find_boundary_edges(new_g, {nts})
-        assert len(broken_edges) == lhs if lhs >= 0 else True
+        try:
+            assert len(broken_edges) == lhs if lhs >= 0 else True
+        except:
+            import pdb
+            pdb.set_trace()
 
         # get ready to replace the chosen nonterminal with the RHS
         new_g.remove_node(nts)
@@ -101,8 +104,8 @@ def _generate_graph(rule_dict: Dict[int, List[PartRule]], upper_bound: int) -> A
                 attr_dict['label'] = d['label']
 
             # sample a color for this node if there are colors available
-            if 'node_colors' in d.keys():
-                attr_dict['color'] = random.sample(d['node_colors'], 1)[0]
+            if 'colors' in d.keys():
+                attr_dict['color'] = random.sample(d['colors'], 1)[0]
 
             new_g.add_node(new_node, **attr_dict)
             node_counter += 1
@@ -110,6 +113,7 @@ def _generate_graph(rule_dict: Dict[int, List[PartRule]], upper_bound: int) -> A
         # randomly assign broken edges to boundary edges
         random.shuffle(broken_edges)
 
+        # TODO: this isn't actually random
         # randomly joining the new boundary edges from the RHS to the rest of the graph - uniformly at random
         for n, d in rhs.nodes(data=True):
             num_boundary_edges = d['b_deg']
@@ -118,12 +122,12 @@ def _generate_graph(rule_dict: Dict[int, List[PartRule]], upper_bound: int) -> A
 
             # assert len(broken_edges) >= num_boundary_edges
             # debugging
-            if False:
-                try:
-                    assert len(broken_edges) >= num_boundary_edges
-                except AssertionError as E:
-                    # pdb.set_trace()
-                    raise AssertionError from E
+            try:
+                assert len(broken_edges) >= num_boundary_edges  # TODO: why is this not checking for equality?
+            except AssertionError as E:
+                import pdb
+                pdb.set_trace()
+                raise AssertionError from E
 
             edge_candidates = broken_edges[:num_boundary_edges]  # picking the first batch of broken edges
             broken_edges = broken_edges[num_boundary_edges:]  # removing them from future consideration
@@ -136,8 +140,10 @@ def _generate_graph(rule_dict: Dict[int, List[PartRule]], upper_bound: int) -> A
 
                 if u == nts:
                     u = node_map[n]
-                else:
+                elif v == nts:
                     v = node_map[n]
+                else:
+                    raise AssertionError
 
                 # logging.debug(f'adding broken edge ({u}, {v})')
                 if len(e) == 2:
@@ -146,10 +152,10 @@ def _generate_graph(rule_dict: Dict[int, List[PartRule]], upper_bound: int) -> A
                     new_g.add_edge(u, v, attr_dict=d)
 
         # adding the RHS to the new graph
-        for u, v, d in rhs.graph.edges(data=True):
+        for u, v, d in rhs.edges(data=True):
             edge_multiplicity = d['weight']
-            if 'edge_colors' in d.keys():
-                edge_color = random.sample(d['edge_colors'], 1)[0]
+            if 'colors' in d.keys():
+                edge_color = random.sample(d['colors'], 1)[0]
                 new_g.add_edge(node_map[u], node_map[v], weight=edge_multiplicity, edge_color=edge_color)
             else:
                 new_g.add_edge(node_map[u], node_map[v], weight=edge_multiplicity)

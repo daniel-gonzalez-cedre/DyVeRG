@@ -72,7 +72,7 @@ def experiment(trial: int,
 # TODO: implement saving intermediate results in case we need to stop the code
 def main(dataset, rewire, delta, n_trials, parallel, n_jobs, mu):
     rootpath = git.Repo(getcwd(), search_parent_directories=True).git.rev_parse("--show-toplevel")
-    resultspath = 'results/experiment_sequential_random/'
+    resultspath = 'results/experiment_random/'
     mkdir(join(rootpath, resultspath))
 
     base_grammars: dict[tuple[int, int, float], VRG] = {}
