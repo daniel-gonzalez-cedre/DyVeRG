@@ -1,12 +1,11 @@
 """
 refactored VRG
 """
-from typing import Union
+from typing import Union, Optional, Collection
 
 from joblib import Parallel, delayed
 import numpy as np
 import networkx.algorithms.isomorphism as iso
-from tqdm import tqdm
 
 from cnrg.Rule import BaseRule
 from src.utils import find, replace, graph_edit_distance
@@ -21,21 +20,15 @@ class VRG:
             clustering = node clustering algorithm used on the input graph to extract this grammar
             name = a string naming the graph this grammar was extracted from
             mu = the μ hyperparameter that (indirectly) determines the rules' maximum RHS sizes
+            extraction_map = maps the dendrogram nodes to the rules extracted from them
+                             used during the extraction process to compute self.decomposition
 
-            rule_list = list of Rule objects
-            rule_dict = dictionary of rules, keyed in by their LHS
-            dl = the minimum description length (MDL) of the collection of rules
-            rule_tree = extraction tree for the grammar (a.k.a. decomposition for the input graph)
-                        each entry looks like [rule, parent_idx, ancestor_node], where:
-                            rule = the rule extracted at this point in the decomposition
-                            parent_idx = index in self.rule_tree corresponding to the parent of rule
-                            ancestor_node = (name of) vertex in rule's parent's RHS graph corresponding to rule
-            rule_source = dict mapping ``vertex v`` -> ``index in rule_tree of rule R that terminally covers v``
-            which_rule_source = dict that maps vertex v -> index in list(R.graph.nodes()), where:
-                                    R = self.rule_source[v],
-                                    indicating which node in the rule RHS corresponds to v
-            comp_map = maps the dendrogram nodes to the rules extracted from them
-                       used during the extraction process to compute rule_tree
+            decomposition = extraction tree for the grammar (a.k.a. decomposition for the input graph)
+                            each entry looks like [rule, pidx, anode], where:
+                                rule = the rule extracted at this point in the decomposition
+                                pidx = index in self.rule_tree corresponding to the parent of rule
+                                anode = (name of) vertex in rule's parent's RHS graph corresponding to rule
+            cover = dict mapping ``vertex v`` -> ``index in decomposition of rule R that terminally covers v``
             transition_matrix = ignore for now
             temporal_matrix = ignore for now
 
@@ -51,31 +44,32 @@ class VRG:
     """
 
     __slots__ = (
-        'gtype', 'clustering', 'name', 'mu', 'rule_list', 'rule_dict',
-        'rule_tree', 'covering_idx', 'comp_map',
-        'transition_matrix', 'temporal_matrix',
+        'gtype', 'clustering', 'name', 'mu',
+        'rules', 'decomposition', 'cover', 'extraction_map',
+        # 'transition_matrix', 'temporal_matrix',
         'penalty', 'amplifier'
     )
 
     def __init__(self, gtype: str, clustering: str, name: str, mu: int):
-        self.gtype: str = gtype  # type of grammar - lambda, local, global, selection strategy - random, dl, level, or dl_levels
-        self.clustering: str = clustering  # clustering strategy
-        self.name: str = name  # name of the graph
-        self.mu = mu
+        self.gtype: str = gtype
+        self.clustering: str = clustering
+        self.name: str = name
+        self.mu: int = mu
+        self.extraction_map: dict[int, int] = {}
 
-        self.rule_list: list[BaseRule] = []  # list of Rule objects
-        self.rule_dict: dict[int, list[BaseRule]] = {}  # dictionary of rules, keyed in by their LHS
-        self.rule_tree: list[list] = []  # extraction tree for the grammar; each entry looks like [rule, parent_idx, which_child]
-        self.covering_idx: dict[int, int] = {}  # dict that maps vertex v -> index in rule_tree of rule R that terminally covers v
-        self.comp_map: dict[int, int] = {}
-        self.transition_matrix = None
-        self.temporal_matrix = None
+        # self.rule_list
+        # self.rule_dict
+        self.rules: dict[int, list[BaseRule]] = {}
+        self.decomposition: list[list] = []
+        self.cover: dict[int, int] = {}
+        # self.transition_matrix = None
+        # self.temporal_matrix = None
         self.penalty: float = 0
         self.amplifier: float = 100
 
     @property
     def root(self) -> tuple[int, BaseRule]:
-        for idx, (r, pidx, anode) in enumerate(self.rule_tree):
+        for idx, (r, pidx, anode) in enumerate(self.decomposition):
             if pidx is None and anode is None:
                 # assert r.lhs == min(nts for nts in self.rule_dict)
                 return idx, r
@@ -97,7 +91,7 @@ class VRG:
 
     @property
     def dl(self) -> float:
-        return sum(rule.mdl for rule in self.rule_list)
+        return sum(sum(rule.mdl for rule in rules) for lhs, rules in self.rules.items())
 
     @property
     def ll(self) -> float:
@@ -111,10 +105,35 @@ class VRG:
     # total cost (in terms of edit operations) incurred to dynamically augment this grammar
     @property
     def cost(self) -> float:
-        return sum(rule.edit_dist for rule in self.rule_list)
+        return sum(rule.edit_dist for rule, _, _ in self.decomposition)
+        # return sum(sum(rule.edit_dist for rule in self.rule_list) for lhs, rules in self.rules)
+
+    @property
+    def nonterminals(self):
+        if not self.rules:
+            self.compute_rules()
+        return set(self.rules)
+
+    def compute_rules(self):
+        self.rules: dict[int, list[BaseRule]] = {}
+        for rule, _, _ in self.decomposition:
+            if rule.lhs in self.rules:
+                for rr in self.rules[rule.lhs]:
+                    if rule == rr:
+                        rr.frequency += 1
+                        break
+                else:
+                    self.rules[rule.lhs] += [rule]
+            else:
+                self.rules[rule.lhs] = [rule]
+
+    def set_time(self, time: int):
+        for _, (rule, _, _) in enumerate(self.decomposition):
+            rule.time_created = time
+            rule.time_changed = time
 
     def minimum_edit_dist(self, rule: BaseRule, parallel: bool = True, n_jobs: int = 4) -> int:
-        if rule.lhs in self.rule_dict:
+        if rule.lhs in self.nonterminals:
             candidates = [r for r in self.rule_dict[rule.lhs] if r is not rule]
             penalty = 0
         else:
@@ -134,148 +153,81 @@ class VRG:
         return int(min(edit_dists)) + penalty
 
     def is_edge_connected(self, u: int, v: int) -> bool:
-        return u in self.covering_idx or v in self.covering_idx
-
-    def is_in(self, r: BaseRule, where: str = 'list') -> bool:
-        assert where in ['rule_list', 'list',
-                         'rule_dict', 'dict',
-                         'rule_tree', 'tree', 'decomposition']
-        where = where.strip().split('_')[-1]
-
-        if where == 'list':
-            for rule in self.rule_list:
-                if rule is r:
-                    return True
-        elif where == 'dict':
-            for rules in self.rule_dict.values():
-                for rule in rules:
-                    if rule is r:
-                        return True
-        else:
-            for rule, _, _ in self.rule_tree:
-                if rule is r:
-                    return True
-        return False
+        return NotImplemented
+        return u in self.cover or v in self.cover
 
     # find a reference to a rule somewhere in this grammar
-    def find_rule(self, rule: BaseRule, where: str) -> Union[int, tuple[int, int], list[int]]:
-        assert where in ['rule_list', 'list',
-                         'rule_dict', 'dict',
-                         'rule_tree', 'tree', 'decomposition']
-        where = where.strip().split('_')[-1]
-
-        if where == 'list':
-            refs = find(rule, self.rule_list)
-            here, = refs if refs else [[]]
-        elif where == 'dict':
-            refs = find(rule, self.rule_dict)
-            (lhs, idxs), = refs if refs else (((), ()),)
-            here = (lhs, *idxs)
-        else:
-            here = [idx for idx, _ in find(rule, self.rule_tree)]
-
+    def find_rule(self, ref: Union[int, BaseRule]) -> int:
+        if isinstance(ref, int):
+            return ref
+        refs = find(ref, self.decomposition)
+        here, = refs if refs else [[]]
         return here
 
-    # find all direct descendants of (all copies of) this rule in the decomposition
-    def get_all_children(self, rule: BaseRule) -> list[tuple[int, BaseRule]]:
-        refs: list[int] = self.find_rule(rule, where='rule_tree')  # type: ignore
-        return [(cidx, r)
-                for ref in refs
-                for cidx, (r, pidx, _) in enumerate(self.rule_tree)
-                if ref == pidx]
-
-    # find all direct descendants corresponding to the nonterminal symbol in (all copies of) this rule
-    def get_all_children_of(self, nts: int, rule: BaseRule) -> list[tuple[int, BaseRule]]:
-        assert 'label' in rule.graph.nodes[nts]
-        refs: list[int] = self.find_rule(rule, where='rule_tree')  # type: ignore
-        return [(cidx, r)
-                for ref in refs
-                for cidx, (r, pidx, anode) in enumerate(self.rule_tree)
-                if ref == pidx and nts == anode]
-
     # find the direct descendants downstream of this location in the decomposition
-    def get_children(self, ref: int) -> list[tuple[int, BaseRule]]:
+    def find_children(self, ref: Union[int, BaseRule]) -> list[tuple[int, BaseRule]]:
+        idx = self.find_rule(ref)
         return [(cidx, r)
-                for cidx, (r, pidx, _) in enumerate(self.rule_tree)
-                if ref == pidx]
+                for cidx, (r, pidx, _) in enumerate(self.decomposition)
+                if idx == pidx]
 
     # find the direct descendants downstream of this nonterminal symbol in this location in the decomposition
-    def get_children_of(self, nts: int, ref: int) -> list[tuple[int, BaseRule]]:
-        assert 'label' in self.rule_tree[ref][0].graph.nodes[nts]  # type: ignore
+    def find_children_of(self, nts: str, ref: Union[int, BaseRule]) -> list[tuple[int, BaseRule]]:
+        idx = self.find_rule(ref)
+        assert 'label' in self.decomposition[idx][0].graph.nodes[nts]  # type: ignore
         return [(cidx, r)
-                for cidx, (r, pidx, anode) in enumerate(self.rule_tree)
-                if ref == pidx and nts == anode]
+                for cidx, (r, pidx, anode) in enumerate(self.decomposition)
+                if idx == pidx and nts == anode]
 
-    # TODO: during extraction, when rules are merged, take the min of their levels
-    # find the minimum distance in the decomposition between this rule and the root
-    def find_level(self, r: BaseRule) -> int:
-        return min(self.find_levels(r))
+    def compute_levels(self):
+        curr_level = 0
+        root_idx, root_rule = self.root
+        root_rule.level = curr_level
+        children = self.find_children(root_idx)
 
-    # find all distances in the decomposition between this rule and the root
-    def find_levels(self, r: BaseRule) -> list[int]:
-        levels = []
-        for this_idx in self.find_rule(r, where='rule_tree'):  # type: ignore
-            level = 0
-            parent_idx = self.rule_tree[this_idx][1]
+        while len(children) != 0:
+            curr_level += 1
+            for _, crule in children:
+                crule.level = curr_level
+            children = [grandchild for cidx, crule in children for grandchild in self.find_children(cidx)]
 
-            while parent_idx is not None:
-                level += 1
-                try:
-                    parent_idx = self.rule_tree[parent_idx][1]
-                except:
-                    import pdb
-                    pdb.set_trace()
+    def level(self, ref: Union[int, BaseRule]) -> int:
+        level = 0
+        this_idx = self.find_rule(ref)
 
-            levels += [level]
-        return levels
+        parent_idx = self.decomposition[this_idx][1]
+
+        while parent_idx is not None:
+            level += 1
+            parent_idx = self.decomposition[parent_idx][1]
+
+        return level
 
     # replaces every occurrence of old_rule with new_rule in the grammar
     # f: V(old_rule) -> V(new_rule)
     def replace_rule(self, old_rule: BaseRule, new_rule: BaseRule, f: dict[str, str]):
-        for child_idx, _ in self.get_all_children(old_rule):
-            ancestor_node = self.rule_tree[child_idx][2]
-            self.rule_tree[child_idx][2] = f[ancestor_node]
-        replace(old_rule, new_rule, self.rule_tree)
-        replace(old_rule, new_rule, self.rule_dict)
-        replace(old_rule, new_rule, self.rule_list)
-
-    def push_down_grammar(self, steps: int = 1):
-        self.push_down_branch(self.root_rule, steps=steps)
-        # for rule in self.rule_list:
-        #     rule.level += steps
-
-    def push_down_branch(self, rule: BaseRule, steps: int = 1):
-        rule.level += steps
-        for _, child in self.get_all_children(rule):
-            self.push_down_branch(child)
+        return NotImplemented
+        for cidx, _ in self.find_children(old_rule):
+            ancestor_node = self.decomposition[cidx][2]
+            self.decomposition[cidx][2] = f[ancestor_node]
+        replace(old_rule, new_rule, self.decomposition)
 
     def copy(self):
-        bag = [rule.copy() for rule in self.rule_list]
-
         vrg_copy = VRG(gtype=self.gtype, clustering=self.clustering, name=self.name, mu=self.mu)
-
-        vrg_copy.rule_tree = [[bag[bag.index(rule)], parent_idx, ancestor_node] for rule, parent_idx, ancestor_node in self.rule_tree]
-
-        vrg_copy.rule_list = [bag[idx] for idx, _ in enumerate(self.rule_list)]
-        vrg_copy.rule_dict = {lhs: [rule for rule in bag if rule.lhs == lhs] for lhs in [rule.lhs for rule in bag]}
-        # vrg_copy.rule_dict = {lhs: [bag[bag.index(rule)] for rule in self.rule_dict[lhs]] for lhs in self.rule_dict}
-
-        vrg_copy.covering_idx = self.covering_idx.copy()
-        vrg_copy.comp_map = self.comp_map.copy()
-        vrg_copy.transition_matrix = self.transition_matrix.copy() if self.transition_matrix is not None else None
-        vrg_copy.temporal_matrix = self.temporal_matrix.copy() if self.temporal_matrix is not None else None
-
+        vrg_copy.decomposition = [[rule.copy(), pidx, anode] for rule, pidx, anode in self.decomposition]
+        vrg_copy.cover = self.cover.copy()
+        vrg_copy.extraction_map = self.extraction_map.copy()
         return vrg_copy
 
     def __len__(self):
-        return len(self.rule_list)
+        return len(self.decomposition)
 
     def __contains__(self, rule: BaseRule):
-        return rule in self.rule_dict[rule.lhs]
+        return isinstance(self.find_rule(rule), int)
 
     def __str__(self):
         st = (
-            f'graph: {self.name}, mu: {self.mu}, type: {self.gtype} clustering: {self.clustering} rules: {len(self.rule_list)}'
+            f'graph: {self.name}, mu: {self.mu}, type: {self.gtype} clustering: {self.clustering} rules: {len(self.decomposition)}'
             f'({len(self)}) mdl: {round(self.mdl, 3):_g} bits'
         )
         return st
@@ -284,20 +236,19 @@ class VRG:
         return str(self)
 
     def __getitem__(self, item):
-        return self.rule_list[item]
+        return self.decomposition[item]
 
     def reset(self):
-        self.rule_list = []
-        self.rule_dict = {}
-        self.rule_tree = []
-        self.covering_idx = {}
-        self.comp_map = {}
-        self.transition_matrix = None
-        self.temporal_matrix = None
+        self.decomposition = []
+        self.cover = {}
+        self.extraction_map = {}
+        # self.transition_matrix = None
+        # self.temporal_matrix = None
         self.dl = 0
 
     # adds to the grammar iff it's a new rule
     def add_rule(self, rule: BaseRule) -> BaseRule:
+        return NotImplemented
         if rule.lhs not in self.rule_dict:
             self.rule_dict[rule.lhs] = []
 
@@ -348,6 +299,7 @@ class VRG:
         return rule
 
     def init_temporal_matrix(self):
+        return NotImplemented
         n = len(self.rule_list)
         self.temporal_matrix = np.identity(n, dtype=float)
 

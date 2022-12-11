@@ -22,7 +22,7 @@ class BaseRule:
             time = the timestamp when this rule was extracted
             time_changed = the most recent timestamp when this rule was modified
             subtree = the original names of the nodes this rule was extracted from
-            mapping = dict mapping ``original_node_names`` -> ``rule_node_names``
+            alias = dict mapping ``original_node_names`` -> ``rule_node_names``
             edit_dist = the minimum graph edit distance between this rule and all other rules in the grammar
                         == 0 if this rule was added during the course of learning a static grammar
                         >= 0 if this rule was added by merging two grammars or modifying a previous rule
@@ -36,24 +36,24 @@ class BaseRule:
 
     __slots__ = (
         'lhs', 'graph', 'level', 'frequency', 'idn',
-        'subtree', 'mapping', 'time', 'time_changed',
+        'subtree', 'alias', 'time_created', 'time_changed',
         'edit_dist', 'timed_out'
     )
 
     def __init__(self, lhs: int, graph: nx.Graph, level: int = 0, frequency: int = 1, idn: int = None,
-                 time: int = None, subtree: set[int] = None, mapping: dict[int, Any] = None,
+                 time: int = None, subtree: set[int] = None, alias: dict[int, Any] = None,
                  edit_dist: int = 0, timed_out: bool = False):
-        self.lhs = lhs
+        self.lhs: int = lhs
         self.graph: LMG = convert(graph)
-        self.level = level
-        self.frequency = frequency
-        self.idn = idn
-        self.time = time
-        self.time_changed = time
-        self.subtree = subtree if subtree is not None else set()
-        self.mapping = mapping if mapping is not None else {}
-        self.edit_dist = edit_dist
-        self.timed_out = timed_out
+        self.level: int = level
+        self.frequency: int = frequency
+        self.idn: int = idn
+        self.time_created: int = time
+        self.time_changed: int = time
+        self.subtree: set[int] = subtree if subtree is not None else set()
+        self.alias: dict[int, str] = alias if alias is not None else {}
+        self.edit_dist: int = edit_dist
+        self.timed_out: bool = timed_out
 
     @property
     def nonterminals(self):
@@ -135,9 +135,9 @@ class BaseRule:
             level=self.level,
             frequency=self.frequency,
             idn=self.idn,
-            time=self.time,
+            time=self.time_changed,
             subtree=self.subtree.copy(),
-            mapping=self.mapping.copy(),
+            alias=self.alias.copy(),
             edit_dist=self.edit_dist,
             timed_out=self.timed_out
         )
@@ -169,11 +169,74 @@ class BaseRule:
                 dot.edge(str(u), str(v))
         return dot
 
-    def deactivate(self):
-        self.is_active = False
 
-    def activate(self):
-        self.is_active = True
+class PartRule(BaseRule):
+    """
+    Rule class for Partial option
+    """
+    def __init__(self, lhs: int, graph: nx.Graph, level: int = 0, frequency: int = 1, idn: int = None,
+                 time: int = None, subtree: set[int] = None, alias: dict[int, str] = None,
+                 edit_dist: int = 0, timed_out: bool = False):
+        super().__init__(
+            lhs=lhs,
+            graph=graph,
+            level=level,
+            frequency=frequency,
+            idn=idn,
+            time=time,
+            subtree=subtree,
+            alias=alias,
+            edit_dist=edit_dist,
+            timed_out=timed_out
+        )
+
+    @property
+    def dl(self) -> float:
+        """
+        Calculates the MDL for the rule. This includes the encoding of boundary degrees of the nodes.
+        l_u = 2 (because we have one type of nodes and one type of edge)
+        :return:
+        """
+        b_deg = nx.get_node_attributes(self.graph, 'b_deg')
+        assert len(b_deg) > 0, 'invalid b_deg'
+        max_boundary_degree = max(b_deg.values())
+        # l_u = 2
+        # for node, data in self.graph.nodes(data=True):
+        #     if 'label' in data:  # it's a non-terminal
+        #         l_u = 3
+        return MDL.gamma_code(max(0, self.lhs) + 1) + MDL.graph_dl(self.graph) + MDL.gamma_code(self.frequency + 1) + self.graph.order() * MDL.gamma_code(max_boundary_degree + 1)
+
+    def copy(self):
+        copy_rule = PartRule(
+            lhs=self.lhs,
+            graph=self.graph.copy(),
+            level=self.level,
+            frequency=self.frequency,
+            idn=self.idn,
+            time=self.time_changed,
+            subtree=self.subtree.copy(),
+            alias=self.alias.copy(),
+            edit_dist=self.edit_dist,
+            timed_out=self.timed_out
+        )
+        copy_rule.time_changed = self.time_changed
+        return copy_rule
+
+    def generalize_rhs(self):
+        """
+        Relabels the RHS such that the internal nodes are Latin characters, the boundary nodes are numerals.
+
+        :param self: RHS subgraph
+        :return:
+        """
+        self.alias = {}
+        internal_node_counter = 'a'
+
+        for n in self.graph.nodes():
+            self.alias[n] = internal_node_counter
+            internal_node_counter = chr(ord(internal_node_counter) + 1)
+
+        nx.relabel_nodes(self.graph, mapping=self.alias, copy=False)
 
 
 class FullRule(BaseRule):
@@ -213,7 +276,7 @@ class FullRule(BaseRule):
             internal_nodes=self.internal_nodes.copy(),
             edges_covered=self.edges_covered.copy(),
             idn=self.idn,
-            time=self.time,
+            time=self.time_changed,
             edit_dist=self.edit_dist,
             timed_out=self.timed_out
         )
@@ -227,20 +290,20 @@ class FullRule(BaseRule):
         :param self: RHS subgraph
         :return:
         """
-        self.mapping = {}
+        self.alias = {}
         internal_node_counter = 'a'
         boundary_node_counter = 0
 
         for n in self.internal_nodes:
-            self.mapping[n] = internal_node_counter
+            self.alias[n] = internal_node_counter
             internal_node_counter = chr(ord(internal_node_counter) + 1)
 
         for n in [x for x in self.graph.nodes() if x not in self.internal_nodes]:
-            self.mapping[n] = boundary_node_counter
+            self.alias[n] = boundary_node_counter
             boundary_node_counter += 1
 
-        self.graph = nx.relabel_nodes(self.graph, mapping=self.mapping)
-        self.internal_nodes = {self.mapping[n] for n in self.internal_nodes}
+        self.graph = nx.relabel_nodes(self.graph, mapping=self.alias)
+        self.internal_nodes = {self.alias[n] for n in self.internal_nodes}
 
     def contract_rhs(self):
         """
@@ -269,75 +332,6 @@ class FullRule(BaseRule):
         return
 
 
-class PartRule(BaseRule):
-    """
-    Rule class for Partial option
-    """
-    def __init__(self, lhs: int, graph: nx.Graph, level: int = 0, dl: int = 0, frequency: int = 1, idn: int = None,
-                 time: int = None, subtree: set[int] = None, mapping: dict[int, str] = None,
-                 edit_dist: int = 0, timed_out: bool = False):
-        super().__init__(
-            lhs=lhs,
-            graph=graph,
-            level=level,
-            frequency=frequency,
-            idn=idn,
-            time=time,
-            subtree=subtree,
-            mapping=mapping,
-            edit_dist=edit_dist,
-            timed_out=timed_out
-        )
-
-    @property
-    def dl(self) -> float:
-        """
-        Calculates the MDL for the rule. This includes the encoding of boundary degrees of the nodes.
-        l_u = 2 (because we have one type of nodes and one type of edge)
-        :return:
-        """
-        b_deg = nx.get_node_attributes(self.graph, 'b_deg')
-        assert len(b_deg) > 0, 'invalid b_deg'
-        max_boundary_degree = max(b_deg.values())
-        # l_u = 2
-        # for node, data in self.graph.nodes(data=True):
-        #     if 'label' in data:  # it's a non-terminal
-        #         l_u = 3
-        return MDL.gamma_code(max(0, self.lhs) + 1) + MDL.graph_dl(self.graph) + MDL.gamma_code(self.frequency + 1) + self.graph.order() * MDL.gamma_code(max_boundary_degree + 1)
-
-    def copy(self):
-        copy_rule = PartRule(
-            lhs=self.lhs,
-            graph=self.graph.copy(),
-            level=self.level,
-            frequency=self.frequency,
-            idn=self.idn,
-            time=self.time,
-            subtree=self.subtree.copy(),
-            mapping=self.mapping.copy(),
-            edit_dist=self.edit_dist,
-            timed_out=self.timed_out
-        )
-        copy_rule.time_changed = self.time_changed
-        return copy_rule
-
-    def generalize_rhs(self):
-        """
-        Relabels the RHS such that the internal nodes are Latin characters, the boundary nodes are numerals.
-
-        :param self: RHS subgraph
-        :return:
-        """
-        self.mapping = {}
-        internal_node_counter = 'a'
-
-        for n in self.graph.nodes():
-            self.mapping[n] = internal_node_counter
-            internal_node_counter = chr(ord(internal_node_counter) + 1)
-
-        nx.relabel_nodes(self.graph, mapping=self.mapping, copy=False)
-
-
 class NoRule(PartRule):
     """
     Class for no_info
@@ -350,7 +344,7 @@ class NoRule(PartRule):
             level=self.level,
             frequency=self.frequency,
             idn=self.idn,
-            time=self.time,
+            time=self.time_changed,
             edit_dist=self.edit_dist,
             timed_out=self.timed_out
         )

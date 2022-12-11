@@ -1,19 +1,15 @@
-import sys
-
-sys.path.append('../')
-
 import networkx as nx
 from tqdm import tqdm
 
 from cnrg.VRG import VRG
-from utils import silence
-from decomposition import decompose
-from adjoin_grammar import conjoin_grammars
-from adjoin_rule import mutate_rule_domestic, mutate_rule_diplomatic
+from src.utils import silence
+from src.decomposition import decompose
+from src.adjoin_grammar import conjoin_grammars
+from src.adjoin_rule import mutate_rule_domestic, mutate_rule_diplomatic
 
 
 def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph,
-                   time: int, mode: str = 'joint', mu: int = None, amnesia: bool = False):
+                   time: int, mode: str = 'jb', mu: int = None, amnesia: bool = False):
     """ docstring goes here """
     if mu is None:
         mu = grammar.mu
@@ -22,7 +18,8 @@ def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph,
         away_graph = nx.relabel_nodes(away_graph, {v: v + max(home_graph.nodes())
                                                    for v in away_graph.nodes()})
 
-    assert mode in ['joint', 'j', 'independent', 'indep', 'i']
+    mode = mode.replace('-', ' ').replace('_', ' ').lower()
+    assert mode in ('joint anneal', 'ja', 'joint branch', 'jb', 'independent', 'i')
 
     charted_grammar = grammar.copy()
 
@@ -43,7 +40,9 @@ def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph,
     edges_diplomatic = {(u if u in home_graph else v, v if v not in home_graph else u)
                         for u, v in edges_diplomatic}
 
-    if mode in ['joint', 'j']:
+    if 'j' in mode:
+        approach = 'branch' if 'b' in mode else 'anneal'
+
         uncharted_region = nx.Graph()
         uncharted_region.add_edges_from(edges_diplomatic | edges_foreign)
         uncharted_region.remove_nodes_from(home_graph.nodes())
@@ -54,26 +53,18 @@ def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph,
         conquered_components: list[frozenset] = []
 
         for nodes, territory in tqdm(uncharted_territories.items(), desc='joint changes', leave=True):
-            if territory.order() > 0:
+            if territory.order() >= 1:
                 with silence():
                     territory_grammar = decompose(territory, time=time, mu=mu)
-                try:
-                    assert len(charted_grammar.covering_idx.keys() & territory_grammar.covering_idx.keys()) == 0
-                except AssertionError as E:
-                    print(charted_grammar.covering_idx.keys() & territory_grammar.covering_idx.keys())
-                    raise AssertionError from E
 
-                # frontier = {(u if u in home_graph else v, v if v not in home_graph else u)
-                #             for (u, v) in edges_diplomatic
-                #             if (u in territory) or (v in territory)}
                 frontier = {(u if u in home_graph else v, v if v not in home_graph else u)
                             for (u, v) in edges_diplomatic
                             if v in territory}
 
                 for u, v in frontier:
-                    assert u in charted_grammar.covering_idx and v in territory_grammar.covering_idx
+                    assert u in charted_grammar.cover and v in territory_grammar.cover
 
-                charted_grammar = conjoin_grammars(charted_grammar, territory_grammar, frontier)
+                conjoin_grammars(charted_grammar, territory_grammar, frontier, time, approach=approach)
 
                 conquered_components += [nodes]
 
@@ -110,11 +101,11 @@ def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph,
             if not charted_grammar.is_edge_connected(u, v):
                 charted_grammar.penalty += 1
             else:
-                if u in charted_grammar.covering_idx and v in charted_grammar.covering_idx:
+                if u in charted_grammar.cover and v in charted_grammar.cover:
                     mutate_rule_domestic(charted_grammar, u, v, time, mode='add')
-                elif u in charted_grammar.covering_idx and v not in charted_grammar.covering_idx:
+                elif u in charted_grammar.cover and v not in charted_grammar.cover:
                     mutate_rule_diplomatic(charted_grammar, u, v, time)
-                elif u not in charted_grammar.covering_idx and v in charted_grammar.covering_idx:
+                elif u not in charted_grammar.cover and v in charted_grammar.cover:
                     mutate_rule_diplomatic(charted_grammar, v, u, time)
                 else:
                     raise AssertionError(f'{u}, {v}')
@@ -130,7 +121,9 @@ def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph,
     # for u, v in tqdm(edge_deletions, desc='deletions', leave=True):
     #     charted_grammar = update_rule_domestic(charted_grammar, u, v, 'del')
 
-    for idx, rule in enumerate(charted_grammar.rule_list):
-        rule.idn = idx
+    # for idx, rule in enumerate(charted_grammar.rule_list):
+    #     rule.idn = idx
 
+    charted_grammar.compute_rules()
+    charted_grammar.compute_levels()
     return charted_grammar

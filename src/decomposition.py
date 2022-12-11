@@ -1,13 +1,8 @@
-import sys
 import random
-from typing import Collection
+from typing import Collection, Iterable
 
 # from tqdm import tqdm
 import networkx as nx
-
-sys.path.append('..')
-
-from utils import is_rule_isomorphic
 
 from cnrg.Rule import PartRule
 from cnrg.VRG import VRG
@@ -17,9 +12,12 @@ from cnrg.LightMultiGraph import LightMultiGraph as LMG
 from cnrg.extract import MuExtractor
 from cnrg.partitions import leiden, louvain
 
+from src.utils import is_rule_isomorphic
+
 
 # returns the isomorphic rule after merging if one is found, otherwise returns the new rule
 def assimilate_rule(new_rule: PartRule, grammar: VRG, parallel: bool = True, compute_ged: bool = False) -> tuple[PartRule, dict[str, str]]:
+    return NotImplemented
     if new_rule.lhs in grammar.rule_dict:
         found = False
         for old_rule in grammar.rule_dict[new_rule.lhs]:
@@ -52,181 +50,151 @@ def assimilate_rule(new_rule: PartRule, grammar: VRG, parallel: bool = True, com
 
 
 def assimilate_rules(host_grammar: VRG, parasite_grammar: VRG, parallel: bool = True):
+    return NotImplemented
     for parasite_rule in parasite_grammar.rule_list:
         assimilated_rule, f = assimilate_rule(parasite_rule, host_grammar, parallel=parallel, compute_ged=True)
         parasite_grammar.replace_rule(parasite_rule, assimilated_rule, f)
 
 
-def ancestor(u: int, grammar: VRG) -> tuple[PartRule, int, str]:
-    parent_idx = grammar.covering_idx[u]  # points to which entry in rule_tree contains this rule
-    parent_rule = grammar.rule_tree[parent_idx][0]  # the rule in question
-    ancestor_u = parent_rule.mapping[u]  # the node in the rule's RHS corresponding to u
-    return parent_rule, parent_idx, ancestor_u
+def ancestor(u: int, grammar: VRG) -> tuple[int, PartRule, str]:
+    parent_idx = grammar.cover[u]  # points to which entry in rule_tree contains this rule
+    parent_rule = grammar[parent_idx][0]  # the rule in question
+    ancestor_u = parent_rule.alias[u]  # the node in the rule's RHS corresponding to u
+    return parent_idx, parent_rule, ancestor_u
 
 
-def common_ancestor(nodes: Collection[int], grammar: VRG) -> tuple[PartRule, int, dict[int, str]]:
+def common_ancestor(nodes: Collection[int], grammar: VRG) -> tuple[int, PartRule, dict[int, str]]:
     if len(nodes) == 1:
         u, = nodes
         parent_rule, parent_idx, ancestor_u = ancestor(u, grammar)
         return parent_rule, parent_idx, {u: ancestor_u}
 
-    parent_indices: dict[int, int] = {u: grammar.covering_idx[u] for u in nodes}
+    parent_indices: dict[int, int] = {u: grammar.cover[u] for u in nodes}
     node_ancestors: dict[int, list[int]] = {u: [] for u in nodes}
 
     # trace the ancestral lineage of each node all the way up to the root
     for u in nodes:
         while parent_indices[u] is not None:
-            try:
-                node_ancestors[u] += [parent_indices[u]]
-                parent_indices[u] = grammar.rule_tree[parent_indices[u]][1]
-            except IndexError as E:
-                print(parent_indices[u], len(grammar.rule_tree))
-                raise IndexError from E
+            node_ancestors[u] += [parent_indices[u]]
+            parent_indices[u] = grammar[parent_indices[u]][1]
 
     # take the rule furthest away from the root in the decomposition that still covers everyone
     common_ancestors = set.intersection(*[set(lineage) for lineage in node_ancestors.values()])
-    least_common_ancestor = max(common_ancestors, key=lambda idx: grammar.find_level(grammar.rule_tree[idx][0]))
-    # least_common_ancestor = max(common_ancestors, key=lambda idx: grammar.rule_tree[idx][0].level)
+    least_common_ancestor = max(common_ancestors, key=grammar.level)
 
     ancestor_idx = least_common_ancestor
-    ancestor_rule = grammar.rule_tree[ancestor_idx][0]
+    # ancestor_rule = grammar.decomposition[ancestor_idx][0]
+    ancestor_rule = grammar[ancestor_idx][0]
 
     ancestor_nodes = {}  # type: ignore
     for u in nodes:
         if len(node_ancestors[u]) == 0:
-            ancestor_nodes[u] = ancestor_rule.mapping[u]
+            ancestor_nodes[u] = ancestor_rule.alias[u]
         else:
             pre_ancestor_idx = node_ancestors[u][node_ancestors[u].index(least_common_ancestor) - 1]
-            ancestor_u = grammar.rule_tree[pre_ancestor_idx][2]
-            ancestor_nodes[u] = ancestor_u if ancestor_u is not None else ancestor_rule.mapping[u]
+            ancestor_u = grammar[pre_ancestor_idx][2]
+            ancestor_nodes[u] = ancestor_u if ancestor_u is not None else ancestor_rule.alias[u]
 
-    return ancestor_rule, ancestor_idx, ancestor_nodes
+    return ancestor_idx, ancestor_rule, ancestor_nodes
 
 
-def propagate_ancestors(node: str, rule_idx: int, grammar: VRG, time: int = None):
-    this_rule, parent_idx, ancestor_node = grammar.rule_tree[rule_idx]
+def propagate_ancestors(node: str, rule_idx: int, grammar: VRG, time: int = None,
+                        edit: bool = False, stop_at: int = -1):
+    if (node is None and rule_idx is None) or stop_at == rule_idx:
+        return
+    if node is None or rule_idx is None:
+        raise AssertionError('decomposition\'s miffed')
 
-    if this_rule.frequency == 1:
-        modified_rule = this_rule
+    rule, pidx, anode = grammar[rule_idx]
 
-        list_idx = grammar.find_rule(this_rule, where='rule_list')
-        del grammar.rule_list[list_idx]
+    rule.lhs += 1
+    rule.time_changed = time
+    rule.graph.nodes[node]['b_deg'] += 1
+    rule.graph.nodes[node]['label'] += 1
 
-        lhs, dict_idx = grammar.find_rule(this_rule, where='rule_dict')
-        del grammar.rule_dict[lhs][dict_idx]
+    if edit:
+        # modified_rule.edit_dist += 2  # TODO: think about this
+        rule.edit_dist += 1
 
-        if len(grammar.rule_dict[lhs]) == 0:
-            del grammar.rule_dict[lhs]
-    else:
-        modified_rule = this_rule.copy()
-        modified_rule.edit_dist = 0
-        modified_rule.frequency = 1
-        this_rule.frequency -= 1
-        grammar.rule_tree[rule_idx][0] = modified_rule
-
-    modified_rule.lhs += 1
-    modified_rule.graph.nodes[node]['b_deg'] += 1
-    # modified_rule.edit_dist += 2  # TODO: think about this
-
-    if parent_idx is not None and ancestor_node is not None:
-        propagate_ancestors(ancestor_node, parent_idx, grammar, time)
-
-    assimilate_rule(modified_rule, grammar)
+    propagate_ancestors(anode, pidx, grammar, time)
 
 
 def propagate_descendants(nts: str, rule_idx: int, grammar: VRG, time: int = None):
-    for child_idx, child_rule in grammar.get_children_of(nts, rule_idx):
-        if child_rule.frequency == 1:
-            modified_rule = child_rule
-
-            list_idx = grammar.find_rule(child_rule, where='rule_list')
-            del grammar.rule_list[list_idx]
-
-            lhs, dict_idx = grammar.find_rule(child_rule, where='rule_dict')
-            del grammar.rule_dict[lhs][dict_idx]
-
-            if len(grammar.rule_dict[lhs]) == 0:
-                del grammar.rule_dict[lhs]
-        else:
-            modified_rule = child_rule.copy()
-            modified_rule.edit_dist = 0
-            modified_rule.frequency = 1
-            child_rule.frequency -= 1
-            grammar.rule_tree[child_idx][0] = modified_rule
-
-        (v, d), = random.sample(modified_rule.graph.nodes(data=True), 1)
+    for child_idx, child_rule in grammar.find_children_of(nts, rule_idx):
+        (v, d), = random.sample(child_rule.graph.nodes(data=True), 1)
         d['b_deg'] += 1
 
         if 'label' in d:
             d['label'] += 1
-            modified_rule.edit_dist += 1  # cost of relabeling a node
+            child_rule.edit_dist += 1  # cost of relabeling a node
 
             propagate_descendants(v, child_idx, grammar, time)
 
-        modified_rule.lhs += 1
-        modified_rule.edit_dist += 2  # cost of relabeling a node and changing the RHS
+        child_rule.lhs += 1
+        child_rule.edit_dist += 2  # cost of relabeling a node and changing the RHS
 
         if time:
-            modified_rule.time_changed = time
+            child_rule.time_changed = time
 
-        assimilate_rule(modified_rule, grammar)
+        # assimilate_rule(child_rule, grammar)
 
 
-def create_splitting_rule(subgrammars: list[VRG], time: int) -> PartRule:
-    S = min(min(key for key in subgrammar.rule_dict) for subgrammar in subgrammars)
+def create_splitting_rule(subgrammars: Iterable[VRG], time: int) -> PartRule:
+    S = min(min(subgrammar.nonterminals) for subgrammar in subgrammars)
     rhs = nx.Graph()
 
     for idx, subgrammar in enumerate(subgrammars):
-        rhs.add_node(str(idx), b_deg=0, label=min(key for key in subgrammar.rule_dict))
+        rhs.add_node(str(idx), b_deg=0, label=min(subgrammar.nonterminals))
 
     return PartRule(S - 1, rhs, time=time)
 
 
 def decompose(g: nx.Graph, time: int = 0, mu: int = 4, clustering: str = 'leiden', gtype: str = 'mu_level_dl', name: str = ''):
     def merge_subgrammars(splitting_rule: PartRule, subgrammars: list[VRG]) -> VRG:
-        for subgrammar in subgrammars:
-            subgrammar.push_down_grammar()
+        # for subgrammar in subgrammars:
+        #     subgrammar.push_down_grammar()
 
-        for i, subgrammar in enumerate(subgrammars):
-            if i == 0:
-                supergrammar = subgrammar
-                splitting_idx = len(supergrammar.rule_tree)
+        supergrammar = subgrammars[0]
+        splitting_rule.idn = len(supergrammar.decomposition)
+        # splitting_idx = len(supergrammar.decomposition)
 
-                # make the root of the old decomposition point to the new root
-                for idx, (_, parent_idx, ancestor_node) in enumerate(supergrammar.rule_tree):
-                    if parent_idx is None and ancestor_node is None:
-                        supergrammar.rule_tree[idx][1] = splitting_idx
-                        supergrammar.rule_tree[idx][2] = str(i)
-                        break
+        # make the root of the old decomposition point to the new root
+        for idx, (_, pidx, anode) in enumerate(supergrammar.decomposition):
+            if pidx is None and anode is None:
+                supergrammar[idx][1] = splitting_rule.idn
+                supergrammar[idx][2] = '0'
+                break
+        else:
+            raise AssertionError('never found the root rule')
+
+        supergrammar.decomposition += [[splitting_rule, None, None]]
+        # supergrammar.rule_list += [splitting_rule]
+        # supergrammar.rule_dict[splitting_rule.lhs] = [splitting_rule]
+
+        for i, subgrammar in enumerate(subgrammars[1:], start=1):
+            offset = len(supergrammar.decomposition)
+
+            # merge in new rules that are duplicates of old rules
+            # assimilate_rules(supergrammar, subgrammar)
+
+            # shift the indices of the sub-decomposition
+            for idx, (_, pidx, anode) in enumerate(subgrammar.decomposition):
+                subgrammar[idx][0].idn += offset
+                if pidx is None and anode is None:
+                    subgrammar[idx][1] = splitting_rule.idn
+                    subgrammar[idx][2] = str(i)
                 else:
-                    raise AssertionError('never find the root rule')
+                    subgrammar[idx][1] += offset
 
-                supergrammar.rule_tree += [[splitting_rule, None, None]]
-                supergrammar.rule_list += [splitting_rule]
-                supergrammar.rule_dict[splitting_rule.lhs] = [splitting_rule]
-            else:
-                offset = len(supergrammar.rule_tree)
+            # append the sub-decomposition to the super-decomposition
+            supergrammar.decomposition += subgrammar.decomposition
 
-                # merge in new rules that are duplicates of old rules
-                assimilate_rules(supergrammar, subgrammar)
+            # shift the indices of the covering_idx map
+            for node in subgrammar.cover:
+                subgrammar.cover[node] += offset
 
-                # shift the indices of the sub-decomposition
-                for idx, (_, parent_idx, ancestor_node) in enumerate(subgrammar.rule_tree):
-                    if parent_idx is None and ancestor_node is None:
-                        subgrammar.rule_tree[idx][1] = splitting_idx
-                        subgrammar.rule_tree[idx][2] = str(i)
-                    else:
-                        subgrammar.rule_tree[idx][1] += offset
-
-                # append the sub-decomposition to the super-decomposition
-                supergrammar.rule_tree += subgrammar.rule_tree
-
-                # shift the indices of the covering_idx map
-                for node in subgrammar.covering_idx:
-                    subgrammar.covering_idx[node] += offset
-
-                assert len(supergrammar.covering_idx.keys() & subgrammar.covering_idx.keys()) == 0
-                supergrammar.covering_idx |= subgrammar.covering_idx
+            assert len(supergrammar.cover.keys() & subgrammar.cover.keys()) == 0
+            supergrammar.cover |= subgrammar.cover
 
         return supergrammar
 
@@ -249,13 +217,11 @@ def decompose(g: nx.Graph, time: int = 0, mu: int = 4, clustering: str = 'leiden
 
     # sanity check
     for v in g.nodes():
-        assert v in supergrammar.covering_idx
+        assert v in supergrammar.cover
 
-    # proper bookkeeping
-    for idx, rule in enumerate(supergrammar.rule_list):
-        rule.idn = idx
-        rule.time = time
-        rule.time_changed = time
+    supergrammar.compute_rules()
+    supergrammar.compute_levels()
+    supergrammar.set_time(time)
 
     return supergrammar
 
@@ -285,7 +251,6 @@ def decompose_component(g: nx.Graph, mu: int = 4, clustering: str = 'leiden', gt
                             root=dendrogram)
 
     extractor.generate_grammar()
-    # ex_sequence = extractor.extracted_sequence
     grammar = extractor.grammar
 
     return grammar

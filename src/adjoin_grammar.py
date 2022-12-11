@@ -1,121 +1,121 @@
-import sys
-
-sys.path.append('..')
-
-from joblib import Parallel, delayed
+# from joblib import Parallel, delayed
 
 from cnrg.VRG import VRG
-from decomposition import create_splitting_rule, assimilate_rules, ancestor, common_ancestor, propagate_ancestors, propagate_descendants
+from src.decomposition import create_splitting_rule, common_ancestor, propagate_ancestors
 
 
-def conjoin_grammars(host_grammar: VRG, parasite_grammar: VRG, frontier: set[tuple[int, int]]) -> VRG:
+def conjoin_grammars(host_grammar: VRG, parasite_grammar: VRG, frontier: set[tuple[int, int]], time: int, approach: str) -> VRG:
     """
-        Joins two grammars in such a way that one grammar is ``conditioned`` on the other.
+        Joins two grammars in the manner described by the ``approach``.
+        Both grammar objects are modified (not copied) in-place; the final joined grammar resides is referred to by the first argument.
 
         Required arguments:
-            host_grammar: VRG = the grammar treated as a prior
-            parasite_grammar: VRG = the grammar treated as an update
-            frontier: {(int, int) for ...} = a set of edges forming a cut on the input graph such that
-                                             the two halves of the graph induced partition the nodes
-                                             based on which of the two grammars they are covered by
-            root: int = the LHS of the root of the decomposition
-
-        Returns:
-            The joined grammar.
+            host_grammar = the grammar treated as a prior
+            parasite_grammar = the grammar treated as an update
+            frontier = a set of edges forming a cut on the input graph such that
+                       the two halves of the graph induced partition the nodes
+                       based on which of the two grammars they are covered by
+            time = timestamp corresponding to these changes in the dataset
+            approach = the strategy to use when joining the grammars; either ``branch`` or ``anneal``
+                       ``branch``: we consider the second grammar to be conditioned on the first
+                                   boundary edges from the frontier are added to rules in the second grammar; changes propagate up
+                                   the common ancestor of those frontier edges in the first grammar is found
+                                   a nonterminal symbol is added to that rule in the first grammar, whose size is len(frontier)
+                                   the second grammar decomposition is inserted as a branch under this rule in the first grammar
+                       ``anneal``: we regard both grammars equally
+                                   boundary edges from the frontier are added to rules in both grammars; changes propagate up
+                                   a new root rule is created and both decompositions are inserted under that rule
     """
-    host_grammar, parasite_grammar, attachment_idx, parasite_node = incise_grammars(host_grammar, parasite_grammar, frontier)
-    conjoined_grammar = suture_grammars(host_grammar, parasite_grammar, attachment_idx, parasite_node)
-
-    return conjoined_grammar
-
-
-def incise_grammars(host_grammar: VRG, parasite_grammar: VRG, frontier: set[tuple[int, int]]) -> tuple[VRG, VRG, int, str]:
-    # u is old => covered by the host_grammar
-    # v is new => covered by the parasite_grammar
     if len(frontier) == 0:
-        assert parasite_grammar.root_rule.lhs == 0
-        assert host_grammar.root_rule.lhs <= 0
-
-        time = max(rule.time for rule in host_grammar.rule_list + parasite_grammar.rule_list)
-        S = host_grammar.root_rule.lhs  # TODO: check this
-
-        if S == 0:  # create & incorporate a splitting rule
-            splitting_rule = create_splitting_rule([host_grammar, parasite_grammar], time)
-            attachment_idx = len(host_grammar.rule_tree)
-            host_node = '0'
-            parasite_node = '1'
-
-            # make the root of the old decomposition point to the new root
-            host_root_idx = host_grammar.root_idx
-            host_grammar.rule_tree[host_root_idx][1] = attachment_idx
-            host_grammar.rule_tree[host_root_idx][2] = host_node
-
-            # add the splitting rule to the host grammar
-            host_grammar.rule_tree += [[splitting_rule, None, None]]
-            host_grammar.rule_list += [splitting_rule]
-            host_grammar.rule_dict[splitting_rule.lhs] = splitting_rule
-        else:  # splitting rule already exists
-            attachment_idx, splitting_rule = host_grammar.root
-            parasite_node = chr(ord(max(splitting_rule.graph.nodes())) + 1)
-
-            # splitting_rule.graph.add_node(parasite_node, b_deg=0, label=min(lhs for lhs in parasite_grammar.rule_dict))
-            splitting_rule.graph.add_node(parasite_node, b_deg=0, label=parasite_grammar.root_rule.lhs)
+        strategy = 'anneal'
     else:
-        # add additional boundary degrees to the proper nodes in the root rule of the away decomposition
-        for _, v in frontier:
-            _, idx_v, ancestor_v = ancestor(v, parasite_grammar)
-            propagate_ancestors(ancestor_v, idx_v, parasite_grammar)
+        strategy = approach.strip().lower()
 
-        assert len(frontier) == parasite_grammar.root_rule.lhs
-
-        # find the root rule for the new branch (where parasite_grammar will be grafted in under)
-        attachment_rule, attachment_idx, ancestor_children = common_ancestor({u for u, _ in frontier}, host_grammar)
-
-        # add the nonterminal symbol and connect it to the rest of this root
-        parasite_node = chr(ord(max(attachment_rule.graph.nodes())) + 1)
-        attachment_rule.graph.add_node(parasite_node, b_deg=0, label=parasite_grammar.root_rule.lhs)
-
-        for u, _ in frontier:
-            ancestor_u = ancestor_children[u]
-            attachment_rule.graph.add_edge(ancestor_u, parasite_node)
-
-            for node in (ancestor_u, parasite_node):
-                if 'label' in attachment_rule.graph.nodes[node]:
-                    propagate_descendants(node, attachment_idx, host_grammar)
-
-    return host_grammar, parasite_grammar, attachment_idx, parasite_node
+    if strategy == 'branch':
+        branch(host_grammar, parasite_grammar, frontier, time)
+    elif strategy == 'anneal':
+        anneal(host_grammar, parasite_grammar, frontier, time)
+    else:
+        raise AssertionError(f'{strategy} is not a valid joining strategy; select one of "branch" or "anneal"')
 
 
-# when the frontier is nonempty
-def suture_grammars(host_grammar: VRG, parasite_grammar: VRG, attachment_idx: int, parasite_node: str, parallel: bool = True) -> VRG:
-    offset = len(host_grammar.rule_tree)
-    assimilate_rules(host_grammar, parasite_grammar, parallel=parallel)
+def prepare(u: int, grammar: VRG, time: int,
+            edit: bool, stop_at: int = -1):
+    rule_idx = grammar.cover[u]
 
-    # shift the indices of the parasite decomposition
-    for idx, (_, parent_idx, ancestor_node) in enumerate(parasite_grammar.rule_tree):
-        if parent_idx is not None and ancestor_node is not None:
-            parasite_grammar.rule_tree[idx][1] += offset
+    if stop_at == rule_idx:
+        return
 
-    # point the old root to the attachment site
-    parasite_root_idx = parasite_grammar.root_idx
-    parasite_grammar.rule_tree[parasite_root_idx][1] = attachment_idx
-    parasite_grammar.rule_tree[parasite_root_idx][2] = parasite_node
+    rule, pidx, anode = grammar[rule_idx]
+    rule_u = rule.alias[u]
 
-    # shift the indices of the parasite covering_idx map
-    for node in parasite_grammar.covering_idx:
-        parasite_grammar.covering_idx[node] += offset
+    rule.lhs += 1
+    rule.time_changed = time
+    rule.graph.nodes[rule_u]['b_deg'] += 1
 
-    # append the sub-decomposition to the super-decomposition
-    # host_grammar.rule_tree += parasite_grammar.rule_tree
-    for node in parasite_grammar.rule_tree:
-        host_grammar.rule_tree.append(node)
+    if edit:
+        rule.edit_dist += 1
 
-    for _, pidx, _ in host_grammar.rule_tree:
-        if pidx:
-            assert pidx <= len(host_grammar.rule_tree)
+    assert 'label' not in rule.graph[rule_u]
+    propagate_ancestors(anode, pidx, grammar, time, edit=edit, stop_at=stop_at)
 
-    assert len(host_grammar.covering_idx.keys() & parasite_grammar.covering_idx.keys()) == 0
 
-    host_grammar.covering_idx |= parasite_grammar.covering_idx
+def branch(host_grammar: VRG, parasite_grammar: VRG, frontier: set[tuple[int, int]], time: int):
+    for _, v in frontier:
+        prepare(v, parasite_grammar, time, edit=False)
 
-    return host_grammar
+    branch_idx, branch_rule, mapping = common_ancestor({u for u, _ in frontier}, host_grammar)
+    branch_rule.time_changed = time
+
+    nts = chr(max(ord(v) for v in branch_rule.graph.nodes()) + 1)
+
+    branch_rule.graph.add_node(nts, label=len(frontier), b_deg=0)
+    branch_rule.time_changed = time
+
+    for u, _ in frontier:
+        prepare(u, host_grammar, time, edit=True, stop_at=branch_idx)
+        branch_rule.graph.add_edge(mapping[u], nts)
+
+        if 'label' in branch_rule.graph.nodes[mapping[u]]:
+            branch_rule.graph.nodes[mapping[u]]['label'] += 1
+
+    offset = len(host_grammar.decomposition)
+
+    for idx, (_, pidx, anode) in enumerate(parasite_grammar.decomposition):
+        if pidx is None and anode is None:
+            parasite_grammar[idx][1] = branch_idx
+            parasite_grammar[idx][2] = nts
+        else:
+            parasite_grammar[idx][1] += offset
+
+    host_grammar.decomposition += parasite_grammar.decomposition
+
+
+def anneal(host_grammar: VRG, parasite_grammar: VRG, frontier: set[tuple[int, int]], time: int):
+    for u, v in frontier:
+        prepare(u, host_grammar, time, edit=True)
+        prepare(v, parasite_grammar, time, edit=False)
+
+    splitting_rule = create_splitting_rule((host_grammar, parasite_grammar), time)
+    splitting_rule.idn = len(host_grammar.decomposition)
+    splitting_rule.graph.nodes['0']['label'] = host_grammar.root_rule.lhs
+    splitting_rule.graph.nodes['1']['label'] = parasite_grammar.root_rule.lhs
+
+    for idx, (_, pidx, anode) in enumerate(host_grammar.decomposition):
+        if pidx is None and anode is None:
+            host_grammar[idx][1] = splitting_rule.idn
+            host_grammar[idx][2] = '0'
+            break
+
+    host_grammar.decomposition += [[splitting_rule, None, None]]
+    offset = len(host_grammar.decomposition)
+
+    for idx, (_, pidx, anode) in enumerate(parasite_grammar.decomposition):
+        if pidx is None and anode is None:
+            parasite_grammar[idx][1] = splitting_rule.idn
+            parasite_grammar[idx][2] = '1'
+        else:
+            parasite_grammar[idx][0].idn += offset
+            parasite_grammar[idx][1] += offset
+
+    host_grammar.decomposition += parasite_grammar.decomposition
