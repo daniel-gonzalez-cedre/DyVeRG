@@ -4,13 +4,9 @@ from os import getcwd
 from os.path import join
 from argparse import ArgumentParser
 
-import sys
-sys.path.append('./src/')
-
 import git
 import numpy as np
 import networkx as nx
-from tqdm import tqdm
 from joblib import Parallel, delayed
 
 from cnrg.VRG import VRG
@@ -40,33 +36,31 @@ def perturb_graph(g: nx.Graph, p: float = 0.01) -> nx.Graph:
 
         h.add_edge(u, v)
 
-    # we no longer need to enforce connectivity on the graph
-    # while not nx.is_connected(h):
-    #     component1, component2 = random.sample(list(nx.connected_components(h)), 2)
-    #     x1, = random.sample(component1, 1)
-    #     x2, = random.sample(component2, 1)
-    #     h.add_edge(x1, x2)
-
     return h
 
 
 def experiment(trial: int,
                curr_time: int, curr_graph: nx.Graph,
                next_time: int, next_graph: nx.Graph,
-               p: float, mu: int):
+               p: float, mu: int) -> tuple[int, int, int, float, VRG, VRG, VRG, VRG]:
     base_grammar = decompose(curr_graph, time=curr_time, mu=mu)
     perturbed_graph = perturb_graph(next_graph, p)
-    joint_grammar = update_grammar(base_grammar,
-                                   curr_graph,
-                                   perturbed_graph,
-                                   next_time,
-                                   mode='j')
-    indep_grammar = update_grammar(base_grammar,
-                                   curr_graph,
-                                   perturbed_graph,
-                                   next_time,
-                                   mode='i')
-    return trial, curr_time, next_time, p, base_grammar, joint_grammar, indep_grammar
+    jagrammar = update_grammar(base_grammar,
+                               curr_graph,
+                               perturbed_graph,
+                               next_time,
+                               mode='ja')
+    jbgrammar = update_grammar(base_grammar,
+                               curr_graph,
+                               perturbed_graph,
+                               next_time,
+                               mode='jb')
+    igrammar = update_grammar(base_grammar,
+                              curr_graph,
+                              perturbed_graph,
+                              next_time,
+                              mode='i')
+    return trial, curr_time, next_time, p, base_grammar, igrammar, jagrammar, jbgrammar
 
 
 # TODO: implement saving intermediate results in case we need to stop the code
@@ -76,8 +70,9 @@ def main(dataset, rewire, delta, n_trials, parallel, n_jobs, mu):
     mkdir(join(rootpath, resultspath))
 
     base_grammars: dict[tuple[int, int, float], VRG] = {}
-    joint_grammars: dict[tuple[int, int, int, float], VRG] = {}
-    indep_grammars: dict[tuple[int, int, int, float], VRG] = {}
+    igrammars: dict[tuple[int, int, int, float], VRG] = {}
+    jagrammars: dict[tuple[int, int, int, float], VRG] = {}
+    jbgrammars: dict[tuple[int, int, int, float], VRG] = {}
 
     time_graph_pairs: list[tuple[int, nx.Graph]] = load_data(dataset)
 
@@ -94,48 +89,59 @@ def main(dataset, rewire, delta, n_trials, parallel, n_jobs, mu):
                    for p in np.linspace(0, rewire, delta)
                    for trial in range(1, n_trials + 1)]
 
-    for trial, curr_time, next_time, p, base_grammar, joint_grammar, indep_grammar in results:
+    for trial, curr_time, next_time, p, base_grammar, igrammar, jagrammar, jbgrammar in results:
         base_grammars[(trial, curr_time, p)] = base_grammar
-        joint_grammars[(trial, curr_time, next_time, p)] = joint_grammar
-        indep_grammars[(trial, curr_time, next_time, p)] = indep_grammar
+        igrammars[(trial, curr_time, next_time, p)] = igrammar
+        jagrammars[(trial, curr_time, next_time, p)] = jagrammar
+        jbgrammars[(trial, curr_time, next_time, p)] = jbgrammar
 
-    base_mdls = {key: grammar.mdl for key, grammar in base_grammars.items()}
+    with open(join(rootpath, resultspath, f'{dataset}_base.grammars'), 'wb') as base_file, \
+         open(join(rootpath, resultspath, f'{dataset}_i.grammars'), 'wb') as ifile, \
+         open(join(rootpath, resultspath, f'{dataset}_ja.grammars'), 'wb') as jafile, \
+         open(join(rootpath, resultspath, f'{dataset}_jb.grammars'), 'wb') as jbfile:
+        pickle.dump(base_grammars, base_file)
+        pickle.dump(igrammars, ifile)
+        pickle.dump(jagrammars, jafile)
+        pickle.dump(jbgrammars, jbfile)
 
-    joint_mdls = {key: grammar.mdl for key, grammar in joint_grammars.items()}
-    indep_mdls = {key: grammar.mdl for key, grammar in indep_grammars.items()}
+    with open(join(rootpath, resultspath, f'{dataset}_base.mdls'), 'w') as base_file, \
+         open(join(rootpath, resultspath, f'{dataset}_i.mdls'), 'w') as ifile, \
+         open(join(rootpath, resultspath, f'{dataset}_ja.mdls'), 'w') as jafile, \
+         open(join(rootpath, resultspath, f'{dataset}_jb.mdls'), 'w') as jbfile:
+        base_mdls = {key: grammar.mdl for key, grammar in base_grammars.items()}
+        imdls = {key: grammar.mdl for key, grammar in igrammars.items()}
+        jamdls = {key: grammar.mdl for key, grammar in jagrammars.items()}
+        jbmdls = {key: grammar.mdl for key, grammar in jbgrammars.items()}
 
-    joint_lls = {key: grammar.ll for key, grammar in joint_grammars.items()}
-    indep_lls = {key: grammar.ll for key, grammar in indep_grammars.items()}
-
-    with open(join(rootpath, resultspath, f'{dataset}_base.grammars'), 'wb') as outfile:
-        pickle.dump(base_grammars, outfile)
-    with open(join(rootpath, resultspath, f'{dataset}_joint.grammars'), 'wb') as outfile:
-        pickle.dump(joint_grammars, outfile)
-    with open(join(rootpath, resultspath, f'{dataset}_indep.grammars'), 'wb') as outfile:
-        pickle.dump(indep_grammars, outfile)
-
-    with open(join(rootpath, resultspath, f'{dataset}_base.mdls'), 'w') as outfile:
-        outfile.write('trial,time,p,mdl\n')
+        base_file.write('trial,time,p,mdl\n')
+        ifile.write('trial,time1,time2,p,mdl\n')
+        jafile.write('trial,time1,time2,p,mdl\n')
+        jbfile.write('trial,time1,time2,p,mdl\n')
         for (trial, time, p), mdl in base_mdls.items():
-            outfile.write(f'{trial},{time},{p},{mdl}\n')
+            base_file.write(f'{trial},{time},{p},{mdl}\n')
+        for (trial, time1, time2, p), mdl in imdls.items():
+            ifile.write(f'{trial},{time1},{time2},{p},{mdl}\n')
+        for (trial, time1, time2, p), mdl in jamdls.items():
+            jafile.write(f'{trial},{time1},{time2},{p},{mdl}\n')
+        for (trial, time1, time2, p), mdl in jbmdls.items():
+            jbfile.write(f'{trial},{time1},{time2},{p},{mdl}\n')
 
-    with open(join(rootpath, resultspath, f'{dataset}_joint.mdls'), 'w') as outfile:
-        outfile.write('trial,time1,time2,p,mdl\n')
-        for (trial, time1, time2, p), mdl in joint_mdls.items():
-            outfile.write(f'{trial},{time1},{time2},{p},{mdl}\n')
-    with open(join(rootpath, resultspath, f'{dataset}_indep.mdls'), 'w') as outfile:
-        outfile.write('trial,time1,time2,p,mdl\n')
-        for (trial, time1, time2, p), mdl in indep_mdls.items():
-            outfile.write(f'{trial},{time1},{time2},{p},{mdl}\n')
+    with open(join(rootpath, resultspath, f'{dataset}_i.lls'), 'w') as ifile, \
+         open(join(rootpath, resultspath, f'{dataset}_ja.lls'), 'w') as jafile, \
+         open(join(rootpath, resultspath, f'{dataset}_jb.lls'), 'w') as jbfile:
+        ills = {key: grammar.ll for key, grammar in igrammars.items()}
+        jalls = {key: grammar.ll for key, grammar in jagrammars.items()}
+        jblls = {key: grammar.ll for key, grammar in jbgrammars.items()}
 
-    with open(join(rootpath, resultspath, f'{dataset}_joint.lls'), 'w') as outfile:
-        outfile.write('trial,time1,time2,p,ll\n')
-        for (trial, time1, time2, p), ll in joint_lls.items():
-            outfile.write(f'{trial},{time1},{time2},{p},{ll}\n')
-    with open(join(rootpath, resultspath, f'{dataset}_indep.lls'), 'w') as outfile:
-        outfile.write('trial,time1,time2,p,ll\n')
-        for (trial, time1, time2, p), ll in indep_lls.items():
-            outfile.write(f'{trial},{time1},{time2},{p},{ll}\n')
+        ifile.write('trial,time1,time2,p,ll\n')
+        jafile.write('trial,time1,time2,p,ll\n')
+        jbfile.write('trial,time1,time2,p,ll\n')
+        for (trial, time1, time2, p), ll in ills.items():
+            ifile.write(f'{trial},{time1},{time2},{p},{ll}\n')
+        for (trial, time1, time2, p), ll in jalls.items():
+            jafile.write(f'{trial},{time1},{time2},{p},{ll}\n')
+        for (trial, time1, time2, p), ll in jblls.items():
+            jbfile.write(f'{trial},{time1},{time2},{p},{ll}\n')
 
 
 # python experiment_sequential_random.py [dataset] -d [delta] -r [rewire] -n [# trials] -p -j [# jobs] -m [mu]
