@@ -7,6 +7,8 @@ __pycache__
 
 old_*/
 backup_results/
+figures/
+results/
 
 data/*
 !data/readme.md
@@ -26,5 +28,3 @@ notebooks/*
 !notebooks/random.ipynb
 !notebooks/saturation.ipynb
 !notebooks/generation.ipynb
-
-figures/*

@@ -113,7 +113,7 @@ def main(pre_dispatch: bool):
         write(results)
 
 
-# nice -n 10 python experiment_random.py email-enron -r 0.25 -d 25 -n 25 -p -j 40 -m 4
+# nice -n 10 python experiment_random.py email-enron -n 100 -p -j 25 -m 4
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('dataset',
@@ -154,7 +154,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     rootpath = git.Repo(getcwd(), search_parent_directories=True).git.rev_parse("--show-toplevel")
-    resultspath = 'results/experiment_random/'
+    resultspath = 'results/experiment_saturation/'
     mkdir(join(rootpath, resultspath))
 
     # pylint: disable=consider-using-with
