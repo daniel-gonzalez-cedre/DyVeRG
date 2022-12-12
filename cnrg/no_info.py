@@ -25,7 +25,7 @@ def generate_graph(rule_dict, rule_list):
 
     new_g = nx.MultiGraph()
 
-    new_g.add_node(0, attr_dict={'label': 0})
+    new_g.add_node(0, label=0)
 
     # non_terminals.add(0)
     non_terminals[0] = 0  # non-terminal 0 has size 0
@@ -62,7 +62,7 @@ def generate_graph(rule_dict, rule_list):
         for n, d in rhs.graph.nodes_iter(data=True):  # all the nodes are internal
             new_node = node_counter
             nodes[n] = new_node
-            new_g.add_node(new_node, attr_dict=d)
+            new_g.add_node(new_node, **d)
             if 'label' in d:  # if it's a new non-terminal add it to the dictionary of non-terminals
                 non_terminals[new_node] = d['label']
 

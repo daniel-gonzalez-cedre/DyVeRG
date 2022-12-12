@@ -70,7 +70,7 @@ def mutate_rule_diplomatic(grammar: VRG, u: int, v: int, time: int):
 
     parent_rule.edit_dist += 2  # cost of adding a node and an edge
     parent_rule.time_changed = time
-    parent_rule.graph.add_node(ancestor_v, b_deg=0, look='at me')
+    parent_rule.graph.add_node(ancestor_v, b_deg=0)
     parent_rule.graph.add_edge(ancestor_u, ancestor_v)
 
     if 'label' in parent_rule.graph.nodes[ancestor_u]:  # if we modified a nonterminal, propagate that change downstream

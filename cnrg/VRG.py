@@ -1,7 +1,7 @@
 """
 refactored VRG
 """
-from typing import Union, Optional, Collection
+from typing import Union, Collection
 
 from joblib import Parallel, delayed
 import numpy as np
@@ -114,15 +114,23 @@ class VRG:
             self.compute_rules()
         return set(self.rules)
 
-    def compute_rules(self):
+    def compute_rules(self, merge: bool = False):
+        for idx, (rule, _, _) in enumerate(self.decomposition):
+            assert idx == rule.idn, f'{idx}, {rule.idn}, {rule}'
+            rule.frequency = 1
         self.rules: dict[int, list[BaseRule]] = {}
+
         for rule, _, _ in self.decomposition:
             if rule.lhs in self.rules:
-                for rr in self.rules[rule.lhs]:
-                    if rule == rr:
-                        rr.frequency += 1
-                        break
-                else:
+                if merge:  # merge isomorphic copies of the same rule together
+                    for other_rule in self.rules[rule.lhs]:
+                        if rule == other_rule:
+                            rule.frequency = 0
+                            other_rule.frequency += 1
+                            break
+                    else:
+                        self.rules[rule.lhs] += [rule]
+                else:  # distinguish between isomorphic copies of the same rule
                     self.rules[rule.lhs] += [rule]
             else:
                 self.rules[rule.lhs] = [rule]

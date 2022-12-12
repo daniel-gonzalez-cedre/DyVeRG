@@ -81,12 +81,13 @@ def branch(host_grammar: VRG, parasite_grammar: VRG, frontier: set[tuple[int, in
 
     offset = len(host_grammar.decomposition)
 
-    for idx, (_, pidx, anode) in enumerate(parasite_grammar.decomposition):
+    for idx, (rule, pidx, anode) in enumerate(parasite_grammar.decomposition):
         if pidx is None and anode is None:
             parasite_grammar[idx][1] = branch_idx
             parasite_grammar[idx][2] = nts
         else:
             parasite_grammar[idx][1] += offset
+        rule.idn += offset
 
     host_grammar.decomposition += parasite_grammar.decomposition
 
@@ -110,12 +111,13 @@ def anneal(host_grammar: VRG, parasite_grammar: VRG, frontier: set[tuple[int, in
     host_grammar.decomposition += [[splitting_rule, None, None]]
     offset = len(host_grammar.decomposition)
 
-    for idx, (_, pidx, anode) in enumerate(parasite_grammar.decomposition):
+    for idx, (rule, pidx, anode) in enumerate(parasite_grammar.decomposition):
         if pidx is None and anode is None:
             parasite_grammar[idx][1] = splitting_rule.idn
             parasite_grammar[idx][2] = '1'
         else:
             parasite_grammar[idx][0].idn += offset
             parasite_grammar[idx][1] += offset
+        rule.idn += offset
 
     host_grammar.decomposition += parasite_grammar.decomposition

@@ -96,7 +96,7 @@ def generate_graph(rule_dict, rule_list):
         for n, d in rhs.graph.nodes(data=True):   # all the nodes are internal
             new_node = node_counter
             nodes[n] = new_node
-            new_g.add_node(new_node, attr_dict=d)
+            new_g.add_node(new_node, **d)
             if 'label' in d:  # if it's a new non-terminal add it to the set of non-terminals
                 non_terminals.add(new_node)
             node_counter += 1
@@ -113,8 +113,8 @@ def generate_graph(rule_dict, rule_list):
 
             assert len(broken_edges) >= num_boundary_edges
 
-            edge_candidates = broken_edges[: num_boundary_edges]   # picking the first num_broken edges
-            broken_edges = broken_edges[num_boundary_edges: ]    # removing them from future consideration
+            edge_candidates = broken_edges[:num_boundary_edges]   # picking the first num_broken edges
+            broken_edges = broken_edges[num_boundary_edges:]    # removing them from future consideration
 
             for u, v in edge_candidates:  # each edge is either (node_sample, v) or (u, node_sample)
                 if u == node_sample:

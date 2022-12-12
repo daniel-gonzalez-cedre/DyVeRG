@@ -1,4 +1,5 @@
 from time import sleep
+from typing import Union
 
 import networkx as nx
 from tqdm import tqdm
@@ -29,69 +30,45 @@ class LightMultiGraph(nx.Graph):
         graphcopy.add_nodes_from(self.nodes(data=True))
 
         for u, v, d in self.edges(data=True):
-            graphcopy.add_edge(u, v, attr_dict=d)
+            graphcopy.add_edge(u, v, **d)
 
         return graphcopy
 
-    def add_edge(self, u_of_edge, v_of_edge, attr_dict=None, **attr):
+    def add_edge(self, u_of_edge, v_of_edge, **attr):
         u, v = (u_of_edge, v_of_edge)
-        colors = None
-        color = None
-        attr_records = None
-
-        if attr_dict is not None and 'weight' in attr_dict:
-            wt = attr_dict['weight']
-        elif attr is not None and 'weight' in attr:
-            wt = attr['weight']
-        else:
-            wt = 1
-
-        if attr_dict is not None and 'attr_records' in attr_dict:
-            attr_records = attr_dict['attr_records']
-        elif attr is not None and 'attr_records' in attr:
-            attr_records = attr['attr_records']
-
-        if attr_dict is not None and 'colors' in attr_dict:
-            colors = attr_dict['colors']
-        elif attr is not None and 'colors' in attr:
-            colors = attr['colors']
-        elif attr_dict is not None and 'color' in attr_dict:
-            color = attr_dict['color']
-        elif attr is not None and 'color' in attr:
-            color = attr['color']
+        attr: dict = attr if attr else {}
+        weight: int = attr.get('weight', 1)
+        colors: Union[list, set, int, float, str] = attr.get('colors')
+        if isinstance(colors, (list, set)):
+            colors = list(colors)
+        elif isinstance(colors, (int, float, str)):
+            colors = [colors]
 
         if self.has_edge(u, v):  # edge already exists
-            self[u][v]['weight'] += wt
-            if colors is not None:
+            self[u][v]['weight'] += weight
+            if colors and 'colors' in self[u][v]:
                 self[u][v]['colors'] += colors
-            elif color is not None:
-                self[u][v]['colors'] = [color]
-            if attr_records is not None:
-                self[u][v]["attr_records"] += attr_records
+            elif colors and 'colors' not in self[u][v]:
+                self[u][v]['colors'] = colors
         else:
-            if colors is not None:
-                super().add_edge(u, v, weight=wt, colors=colors)
-            elif color is not None:
-                super().add_edge(u, v, weight=wt, colors=[color])
-            elif attr_records is not None:
-                super().add_edge(u, v, weight=wt, attr_records=attr_records)
-            else:
-                super().add_edge(u, v, weight=wt)
+            new_attr = {'weight': weight}
+            if colors:
+                new_attr['colors'] = colors
+            super().add_edge(u, v, **new_attr)
 
-    def add_edges_from(self, ebunch_to_add, attr_dict=None, **attr):
+    def add_edges_from(self, ebunch_to_add, **attr):
         for e in ebunch_to_add:
             ne = len(e)
+
             if ne == 3:
-                u, v, dd = e
+                u, v, d = e
             elif ne == 2:
                 u, v = e
-                dd = {}  # doesnt need edge_attr_dict_factory
+                d = {}
             else:
                 raise nx.NetworkXError(f'Edge tuple {e} must be a 2-tuple or 3-tuple.')
-            if attr_dict is not None:
-                self.add_edge(u, v, attr_dict={**dd, **attr_dict}, **attr)
-            else:
-                self.add_edge(u, v, attr_dict=dd, **attr)
+
+            self.add_edge(u, v, **d)
 
     def remove_edge(self, u, v):
         d = self.edges[u, v]

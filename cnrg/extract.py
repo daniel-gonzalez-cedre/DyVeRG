@@ -72,8 +72,8 @@ def create_rule(subtree: Set[int], g: LightMultiGraph, mode: str) -> Tuple[PartR
                 u, v = bdry
                 rule.graph.add_edge(u, v, b=True)
             elif len(bdry) == 3:
-                u, v, dd = bdry
-                rule.graph.add_edge(u, v, attr_dict=dd, b=True)
+                u, v, d = bdry
+                rule.graph.add_edge(u, v, b=True, **d)
 
         rule.contract_rhs()  # contract and generalize
 

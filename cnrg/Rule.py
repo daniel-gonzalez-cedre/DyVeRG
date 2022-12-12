@@ -310,9 +310,9 @@ class FullRule(BaseRule):
         Contracts the RHS such that all boundary nodes with degree 1 are replaced by a special boundary isolated node I
         """
         iso_nodes = set()
-        for node, dd in self.graph.nodes(data=True):
+        for node, d in self.graph.nodes(data=True):
             if node not in self.internal_nodes and self.graph.degree(node) == 1:  # identifying the isolated nodes
-                iso_nodes.add((node, dd))
+                iso_nodes.add((node, d))
 
         if len(iso_nodes) == 0:  # the rule cannot be contracted
             self.generalize_rhs()
@@ -322,9 +322,9 @@ class FullRule(BaseRule):
 
         for iso_node in iso_nodes:
             for u in rhs_copy.neighbors(iso_node):
-                self.graph.add_edge(u, 'Iso', attr_dict={'b': True})
+                self.graph.add_edge(u, 'iso', b=True)
 
-        assert self.graph.has_node('Iso'), 'No Iso node after contractions'
+        assert self.graph.has_node('iso'), 'No Iso node after contractions'
 
         self.graph.remove_nodes_from(iso_nodes)  # remove the old isolated nodes
 

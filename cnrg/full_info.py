@@ -35,7 +35,7 @@ def generate_graph(rule_dict, rule_list):
     non_terminals = set()
     new_g = nx.MultiGraph()
 
-    new_g.add_node(0, attr_dict={'label': 0})
+    new_g.add_node(0, label=0)
     non_terminals.add(0)
 
     rule_ordering = []
@@ -67,12 +67,12 @@ def generate_graph(rule_dict, rule_list):
             for u, v in rhs.graph.edges():
                 if u == 'I':
                     rhs.graph.remove_edge(u, v)
-                    rhs.graph.add_edge(max_v, v, attr_dict={'b': True})
+                    rhs.graph.add_edge(max_v, v, b=True)
                     max_v += 1
 
                 elif v == 'Iso':
                     rhs.graph.remove_edge(u, v)
-                    rhs.graph.add_edge(u, max_v, attr_dict={'b': True})
+                    rhs.graph.add_edge(u, max_v, b=True)
                     max_v += 1
 
             assert rhs.graph.degree('Iso') == 0
@@ -91,7 +91,7 @@ def generate_graph(rule_dict, rule_list):
             if isinstance(n, str):
                 new_node = node_counter
                 nodes[n] = new_node
-                new_g.add_node(new_node, attr_dict=d)
+                new_g.add_node(new_node, **d)
                 if 'label' in d:  # if it's a new non-terminal add it to the set of non-terminals
                     non_terminals.add(new_node)
                 node_counter += 1
