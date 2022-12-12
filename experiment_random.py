@@ -157,6 +157,11 @@ if __name__ == '__main__':
                         dest='n_jobs',
                         type=int,
                         help='the max number of parallel jobs to spawn')
+    parser.add_argument('-l', '--predispatch',
+                        action='store_true',
+                        default=False,
+                        dest='pre_dispatch',
+                        help='pre-dispatch the jobs or not')
     parser.add_argument('-m', '--mu',
                         default=4,
                         dest='mu',
@@ -189,7 +194,7 @@ if __name__ == '__main__':
     ja_llf.write('trial,time1,time2,p,ll\n')
     jb_llf.write('trial,time1,time2,p,ll\n')
 
-    main(pre_dispatch=True)
+    main(pre_dispatch=args.pre_dispatch)
 
     base_gf.close()
     i_gf.close()
