@@ -125,6 +125,7 @@ def main(dataset, rewire, delta, n_trials, do_batch, parallel, n_jobs, mu):
                 )
             else:
                 results = [experiment(*task) for task in batch]
+            write(base_gf, i_gf, ja_gf, jb_gf, base_mdlf, i_mdlf, ja_mdlf, jb_mdlf, i_llf, ja_llf, jb_llf, results)
         else:
             if parallel:
                 results = Parallel(n_jobs=n_jobs, verbose=10)(
@@ -138,8 +139,7 @@ def main(dataset, rewire, delta, n_trials, do_batch, parallel, n_jobs, mu):
                            for (curr_time, curr_graph), (next_time, next_graph) in zip(time_graph_pairs[:-1], time_graph_pairs[1:])
                            for p in np.linspace(0, rewire, delta)
                            for trial in range(1, n_trials + 1)]
-
-        write(base_gf, i_gf, ja_gf, jb_gf, base_mdlf, i_mdlf, ja_mdlf, jb_mdlf, i_llf, ja_llf, jb_llf, results)
+            write(base_gf, i_gf, ja_gf, jb_gf, base_mdlf, i_mdlf, ja_mdlf, jb_mdlf, i_llf, ja_llf, jb_llf, results)
 
 
 # python experiment_random.py [dataset] -d [delta] -r [rewire] -n [# trials] -p -j [# jobs] -m [mu]
