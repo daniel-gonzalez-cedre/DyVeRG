@@ -45,103 +45,107 @@ def experiment(trial: int,
                p: float, mu: int) -> tuple[int, int, int, float, VRG, VRG, VRG, VRG]:
     base_grammar = decompose(curr_graph, time=curr_time, mu=mu)
     perturbed_graph = perturb_graph(next_graph, p)
-    jagrammar = update_grammar(base_grammar,
-                               curr_graph,
-                               perturbed_graph,
-                               next_time,
-                               mode='ja')
-    jbgrammar = update_grammar(base_grammar,
-                               curr_graph,
-                               perturbed_graph,
-                               next_time,
-                               mode='jb')
     igrammar = update_grammar(base_grammar,
                               curr_graph,
                               perturbed_graph,
-                              next_time,
-                              mode='i')
+                              'i',
+                              next_time)
+    jagrammar = update_grammar(base_grammar,
+                               curr_graph,
+                               perturbed_graph,
+                               'ja',
+                               next_time)
+    jbgrammar = update_grammar(base_grammar,
+                               curr_graph,
+                               perturbed_graph,
+                               'jb',
+                               next_time)
     return trial, curr_time, next_time, p, base_grammar, igrammar, jagrammar, jbgrammar
 
 
-# TODO: implement saving intermediate results in case we need to stop the code
+def write(base_gf, i_gf, ja_gf, jb_gf,
+          base_mdlf, i_mdlf, ja_mdlf, jb_mdlf,
+          i_llf, ja_llf, jb_llf,
+          results):
+    for trial, curr_time, next_time, p, base_grammar, igrammar, jagrammar, jbgrammar in results:
+        pickle.dump(base_grammar, base_gf)
+        pickle.dump(igrammar, i_gf)
+        pickle.dump(jagrammar, ja_gf)
+        pickle.dump(jbgrammar, jb_gf)
+
+        base_mdlf.write(f'{trial},{curr_time},{p},{base_grammar.mdl}\n')
+        i_mdlf.write(f'{trial},{curr_time},{next_time},{p},{igrammar.mdl}\n')
+        ja_mdlf.write(f'{trial},{curr_time},{next_time},{p},{jagrammar.mdl}\n')
+        jb_mdlf.write(f'{trial},{curr_time},{next_time},{p},{jbgrammar.mdl}\n')
+
+        i_llf.write(f'{trial},{curr_time},{next_time},{p},{igrammar.ll}\n')
+        ja_llf.write(f'{trial},{curr_time},{next_time},{p},{jagrammar.ll}\n')
+        jb_llf.write(f'{trial},{curr_time},{next_time},{p},{jbgrammar.ll}\n')
+
+
 def main(dataset, rewire, delta, n_trials, parallel, n_jobs, mu):
     rootpath = git.Repo(getcwd(), search_parent_directories=True).git.rev_parse("--show-toplevel")
     resultspath = 'results/experiment_random/'
     mkdir(join(rootpath, resultspath))
 
-    base_grammars: dict[tuple[int, int, float], VRG] = {}
-    igrammars: dict[tuple[int, int, int, float], VRG] = {}
-    jagrammars: dict[tuple[int, int, int, float], VRG] = {}
-    jbgrammars: dict[tuple[int, int, int, float], VRG] = {}
-
     time_graph_pairs: list[tuple[int, nx.Graph]] = load_data(dataset)
 
-    if parallel:
-        results = Parallel(n_jobs=n_jobs)(
-            delayed(experiment)(trial, curr_time, curr_graph, next_time, next_graph, p, mu)
-            for (curr_time, curr_graph), (next_time, next_graph) in zip(time_graph_pairs[:-1], time_graph_pairs[1:])
-            for p in np.linspace(0, rewire, delta)
-            for trial in range(1, n_trials + 1)
-        )
-    else:
-        results = [experiment(trial, curr_time, curr_graph, next_time, next_graph, p, mu)
-                   for (curr_time, curr_graph), (next_time, next_graph) in zip(time_graph_pairs[:-1], time_graph_pairs[1:])
-                   for p in np.linspace(0, rewire, delta)
-                   for trial in range(1, n_trials + 1)]
+    with open(join(rootpath, resultspath, f'{dataset}_base.grammars'), 'wb') as base_gf, \
+         open(join(rootpath, resultspath, f'{dataset}_i.grammars'), 'wb') as i_gf, \
+         open(join(rootpath, resultspath, f'{dataset}_ja.grammars'), 'wb') as ja_gf, \
+         open(join(rootpath, resultspath, f'{dataset}_jb.grammars'), 'wb') as jb_gf, \
+         open(join(rootpath, resultspath, f'{dataset}_base.mdls'), 'w') as base_mdlf, \
+         open(join(rootpath, resultspath, f'{dataset}_i.mdls'), 'w') as i_mdlf, \
+         open(join(rootpath, resultspath, f'{dataset}_ja.mdls'), 'w') as ja_mdlf, \
+         open(join(rootpath, resultspath, f'{dataset}_jb.mdls'), 'w') as jb_mdlf, \
+         open(join(rootpath, resultspath, f'{dataset}_i.lls'), 'w') as i_llf, \
+         open(join(rootpath, resultspath, f'{dataset}_ja.lls'), 'w') as ja_llf, \
+         open(join(rootpath, resultspath, f'{dataset}_jb.lls'), 'w') as jb_llf:
+        base_mdlf.write('trial,time,p,mdl\n')
+        i_mdlf.write('trial,time1,time2,p,mdl\n')
+        ja_mdlf.write('trial,time1,time2,p,mdl\n')
+        jb_mdlf.write('trial,time1,time2,p,mdl\n')
+        i_llf.write('trial,time1,time2,p,ll\n')
+        ja_llf.write('trial,time1,time2,p,ll\n')
+        jb_llf.write('trial,time1,time2,p,ll\n')
 
-    for trial, curr_time, next_time, p, base_grammar, igrammar, jagrammar, jbgrammar in results:
-        base_grammars[(trial, curr_time, p)] = base_grammar
-        igrammars[(trial, curr_time, next_time, p)] = igrammar
-        jagrammars[(trial, curr_time, next_time, p)] = jagrammar
-        jbgrammars[(trial, curr_time, next_time, p)] = jbgrammar
+        if parallel:
+            batch_size = 2 * n_jobs
+            tasks = [(trial, curr_time, curr_graph, next_time, next_graph, p, mu)
+                     for (curr_time, curr_graph), (next_time, next_graph) in zip(time_graph_pairs[:-1], time_graph_pairs[1:])
+                     for p in np.linspace(0, rewire, delta)
+                     for trial in range(1, n_trials + 1)]
+            n_batches = len(tasks) // batch_size
+            batches = [batch for start in range(n_batches + 1)
+                       if (batch := tasks[(batch_size * start):(batch_size * start + batch_size)]) != []]
 
-    with open(join(rootpath, resultspath, f'{dataset}_base.grammars'), 'wb') as base_file, \
-         open(join(rootpath, resultspath, f'{dataset}_i.grammars'), 'wb') as ifile, \
-         open(join(rootpath, resultspath, f'{dataset}_ja.grammars'), 'wb') as jafile, \
-         open(join(rootpath, resultspath, f'{dataset}_jb.grammars'), 'wb') as jbfile:
-        pickle.dump(base_grammars, base_file)
-        pickle.dump(igrammars, ifile)
-        pickle.dump(jagrammars, jafile)
-        pickle.dump(jbgrammars, jbfile)
+            for batch in batches:
+                results = Parallel(n_jobs=n_jobs, verbose=10)(
+                    delayed(experiment)(task) for task in batch
+                )
+                write(base_gf, i_gf, ja_gf, jb_gf,
+                      base_mdlf, i_mdlf, ja_mdlf, jb_mdlf,
+                      i_llf, ja_llf, jb_llf,
+                      results)
+        else:
+            batch_size = 2 * n_jobs
+            tasks = [(trial, curr_time, curr_graph, next_time, next_graph, p, mu)
+                     for (curr_time, curr_graph), (next_time, next_graph) in zip(time_graph_pairs[:-1], time_graph_pairs[1:])
+                     for p in np.linspace(0, rewire, delta)
+                     for trial in range(1, n_trials + 1)]
+            n_batches = len(tasks) // batch_size
+            batches = [batch for start in range(n_batches + 1)
+                       if (batch := tasks[(batch_size * start):(batch_size * start + batch_size)]) != []]
 
-    with open(join(rootpath, resultspath, f'{dataset}_base.mdls'), 'w') as base_file, \
-         open(join(rootpath, resultspath, f'{dataset}_i.mdls'), 'w') as ifile, \
-         open(join(rootpath, resultspath, f'{dataset}_ja.mdls'), 'w') as jafile, \
-         open(join(rootpath, resultspath, f'{dataset}_jb.mdls'), 'w') as jbfile:
-        base_mdls = {key: grammar.mdl for key, grammar in base_grammars.items()}
-        imdls = {key: grammar.mdl for key, grammar in igrammars.items()}
-        jamdls = {key: grammar.mdl for key, grammar in jagrammars.items()}
-        jbmdls = {key: grammar.mdl for key, grammar in jbgrammars.items()}
-
-        base_file.write('trial,time,p,mdl\n')
-        ifile.write('trial,time1,time2,p,mdl\n')
-        jafile.write('trial,time1,time2,p,mdl\n')
-        jbfile.write('trial,time1,time2,p,mdl\n')
-        for (trial, time, p), mdl in base_mdls.items():
-            base_file.write(f'{trial},{time},{p},{mdl}\n')
-        for (trial, time1, time2, p), mdl in imdls.items():
-            ifile.write(f'{trial},{time1},{time2},{p},{mdl}\n')
-        for (trial, time1, time2, p), mdl in jamdls.items():
-            jafile.write(f'{trial},{time1},{time2},{p},{mdl}\n')
-        for (trial, time1, time2, p), mdl in jbmdls.items():
-            jbfile.write(f'{trial},{time1},{time2},{p},{mdl}\n')
-
-    with open(join(rootpath, resultspath, f'{dataset}_i.lls'), 'w') as ifile, \
-         open(join(rootpath, resultspath, f'{dataset}_ja.lls'), 'w') as jafile, \
-         open(join(rootpath, resultspath, f'{dataset}_jb.lls'), 'w') as jbfile:
-        ills = {key: grammar.ll for key, grammar in igrammars.items()}
-        jalls = {key: grammar.ll for key, grammar in jagrammars.items()}
-        jblls = {key: grammar.ll for key, grammar in jbgrammars.items()}
-
-        ifile.write('trial,time1,time2,p,ll\n')
-        jafile.write('trial,time1,time2,p,ll\n')
-        jbfile.write('trial,time1,time2,p,ll\n')
-        for (trial, time1, time2, p), ll in ills.items():
-            ifile.write(f'{trial},{time1},{time2},{p},{ll}\n')
-        for (trial, time1, time2, p), ll in jalls.items():
-            jafile.write(f'{trial},{time1},{time2},{p},{ll}\n')
-        for (trial, time1, time2, p), ll in jblls.items():
-            jbfile.write(f'{trial},{time1},{time2},{p},{ll}\n')
+            for batch in batches:
+                results = [experiment(trial, curr_time, curr_graph, next_time, next_graph, p, mu)
+                           for (curr_time, curr_graph), (next_time, next_graph) in zip(time_graph_pairs[:-1], time_graph_pairs[1:])
+                           for p in np.linspace(0, rewire, delta)
+                           for trial in range(1, n_trials + 1)]
+                write(base_gf, i_gf, ja_gf, jb_gf,
+                      base_mdlf, i_mdlf, ja_mdlf, jb_mdlf,
+                      i_llf, ja_llf, jb_llf,
+                      results)
 
 
 # python experiment_sequential_random.py [dataset] -d [delta] -r [rewire] -n [# trials] -p -j [# jobs] -m [mu]

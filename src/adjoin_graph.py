@@ -8,8 +8,8 @@ from src.adjoin_decomposition import conjoin_grammars
 from src.adjoin_rule import mutate_rule_domestic, mutate_rule_diplomatic
 
 
-def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph, signature: str,
-                   time: int, mu: int = None, amnesia: bool = False):
+def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph, signature: str, time: int,
+                   mu: int = None, amnesia: bool = False, verbose: bool = False):
     """
         Required arguments:
             signature =
@@ -45,9 +45,9 @@ def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph, sig
 
     if 'j' in signature:
         edges_domestic, edges_diplomatic, edges_foreign = joint(charted_grammar, home_graph, edges_domestic, edges_diplomatic, edges_foreign,
-                                                                mu, time, approach='branch' if 'b' in signature else 'anneal')
+                                                                mu, time, approach='branch' if 'b' in signature else 'anneal', verbose=verbose)
 
-    independent(charted_grammar, home_graph, edges_domestic, edges_diplomatic, edges_foreign, time)
+    independent(charted_grammar, home_graph, edges_domestic, edges_diplomatic, edges_foreign, time, verbose=verbose)
 
     # TODO: implement refactoring of rules?
     if 'r' in signature:
@@ -59,7 +59,7 @@ def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph, sig
 
 
 def joint(charted_grammar: VRG, home_graph: nx.Graph, edges_domestic, edges_diplomatic, edges_foreign,
-          mu, time, approach: str = 'branch') -> tuple[set, set, set]:
+          mu, time, approach: str = 'branch', verbose: bool = False) -> tuple[set, set, set]:
     uncharted_region = nx.Graph()
     uncharted_region.add_edges_from(edges_diplomatic | edges_foreign)
     uncharted_region.remove_nodes_from(home_graph.nodes())
@@ -68,7 +68,7 @@ def joint(charted_grammar: VRG, home_graph: nx.Graph, edges_domestic, edges_dipl
     uncharted_territories: dict[frozenset[int], nx.Graph] = {frozenset(nodes): uncharted_region.subgraph(nodes)
                                                              for nodes in nx.connected_components(uncharted_region)}
 
-    for nodes, territory in tqdm(uncharted_territories.items(), desc='joint changes', leave=True):
+    for nodes, territory in tqdm(uncharted_territories.items(), desc='joint changes', leave=True, disable=(not verbose)):
         if territory.order() >= mu:
             with silence():
                 territory_grammar = decompose(territory, time=time, mu=mu)
@@ -101,13 +101,13 @@ def joint(charted_grammar: VRG, home_graph: nx.Graph, edges_domestic, edges_dipl
     return edges_domestic, edges_diplomatic, edges_foreign
 
 
-def independent(charted_grammar: VRG, home_graph: nx.Graph, edges_domestic, edges_diplomatic, edges_foreign, time) -> tuple[set, set, set]:
+def independent(charted_grammar: VRG, home_graph: nx.Graph, edges_domestic, edges_diplomatic, edges_foreign, time, verbose: bool = False) -> tuple[set, set, set]:
     conquered = set(home_graph.nodes())
     changes = edges_domestic | edges_diplomatic
 
     # handle the edge additions
     while len(changes) > 0:
-        for u, v in tqdm(changes, desc='additions', leave=True):
+        for u, v in tqdm(changes, desc='additions', leave=True, disable=(not verbose)):
             if not charted_grammar.is_edge_connected(u, v):
                 charted_grammar.penalty += 1
             else:

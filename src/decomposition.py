@@ -2,7 +2,6 @@ import random
 from typing import Collection, Iterable
 from functools import reduce
 
-# from tqdm import tqdm
 import networkx as nx
 
 from cnrg.Rule import PartRule
@@ -152,7 +151,7 @@ def create_splitting_rule(subgrammars: Iterable[VRG], time: int) -> PartRule:
     return PartRule(S - 1, rhs, time=time)
 
 
-def decompose(g: nx.Graph, time: int = 0, mu: int = 4, clustering: str = 'leiden', gtype: str = 'mu_level_dl', name: str = ''):
+def decompose(g: nx.Graph, time: int = 0, mu: int = 4, clustering: str = 'leiden', gtype: str = 'mu_level_dl', name: str = '', verbose: bool = False):
     def merge_subgrammars(splitting_rule: PartRule, subgrammars: list[VRG]) -> VRG:
         # for subgrammar in subgrammars:
         #     subgrammar.push_down_grammar()
@@ -210,9 +209,9 @@ def decompose(g: nx.Graph, time: int = 0, mu: int = 4, clustering: str = 'leiden
         connected_components = [g.subgraph(comp) for comp in nx.connected_components(g)]
 
     if len(connected_components) == 1:
-        supergrammar = decompose_component(g, clustering=clustering, gtype=gtype, name=name, mu=mu)
+        supergrammar = decompose_component(g, clustering=clustering, gtype=gtype, name=name, mu=mu, verbose=verbose)
     else:
-        subgrammars = [decompose_component(component, clustering=clustering, gtype=gtype, name=name, mu=mu)
+        subgrammars = [decompose_component(component, clustering=clustering, gtype=gtype, name=name, mu=mu, verbose=verbose)
                        for component in connected_components]
 
         splitting_rule = create_splitting_rule(subgrammars, time)
@@ -229,7 +228,7 @@ def decompose(g: nx.Graph, time: int = 0, mu: int = 4, clustering: str = 'leiden
     return supergrammar
 
 
-def decompose_component(g: nx.Graph, mu: int = 4, clustering: str = 'leiden', gtype: str = 'mu_level_dl', name: str = ''):
+def decompose_component(g: nx.Graph, mu: int = 4, clustering: str = 'leiden', gtype: str = 'mu_level_dl', name: str = '', verbose: bool = False):
     if not isinstance(g, LMG):
         g = convert(g)
 
@@ -253,7 +252,7 @@ def decompose_component(g: nx.Graph, mu: int = 4, clustering: str = 'leiden', gt
                             mu=mu,
                             root=dendrogram)
 
-    extractor.generate_grammar()
+    extractor.generate_grammar(verbose=verbose)
     grammar = extractor.grammar
 
     return grammar

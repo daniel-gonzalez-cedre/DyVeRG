@@ -277,13 +277,13 @@ class BaseExtractor(abc.ABC):
         """
         pass
 
-    def generate_grammar(self) -> None:
+    def generate_grammar(self, verbose: bool = False) -> None:
         """
         generates the grammar
         """
         num_nodes = self.g.order()
 
-        with tqdm(total=100, bar_format='{l_bar}{bar}|[{elapsed}<{remaining}]', ncols=50) as pbar:
+        with tqdm(total=100, bar_format='{l_bar}{bar}|[{elapsed}<{remaining}]', ncols=50, disable=(not verbose)) as pbar:
             while True:
                 rule = self.extract_rule()
                 assert nx.is_connected(self.g), 'graph is disconnected'
