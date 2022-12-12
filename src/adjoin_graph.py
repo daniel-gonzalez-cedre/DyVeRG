@@ -8,7 +8,7 @@ from src.adjoin_decomposition import conjoin_grammars
 from src.adjoin_rule import mutate_rule_domestic, mutate_rule_diplomatic
 
 
-def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph, signature: str, time: int,
+def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph, time: int, signature: str,
                    mu: int = None, amnesia: bool = False, verbose: bool = False):
     """
         Required arguments:

@@ -45,10 +45,10 @@ def experiment(trial: int, curr_time: int, next_time: int,
     perturbed_graph = perturb_graph(next_graph, p)
 
     base_grammar = decompose(curr_graph, time=curr_time, mu=mu)
-    igrammar = update_grammar(base_grammar, curr_graph, perturbed_graph, 'i', next_time)
-    jagrammar = update_grammar(base_grammar, curr_graph, perturbed_graph, 'ja', next_time)
-    jbgrammar = update_grammar(base_grammar, curr_graph, perturbed_graph, 'jb', next_time)
-    return trial, curr_time, next_time, p, base_grammar, igrammar, jagrammar, jbgrammar
+    i_grammar = update_grammar(base_grammar, curr_graph, perturbed_graph, next_time, 'i')
+    ja_grammar = update_grammar(base_grammar, curr_graph, perturbed_graph, next_time, 'ja')
+    jb_grammar = update_grammar(base_grammar, curr_graph, perturbed_graph, next_time, 'jb')
+    return trial, curr_time, next_time, p, base_grammar, i_grammar, ja_grammar, jb_grammar
 
 
 def main(pre_dispatch: bool):
@@ -59,20 +59,20 @@ def main(pre_dispatch: bool):
                     yield (trial, curr_time, next_time, graphs[curr_time], graphs[next_time], p, args.mu)
 
     def write(res):
-        for trial, curr_time, next_time, p, base_grammar, igrammar, jagrammar, jbgrammar in res:
+        for trial, curr_time, next_time, p, base_grammar, i_grammar, ja_grammar, jb_grammar in res:
             pickle.dump(base_grammar, base_gf)
-            pickle.dump(igrammar, i_gf)
-            pickle.dump(jagrammar, ja_gf)
-            pickle.dump(jbgrammar, jb_gf)
+            pickle.dump(i_grammar, i_gf)
+            pickle.dump(ja_grammar, ja_gf)
+            pickle.dump(jb_grammar, jb_gf)
 
             base_mdlf.write(f'{trial},{curr_time},{p},{base_grammar.mdl}\n')
-            i_mdlf.write(f'{trial},{curr_time},{next_time},{p},{igrammar.mdl}\n')
-            ja_mdlf.write(f'{trial},{curr_time},{next_time},{p},{jagrammar.mdl}\n')
-            jb_mdlf.write(f'{trial},{curr_time},{next_time},{p},{jbgrammar.mdl}\n')
+            i_mdlf.write(f'{trial},{curr_time},{next_time},{p},{i_grammar.mdl}\n')
+            ja_mdlf.write(f'{trial},{curr_time},{next_time},{p},{ja_grammar.mdl}\n')
+            jb_mdlf.write(f'{trial},{curr_time},{next_time},{p},{jb_grammar.mdl}\n')
 
-            i_llf.write(f'{trial},{curr_time},{next_time},{p},{igrammar.ll}\n')
-            ja_llf.write(f'{trial},{curr_time},{next_time},{p},{jagrammar.ll}\n')
-            jb_llf.write(f'{trial},{curr_time},{next_time},{p},{jbgrammar.ll}\n')
+            i_llf.write(f'{trial},{curr_time},{next_time},{p},{i_grammar.ll}\n')
+            ja_llf.write(f'{trial},{curr_time},{next_time},{p},{ja_grammar.ll}\n')
+            jb_llf.write(f'{trial},{curr_time},{next_time},{p},{jb_grammar.ll}\n')
 
     time_graph_pairs: list[tuple[int, nx.Graph]] = load_data(args.dataset)
     times: list[int] = [t for t, _ in time_graph_pairs]
@@ -119,7 +119,7 @@ def main(pre_dispatch: bool):
         write(results)
 
 
-# python experiment_random.py [dataset] -d [delta] -r [rewire] -n [# trials] -p -j [# jobs] -m [mu]
+# nice -n 10 python experiment_random.py email-enron -r 0.25 -d 25 -n 25 -p -j 40 -m 4
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('dataset',
@@ -169,17 +169,17 @@ if __name__ == '__main__':
     mkdir(join(rootpath, resultspath))
 
     # pylint: disable=consider-using-with
-    base_gf = open(join(rootpath, resultspath, f'{args.dataset}_base.grammars'), 'wb')
-    i_gf = open(join(rootpath, resultspath, f'{args.dataset}_i.grammars'), 'wb')
-    ja_gf = open(join(rootpath, resultspath, f'{args.dataset}_ja.grammars'), 'wb')
-    jb_gf = open(join(rootpath, resultspath, f'{args.dataset}_jb.grammars'), 'wb')
-    base_mdlf = open(join(rootpath, resultspath, f'{args.dataset}_base.mdls'), 'w')
-    i_mdlf = open(join(rootpath, resultspath, f'{args.dataset}_i.mdls'), 'w')
-    ja_mdlf = open(join(rootpath, resultspath, f'{args.dataset}_ja.mdls'), 'w')
-    jb_mdlf = open(join(rootpath, resultspath, f'{args.dataset}_jb.mdls'), 'w')
-    i_llf = open(join(rootpath, resultspath, f'{args.dataset}_i.lls'), 'w')
-    ja_llf = open(join(rootpath, resultspath, f'{args.dataset}_ja.lls'), 'w')
-    jb_llf = open(join(rootpath, resultspath, f'{args.dataset}_jb.lls'), 'w')
+    base_gf = open(join(rootpath, resultspath, f'{args.dataset}_{args.mu}_base.grammars'), 'wb')
+    i_gf = open(join(rootpath, resultspath, f'{args.dataset}_{args.mu}_i.grammars'), 'wb')
+    ja_gf = open(join(rootpath, resultspath, f'{args.dataset}_{args.mu}_ja.grammars'), 'wb')
+    jb_gf = open(join(rootpath, resultspath, f'{args.dataset}_{args.mu}_jb.grammars'), 'wb')
+    base_mdlf = open(join(rootpath, resultspath, f'{args.dataset}_{args.mu}_base.mdls'), 'w')
+    i_mdlf = open(join(rootpath, resultspath, f'{args.dataset}_{args.mu}_i.mdls'), 'w')
+    ja_mdlf = open(join(rootpath, resultspath, f'{args.dataset}_{args.mu}_ja.mdls'), 'w')
+    jb_mdlf = open(join(rootpath, resultspath, f'{args.dataset}_{args.mu}_jb.mdls'), 'w')
+    i_llf = open(join(rootpath, resultspath, f'{args.dataset}_{args.mu}_i.lls'), 'w')
+    ja_llf = open(join(rootpath, resultspath, f'{args.dataset}_{args.mu}_ja.lls'), 'w')
+    jb_llf = open(join(rootpath, resultspath, f'{args.dataset}_{args.mu}_jb.lls'), 'w')
 
     base_mdlf.write('trial,time,p,mdl\n')
     i_mdlf.write('trial,time1,time2,p,mdl\n')
