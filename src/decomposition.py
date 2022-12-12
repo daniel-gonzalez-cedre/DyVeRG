@@ -1,5 +1,6 @@
 import random
 from typing import Collection, Iterable
+from functools import reduce
 
 # from tqdm import tqdm
 import networkx as nx
@@ -107,7 +108,7 @@ def propagate_ancestors(node: str, rule_idx: int, grammar: VRG, time: int = None
 
     rule, pidx, anode = grammar[rule_idx]
 
-    rule.lhs += 1
+    rule.lhs = rule.lhs + 1 if rule.lhs >= 0 else 1
     rule.time_changed = time
     rule.graph.nodes[node]['b_deg'] += 1
     rule.graph.nodes[node]['label'] += 1
@@ -116,7 +117,7 @@ def propagate_ancestors(node: str, rule_idx: int, grammar: VRG, time: int = None
         # modified_rule.edit_dist += 2  # TODO: think about this
         rule.edit_dist += 1
 
-    propagate_ancestors(anode, pidx, grammar, time)
+    propagate_ancestors(anode, pidx, grammar, time, stop_at=stop_at)
 
 
 def propagate_descendants(nts: str, rule_idx: int, grammar: VRG, time: int = None):
@@ -140,12 +141,14 @@ def propagate_descendants(nts: str, rule_idx: int, grammar: VRG, time: int = Non
 
 
 def create_splitting_rule(subgrammars: Iterable[VRG], time: int) -> PartRule:
-    S = min(min(subgrammar.nonterminals) for subgrammar in subgrammars)
     rhs = nx.Graph()
+    S = min(min(rule.lhs for rule, _, _ in subgrammar.decomposition)
+            for subgrammar in subgrammars)
 
     for idx, subgrammar in enumerate(subgrammars):
-        rhs.add_node(str(idx), b_deg=0, label=min(subgrammar.nonterminals))
+        rhs.add_node(str(idx), b_deg=0, label=subgrammar.root_rule.lhs)
 
+    # S = sum(d['b_deg'] for v, d in rhs.nodes(data=True) if 'label' in d)
     return PartRule(S - 1, rhs, time=time)
 
 

@@ -31,16 +31,15 @@ def conjoin_grammars(host_grammar: VRG, parasite_grammar: VRG, frontier: set[tup
     else:
         strategy = approach.strip().lower()
 
-    if strategy == 'branch':
-        branch(host_grammar, parasite_grammar, frontier, time)
-    elif strategy == 'anneal':
+    if strategy == 'anneal':
         anneal(host_grammar, parasite_grammar, frontier, time)
+    elif strategy == 'branch':
+        branch(host_grammar, parasite_grammar, frontier, time)
     else:
         raise AssertionError(f'{strategy} is not a valid joining strategy; select one of "branch" or "anneal"')
 
 
-def prepare(u: int, grammar: VRG, time: int,
-            edit: bool, stop_at: int = -1):
+def prepare(u: int, grammar: VRG, time: int, edit: bool, stop_at: int = -1):
     rule_idx = grammar.cover[u]
 
     if stop_at == rule_idx:
@@ -49,7 +48,7 @@ def prepare(u: int, grammar: VRG, time: int,
     rule, pidx, anode = grammar[rule_idx]
     rule_u = rule.alias[u]
 
-    rule.lhs += 1
+    rule.lhs = rule.lhs + 1 if rule.lhs >= 0 else 1
     rule.time_changed = time
     rule.graph.nodes[rule_u]['b_deg'] += 1
 
@@ -58,6 +57,36 @@ def prepare(u: int, grammar: VRG, time: int,
 
     assert 'label' not in rule.graph[rule_u]
     propagate_ancestors(anode, pidx, grammar, time, edit=edit, stop_at=stop_at)
+
+
+def anneal(host_grammar: VRG, parasite_grammar: VRG, frontier: set[tuple[int, int]], time: int):
+    for u, v in frontier:
+        prepare(u, host_grammar, time, edit=True)
+        prepare(v, parasite_grammar, time, edit=False)
+
+    splitting_rule = create_splitting_rule((host_grammar, parasite_grammar), time)
+    splitting_rule.idn = len(host_grammar.decomposition)
+
+    splitting_rule.graph.add_edges_from([('0', '1') for _, _ in frontier])
+
+    for idx, (_, pidx, anode) in enumerate(host_grammar.decomposition):
+        if pidx is None and anode is None:
+            host_grammar[idx][1] = splitting_rule.idn
+            host_grammar[idx][2] = '0'
+            break
+
+    host_grammar.decomposition.append([splitting_rule, None, None])
+    offset = len(host_grammar.decomposition)
+
+    for idx, (rule, pidx, anode) in enumerate(parasite_grammar.decomposition):
+        if pidx is None and anode is None:
+            parasite_grammar[idx][1] = splitting_rule.idn
+            parasite_grammar[idx][2] = '1'
+        else:
+            parasite_grammar[idx][1] += offset
+        rule.idn += offset
+
+    host_grammar.decomposition += parasite_grammar.decomposition
 
 
 def branch(host_grammar: VRG, parasite_grammar: VRG, frontier: set[tuple[int, int]], time: int):
@@ -69,8 +98,9 @@ def branch(host_grammar: VRG, parasite_grammar: VRG, frontier: set[tuple[int, in
 
     nts = chr(max(ord(v) for v in branch_rule.graph.nodes()) + 1)
 
-    branch_rule.graph.add_node(nts, label=len(frontier), b_deg=0)
+    branch_rule.graph.add_node(nts, b_deg=0, label=parasite_grammar.root_rule.lhs)
     branch_rule.time_changed = time
+    branch_rule.branch = True  # TODO: debugging
 
     for u, _ in frontier:
         prepare(u, host_grammar, time, edit=True, stop_at=branch_idx)
@@ -86,37 +116,6 @@ def branch(host_grammar: VRG, parasite_grammar: VRG, frontier: set[tuple[int, in
             parasite_grammar[idx][1] = branch_idx
             parasite_grammar[idx][2] = nts
         else:
-            parasite_grammar[idx][1] += offset
-        rule.idn += offset
-
-    host_grammar.decomposition += parasite_grammar.decomposition
-
-
-def anneal(host_grammar: VRG, parasite_grammar: VRG, frontier: set[tuple[int, int]], time: int):
-    for u, v in frontier:
-        prepare(u, host_grammar, time, edit=True)
-        prepare(v, parasite_grammar, time, edit=False)
-
-    splitting_rule = create_splitting_rule((host_grammar, parasite_grammar), time)
-    splitting_rule.idn = len(host_grammar.decomposition)
-    splitting_rule.graph.nodes['0']['label'] = host_grammar.root_rule.lhs
-    splitting_rule.graph.nodes['1']['label'] = parasite_grammar.root_rule.lhs
-
-    for idx, (_, pidx, anode) in enumerate(host_grammar.decomposition):
-        if pidx is None and anode is None:
-            host_grammar[idx][1] = splitting_rule.idn
-            host_grammar[idx][2] = '0'
-            break
-
-    host_grammar.decomposition += [[splitting_rule, None, None]]
-    offset = len(host_grammar.decomposition)
-
-    for idx, (rule, pidx, anode) in enumerate(parasite_grammar.decomposition):
-        if pidx is None and anode is None:
-            parasite_grammar[idx][1] = splitting_rule.idn
-            parasite_grammar[idx][2] = '1'
-        else:
-            parasite_grammar[idx][0].idn += offset
             parasite_grammar[idx][1] += offset
         rule.idn += offset
 

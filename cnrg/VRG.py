@@ -71,7 +71,6 @@ class VRG:
     def root(self) -> tuple[int, BaseRule]:
         for idx, (r, pidx, anode) in enumerate(self.decomposition):
             if pidx is None and anode is None:
-                # assert r.lhs == min(nts for nts in self.rule_dict)
                 return idx, r
         raise AssertionError('decomposition does not have a root!')
 

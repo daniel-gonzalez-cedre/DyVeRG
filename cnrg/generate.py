@@ -20,8 +20,8 @@ def generate_graph(target_n: int, grammar: VRG, merge_iso_rules: bool,
             merge_iso_rules: whether or not to consider isomorphic rules identical
 
         Optional arguments:
-            tolerance: the percentage allowable deviation from `target_n` for the order of `G`
-                       set to `0.05` by default
+            tolerance: the allowable deviation of the order of `G` from `target_n`
+                       set to `0.05` by default, meaning `|G| = targen_n ± 0.05*target_n`
 
         Returns:
             A tuple `(G, gen_seq)`, where:
@@ -32,17 +32,19 @@ def generate_graph(target_n: int, grammar: VRG, merge_iso_rules: bool,
 
     lower_bound = int(target_n * (1 - tolerance))
     upper_bound = int(target_n * (1 + tolerance))
-    max_trials = 1_000
+    max_trials = 10_000
     trial = 0
     while True:
         if trial > max_trials:
-            raise TimeoutError(f'Generation failed in {max_trials} steps')
+            raise TimeoutError(f'Generation failed after exceeding {max_trials} attempts.')
 
         g, rule_ordering = _generate_graph(rules=grammar.rules, upper_bound=upper_bound)
         if g is None:  # early termination
             continue
         if lower_bound <= g.order() <= upper_bound:  # if the number of nodes falls in bounds,
             break
+
+        # print(g.order(), g.size())
 
         trial += 1
 
