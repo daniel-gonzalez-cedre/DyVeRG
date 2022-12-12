@@ -39,9 +39,9 @@ def perturb_graph(g: nx.Graph, p: float = 0.01) -> nx.Graph:
     return h
 
 
-def experiment(trial: int, curr_time: int, next_time: int, p: float, mu: int) -> tuple[int, int, int, float, VRG, VRG, VRG, VRG]:
-    curr_graph = graphs[curr_time]
-    next_graph = graphs[next_time]
+def experiment(trial: int, curr_time: int, next_time: int,
+               curr_graph: nx.Graph, next_graph: nx.Graph,
+               p: float, mu: int) -> tuple[int, int, int, float, VRG, VRG, VRG, VRG]:
     perturbed_graph = perturb_graph(next_graph, p)
 
     base_grammar = decompose(curr_graph, time=curr_time, mu=mu)
@@ -55,9 +55,8 @@ def main():
     def tasks():
         for trial in range(1, args.n_trials + 1):
             for p in np.linspace(0, args.rewire, args.delta):
-                # for (curr_time, curr_graph), (next_time, next_graph) in zip(time_graph_pairs[:-1], time_graph_pairs[1:]):
                 for curr_time, next_time in zip(times[:-1], times[1:]):
-                    yield (trial, curr_time, next_time, p, args.mu)
+                    yield (trial, curr_time, next_time, graphs[curr_time], graphs[next_time], p, args.mu)
 
     def write(res):
         for trial, curr_time, next_time, p, base_grammar, igrammar, jagrammar, jbgrammar in res:
@@ -103,13 +102,13 @@ def main():
     else:
         if args.parallel:
             results = Parallel(n_jobs=args.n_jobs, verbose=10)(
-                delayed(experiment)(trial, curr_time, next_time, p, args.mu)
+                delayed(experiment)(trial, curr_time, next_time, graphs[curr_time], graphs[next_time], p, args.mu)
                 for curr_time, next_time in zip(times[:-1], times[1:])
                 for p in np.linspace(0, args.rewire, args.delta)
                 for trial in range(1, args.n_trials + 1)
             )
         else:
-            results = [experiment(trial, curr_time, next_time, p, args.mu)
+            results = [experiment(trial, curr_time, next_time, graphs[curr_time], graphs[next_time], p, args.mu)
                        for (curr_time, curr_graph), (next_time, next_graph) in zip(time_graph_pairs[:-1], time_graph_pairs[1:])
                        for p in np.linspace(0, args.rewire, args.delta)
                        for trial in range(1, args.n_trials + 1)]
