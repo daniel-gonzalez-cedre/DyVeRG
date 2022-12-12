@@ -75,7 +75,7 @@ def write(base_gf, i_gf, ja_gf, jb_gf, base_mdlf, i_mdlf, ja_mdlf, jb_mdlf, i_ll
         jb_llf.write(f'{trial},{curr_time},{next_time},{p},{jbgrammar.ll}\n')
 
 
-def main(dataset, rewire, delta, n_trials, parallel, n_jobs, mu):
+def main(dataset, rewire, delta, n_trials, do_batch, parallel, n_jobs, mu):
     rootpath = git.Repo(getcwd(), search_parent_directories=True).git.rev_parse("--show-toplevel")
     resultspath = 'results/experiment_random/'
     mkdir(join(rootpath, resultspath))
@@ -101,29 +101,43 @@ def main(dataset, rewire, delta, n_trials, parallel, n_jobs, mu):
         ja_llf.write('trial,time1,time2,p,ll\n')
         jb_llf.write('trial,time1,time2,p,ll\n')
 
-        batch = []
-        batch_size = 2 * n_jobs
-        for num, task in enumerate(tasks(n_trials, rewire, delta, mu, time_graph_pairs)):
-            batch.append(task)
+        if do_batch:
+            batch = []
+            batch_size = 4 * n_jobs
+            for num, task in enumerate(tasks(n_trials, rewire, delta, mu, time_graph_pairs)):
+                batch.append(task)
 
-            if num % batch_size == 0:
-                if parallel:
-                    results = Parallel(n_jobs=n_jobs, verbose=10)(
-                        delayed(experiment)(*task) for task in batch
-                    )
-                else:
-                    results = [experiment(*task) for task in batch]
+                if num % batch_size == 0:
+                    if parallel:
+                        results = Parallel(n_jobs=n_jobs, verbose=10)(
+                            delayed(experiment)(*task) for task in batch
+                        )
+                    else:
+                        results = [experiment(*task) for task in batch]
 
-                batch = []
-                write(base_gf, i_gf, ja_gf, jb_gf, base_mdlf, i_mdlf, ja_mdlf, jb_mdlf, i_llf, ja_llf, jb_llf, results)
+                    batch = []
+                    write(base_gf, i_gf, ja_gf, jb_gf, base_mdlf, i_mdlf, ja_mdlf, jb_mdlf, i_llf, ja_llf, jb_llf, results)
 
-        # clean up last batch
-        if parallel:
-            results = Parallel(n_jobs=n_jobs, verbose=10)(
-                delayed(experiment)(*task) for task in batch
-            )
+            # clean up last batch
+            if parallel:
+                results = Parallel(n_jobs=n_jobs, verbose=10)(
+                    delayed(experiment)(*task) for task in batch
+                )
+            else:
+                results = [experiment(*task) for task in batch]
         else:
-            results = [experiment(*task) for task in batch]
+            if parallel:
+                results = Parallel(n_jobs=n_jobs, verbose=10)(
+                    delayed(experiment)(trial, curr_time, curr_graph, next_time, next_graph, p, mu)
+                    for (curr_time, curr_graph), (next_time, next_graph) in zip(time_graph_pairs[:-1], time_graph_pairs[1:])
+                    for p in np.linspace(0, rewire, delta)
+                    for trial in range(1, n_trials + 1)
+                )
+            else:
+                results = [experiment(trial, curr_time, curr_graph, next_time, next_graph, p, mu)
+                           for (curr_time, curr_graph), (next_time, next_graph) in zip(time_graph_pairs[:-1], time_graph_pairs[1:])
+                           for p in np.linspace(0, rewire, delta)
+                           for trial in range(1, n_trials + 1)]
 
         write(base_gf, i_gf, ja_gf, jb_gf, base_mdlf, i_mdlf, ja_mdlf, jb_mdlf, i_llf, ja_llf, jb_llf, results)
 
@@ -151,6 +165,11 @@ if __name__ == '__main__':
                         dest='n_trials',
                         type=int,
                         help='the number of times to run each experiment')
+    parser.add_argument('-b', '--batch',
+                        action='store_true',
+                        default=False,
+                        dest='batch',
+                        help='batch the compute tasks or not')
     parser.add_argument('-p', '--parallel',
                         action='store_true',
                         default=False,
@@ -167,4 +186,4 @@ if __name__ == '__main__':
                         type=int,
                         help='select a value for the μ hyperparameter for CNRG')
     args = parser.parse_args()
-    main(args.dataset, args.rewire, args.delta, args.n_trials, args.parallel, args.n_jobs, args.mu)
+    main(args.dataset, args.rewire, args.delta, args.n_trials, args.batch, args.parallel, args.n_jobs, args.mu)
