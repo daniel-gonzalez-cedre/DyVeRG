@@ -51,7 +51,7 @@ def experiment(trial: int, curr_time: int, next_time: int,
     return trial, curr_time, next_time, p, base_grammar, igrammar, jagrammar, jbgrammar
 
 
-def main():
+def main(pre_dispatch: bool):
     def tasks():
         for trial in range(1, args.n_trials + 1):
             for p in np.linspace(0, args.rewire, args.delta):
@@ -74,6 +74,10 @@ def main():
             ja_llf.write(f'{trial},{curr_time},{next_time},{p},{jagrammar.ll}\n')
             jb_llf.write(f'{trial},{curr_time},{next_time},{p},{jbgrammar.ll}\n')
 
+    time_graph_pairs: list[tuple[int, nx.Graph]] = load_data(args.dataset)
+    times: list[int] = [t for t, _ in time_graph_pairs]
+    graphs: dict[int, nx.Graph] = {t: g for t, g in time_graph_pairs}  # pylint: disable=unnecessary-comprehension
+
     if args.batch:
         batch = []
         batch_size = 4 * args.n_jobs
@@ -82,7 +86,7 @@ def main():
 
             if num % batch_size == 0:
                 if args.parallel:
-                    results = Parallel(n_jobs=args.n_jobs, verbose=10)(
+                    results = Parallel(n_jobs=args.n_jobs, verbose=10, pre_dispatch='all' if pre_dispatch else '2 * n_jobs')(
                         delayed(experiment)(*task) for task in batch
                     )
                 else:
@@ -93,7 +97,7 @@ def main():
 
         # clean up last batch
         if args.parallel:
-            results = Parallel(n_jobs=args.n_jobs, verbose=10)(
+            results = Parallel(n_jobs=args.n_jobs, verbose=10, pre_dispatch='all' if pre_dispatch else '2 * n_jobs')(
                 delayed(experiment)(*task) for task in batch
             )
         else:
@@ -101,7 +105,7 @@ def main():
         write(results)
     else:
         if args.parallel:
-            results = Parallel(n_jobs=args.n_jobs, verbose=10)(
+            results = Parallel(n_jobs=args.n_jobs, verbose=10, pre_dispatch='all' if pre_dispatch else '2 * n_jobs')(
                 delayed(experiment)(trial, curr_time, next_time, graphs[curr_time], graphs[next_time], p, args.mu)
                 for curr_time, next_time in zip(times[:-1], times[1:])
                 for p in np.linspace(0, args.rewire, args.delta)
@@ -164,10 +168,6 @@ if __name__ == '__main__':
     resultspath = 'results/experiment_random/'
     mkdir(join(rootpath, resultspath))
 
-    time_graph_pairs: list[tuple[int, nx.Graph]] = load_data(args.dataset)
-    times: list[int] = [t for t, _ in time_graph_pairs]
-    graphs: dict[int, nx.Graph] = {t: g for t, g in time_graph_pairs}  # pylint: disable=unnecessary-comprehension
-
     # pylint: disable=consider-using-with
     base_gf = open(join(rootpath, resultspath, f'{args.dataset}_base.grammars'), 'wb')
     i_gf = open(join(rootpath, resultspath, f'{args.dataset}_i.grammars'), 'wb')
@@ -189,7 +189,7 @@ if __name__ == '__main__':
     ja_llf.write('trial,time1,time2,p,ll\n')
     jb_llf.write('trial,time1,time2,p,ll\n')
 
-    main()
+    main(pre_dispatch=True)
 
     base_gf.close()
     i_gf.close()
