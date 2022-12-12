@@ -36,10 +36,10 @@ def experiment(trial: int, time_graph_pairs: list[tuple[int, nx.Graph]], mu: int
         i_grammar = update_grammar(prev_i_grammar, cumulative_graph, next_graph, next_time, 'i')
         i_grammars[(time, next_time)] = i_grammar
 
-        ja_grammar = update_grammar(prev_ja_grammar, cumulative_graph, next_graph, next_time, 'j')
+        ja_grammar = update_grammar(prev_ja_grammar, cumulative_graph, next_graph, next_time, 'ja')
         ja_grammars[(time, next_time)] = ja_grammar
 
-        jb_grammar = update_grammar(prev_jb_grammar, cumulative_graph, next_graph, next_time, 'j')
+        jb_grammar = update_grammar(prev_jb_grammar, cumulative_graph, next_graph, next_time, 'jb')
         jb_grammars[(time, next_time)] = jb_grammar
 
         time = next_time
