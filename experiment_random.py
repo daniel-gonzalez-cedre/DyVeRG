@@ -45,10 +45,24 @@ def experiment(trial: int, curr_time: int, next_time: int,
     perturbed_graph = perturb_graph(next_graph, p)
 
     base_grammar = decompose(curr_graph, time=curr_time, mu=mu)
-    i_grammar = update_grammar(base_grammar, curr_graph, perturbed_graph, next_time, 'i')
-    ja_grammar = update_grammar(base_grammar, curr_graph, perturbed_graph, next_time, 'ja')
-    jb_grammar = update_grammar(base_grammar, curr_graph, perturbed_graph, next_time, 'jb')
-    return trial, curr_time, next_time, p, base_grammar, i_grammar, ja_grammar, jb_grammar
+    i_grammar = update_grammar(base_grammar, curr_graph, perturbed_graph, curr_time, next_time, 'i')
+    ja_grammar = update_grammar(base_grammar, curr_graph, perturbed_graph, curr_time, next_time, 'ja')
+    jb_grammar = update_grammar(base_grammar, curr_graph, perturbed_graph, curr_time, next_time, 'jb')
+
+    # save the grammars
+    with open(pathprefix + f'_base_{curr_time}_{trial}.grammars', 'wb') as basefile:
+        pickle.dump(base_grammar, basefile)
+    with open(pathprefix + f'_i_{curr_time}_{next_time}_{trial}.grammars', 'wb') as ifile:
+        pickle.dump(i_grammar, ifile)
+    with open(pathprefix + f'_ja_{curr_time}_{next_time}_{trial}.grammars', 'wb') as jafile:
+        pickle.dump(ja_grammar, jafile)
+    with open(pathprefix + f'_jb_{curr_time}_{next_time}_{trial}.grammars', 'wb') as jbfile:
+        pickle.dump(jb_grammar, jbfile)
+
+    return (trial, curr_time, next_time, p,
+            base_grammar.mdl, i_grammar.mdl, ja_grammar.mdl, jb_grammar.mdl,
+            i_grammar.ll(next_time, prior=curr_time), ja_grammar.ll(next_time, prior=curr_time), jb_grammar.ll(next_time, prior=curr_time))
+    # return trial, curr_time, next_time, p, base_grammar, i_grammar, ja_grammar, jb_grammar
 
 
 def main(pre_dispatch: bool):
@@ -58,65 +72,49 @@ def main(pre_dispatch: bool):
                 for curr_time, next_time in zip(times[:-1], times[1:]):
                     yield (trial, curr_time, next_time, graphs[curr_time], graphs[next_time], p, args.mu)
 
-    def write(res):
-        for trial, curr_time, next_time, p, base_grammar, i_grammar, ja_grammar, jb_grammar in res:
-            pickle.dump(base_grammar, base_gf)
-            pickle.dump(i_grammar, i_gf)
-            pickle.dump(ja_grammar, ja_gf)
-            pickle.dump(jb_grammar, jb_gf)
-
-            base_mdlf.write(f'{trial},{curr_time},{p},{base_grammar.mdl}\n')
-            i_mdlf.write(f'{trial},{curr_time},{next_time},{p},{i_grammar.mdl}\n')
-            ja_mdlf.write(f'{trial},{curr_time},{next_time},{p},{ja_grammar.mdl}\n')
-            jb_mdlf.write(f'{trial},{curr_time},{next_time},{p},{jb_grammar.mdl}\n')
-
-            i_llf.write(f'{trial},{curr_time},{next_time},{p},{i_grammar.ll}\n')
-            ja_llf.write(f'{trial},{curr_time},{next_time},{p},{ja_grammar.ll}\n')
-            jb_llf.write(f'{trial},{curr_time},{next_time},{p},{jb_grammar.ll}\n')
-
     time_graph_pairs: list[tuple[int, nx.Graph]] = load_data(args.dataset)
     times: list[int] = [t for t, _ in time_graph_pairs]
     graphs: dict[int, nx.Graph] = {t: g for t, g in time_graph_pairs}  # pylint: disable=unnecessary-comprehension
 
-    if args.batch:
-        batch = []
-        batch_size = 4 * args.n_jobs
-        for num, task in enumerate(tasks()):
-            batch.append(task)
-
-            if num % batch_size == 0:
-                if args.parallel:
-                    results = Parallel(n_jobs=args.n_jobs, verbose=10, pre_dispatch='all' if pre_dispatch else '2 * n_jobs')(
-                        delayed(experiment)(*task) for task in batch
-                    )
-                else:
-                    results = [experiment(*task) for task in batch]
-
-                batch = []
-                write(results)
-
-        # clean up last batch
-        if args.parallel:
-            results = Parallel(n_jobs=args.n_jobs, verbose=10, pre_dispatch='all' if pre_dispatch else '2 * n_jobs')(
-                delayed(experiment)(*task) for task in batch
-            )
-        else:
-            results = [experiment(*task) for task in batch]
-        write(results)
+    # run the experiments
+    if args.parallel:
+        results = Parallel(n_jobs=args.n_jobs, verbose=10, pre_dispatch='all' if pre_dispatch else '2 * n_jobs')(
+            delayed(experiment)(trial, curr_time, next_time, graphs[curr_time], graphs[next_time], p, args.mu)
+            for curr_time, next_time in zip(times[:-1], times[1:])
+            for p in np.linspace(0, args.rewire, args.delta)
+            for trial in range(1, args.n_trials + 1)
+        )
     else:
-        if args.parallel:
-            results = Parallel(n_jobs=args.n_jobs, verbose=10, pre_dispatch='all' if pre_dispatch else '2 * n_jobs')(
-                delayed(experiment)(trial, curr_time, next_time, graphs[curr_time], graphs[next_time], p, args.mu)
-                for curr_time, next_time in zip(times[:-1], times[1:])
-                for p in np.linspace(0, args.rewire, args.delta)
-                for trial in range(1, args.n_trials + 1)
-            )
-        else:
-            results = [experiment(trial, curr_time, next_time, graphs[curr_time], graphs[next_time], p, args.mu)
-                       for (curr_time, curr_graph), (next_time, next_graph) in zip(time_graph_pairs[:-1], time_graph_pairs[1:])
-                       for p in np.linspace(0, args.rewire, args.delta)
-                       for trial in range(1, args.n_trials + 1)]
-        write(results)
+        results = [experiment(trial, curr_time, next_time, graphs[curr_time], graphs[next_time], p, args.mu)
+                   for (curr_time, curr_graph), (next_time, next_graph) in zip(time_graph_pairs[:-1], time_graph_pairs[1:])
+                   for p in np.linspace(0, args.rewire, args.delta)
+                   for trial in range(1, args.n_trials + 1)]
+
+    # write the output
+    with open(pathprefix + '_base.mdls', 'wb') as basemdlfile, \
+         open(pathprefix + '_i.mdls', 'wb') as imdlfile, \
+         open(pathprefix + '_ja.mdls', 'wb') as jamdlfile, \
+         open(pathprefix + '_jb.mdls', 'wb') as jbmdlfile, \
+         open(pathprefix + '_i.lls', 'wb') as illfile, \
+         open(pathprefix + '_ja.lls', 'wb') as jallfile, \
+         open(pathprefix + '_jb.lls', 'wb') as jbllfile:
+        basemdlfile.write('trial,time,p,mdl\n')
+        imdlfile.write('trial,time1,time2,p,mdl\n')
+        jamdlfile.write('trial,time1,time2,p,mdl\n')
+        jbmdlfile.write('trial,time1,time2,p,mdl\n')
+        illfile.write('trial,time1,time2,p,ll\n')
+        jallfile.write('trial,time1,time2,p,ll\n')
+        jbllfile.write('trial,time1,time2,p,ll\n')
+
+        for trial, curr_time, next_time, p, base_mdl, i_mdl, ja_mdl, jb_mdl, i_ll, ja_ll, jb_ll in results:
+            basemdlfile.write(f'{trial},{curr_time},{p},{base_mdl}\n')
+            imdlfile.write(f'{trial},{curr_time},{next_time},{p},{i_mdl}\n')
+            jamdlfile.write(f'{trial},{curr_time},{next_time},{p},{ja_mdl}\n')
+            jbmdlfile.write(f'{trial},{curr_time},{next_time},{p},{jb_mdl}\n')
+
+            illfile.write(f'{trial},{curr_time},{next_time},{p},{i_ll}\n')
+            jallfile.write(f'{trial},{curr_time},{next_time},{p},{ja_ll}\n')
+            jbllfile.write(f'{trial},{curr_time},{next_time},{p},{jb_ll}\n')
 
 
 # nice -n 10 python experiment_random.py email-enron -r 0.25 -d 25 -n 25 -p -j 40 -m 4
@@ -142,11 +140,6 @@ if __name__ == '__main__':
                         dest='n_trials',
                         type=int,
                         help='the number of times to run each experiment')
-    parser.add_argument('-b', '--batch',
-                        action='store_true',
-                        default=False,
-                        dest='batch',
-                        help='batch the compute tasks or not')
     parser.add_argument('-p', '--parallel',
                         action='store_true',
                         default=False,
@@ -171,39 +164,8 @@ if __name__ == '__main__':
 
     rootpath = git.Repo(getcwd(), search_parent_directories=True).git.rev_parse("--show-toplevel")
     resultspath = 'results/experiment_random/'
+    pathprefix = join(rootpath, resultspath, f'{args.dataset}_{args.mu}')
     mkdir(join(rootpath, resultspath))
 
     # pylint: disable=consider-using-with
-    base_gf = open(join(rootpath, resultspath, f'{args.dataset}_{args.mu}_base.grammars'), 'wb')
-    i_gf = open(join(rootpath, resultspath, f'{args.dataset}_{args.mu}_i.grammars'), 'wb')
-    ja_gf = open(join(rootpath, resultspath, f'{args.dataset}_{args.mu}_ja.grammars'), 'wb')
-    jb_gf = open(join(rootpath, resultspath, f'{args.dataset}_{args.mu}_jb.grammars'), 'wb')
-    base_mdlf = open(join(rootpath, resultspath, f'{args.dataset}_{args.mu}_base.mdls'), 'w')
-    i_mdlf = open(join(rootpath, resultspath, f'{args.dataset}_{args.mu}_i.mdls'), 'w')
-    ja_mdlf = open(join(rootpath, resultspath, f'{args.dataset}_{args.mu}_ja.mdls'), 'w')
-    jb_mdlf = open(join(rootpath, resultspath, f'{args.dataset}_{args.mu}_jb.mdls'), 'w')
-    i_llf = open(join(rootpath, resultspath, f'{args.dataset}_{args.mu}_i.lls'), 'w')
-    ja_llf = open(join(rootpath, resultspath, f'{args.dataset}_{args.mu}_ja.lls'), 'w')
-    jb_llf = open(join(rootpath, resultspath, f'{args.dataset}_{args.mu}_jb.lls'), 'w')
-
-    base_mdlf.write('trial,time,p,mdl\n')
-    i_mdlf.write('trial,time1,time2,p,mdl\n')
-    ja_mdlf.write('trial,time1,time2,p,mdl\n')
-    jb_mdlf.write('trial,time1,time2,p,mdl\n')
-    i_llf.write('trial,time1,time2,p,ll\n')
-    ja_llf.write('trial,time1,time2,p,ll\n')
-    jb_llf.write('trial,time1,time2,p,ll\n')
-
     main(pre_dispatch=args.pre_dispatch)
-
-    base_gf.close()
-    i_gf.close()
-    ja_gf.close()
-    jb_gf.close()
-    base_mdlf.close()
-    i_mdlf.close()
-    ja_mdlf.close()
-    jb_mdlf.close()
-    i_llf.close()
-    ja_llf.close()
-    jb_llf.close()

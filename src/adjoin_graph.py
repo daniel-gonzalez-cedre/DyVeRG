@@ -9,13 +9,27 @@ from src.adjoin_rule import domestic, diplomatic, remove_citizen
 
 
 def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph,
-                   t1: int, t2: int, signature: str, mu: int = None, amnesia: bool = False,
-                   verbose: bool = False):
+                   t1: int, t2: int, signature: str,
+                   mu: int = None, amnesia: bool = False, verbose: bool = False):
     """
         Required arguments:
-            signature =
+            grammar = the Vertex Replacement Graph Grammar to update
+            home_graph = the old graph that `grammar` was learned on
+            away_graph = the new graph providing the updates
+            t1 = the timestep associated with `home_graph`
+            t2 = the timestep associated with `away_graph`
+            signature = one of {i, ja, jb}:
+                        i: the independent model
+                        ja: the joint model with the `annealing` strategy
+                        jb: the joint model with the `branching` strategy
 
         Optional arguments:
+            mu = the `mu` parameter for the VRG
+                 by default takes uses `grammar.mu` from the old grammar
+            amnesia = whether or not to forget about the node association between the two graphs
+                      by default False
+            verbose = whether or not to display progress bars and logs
+                      by default False
     """
     if mu is None:
         mu = grammar.mu

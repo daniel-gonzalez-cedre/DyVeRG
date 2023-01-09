@@ -20,7 +20,6 @@ class MetaRule:
         Class properties:
             times = a list containing the keys for the `rules` dict
             mdl = the description length of encoding the rule (in bits)
-            dl = the description length of encoding the rule (in bits)
     '''
     __slots__ = ('rules', 'edits', 'level', 'idn')
 
@@ -36,11 +35,11 @@ class MetaRule:
 
     @property
     def mdl(self) -> float:
-        return self.dl
-
-    @property
-    def dl(self) -> float:
         return sum(MDL.gamma_code(tt) + rr.mdl for tt, rr in self.rules.items())
+
+    # @property
+    # def dl(self) -> float:
+    #     return sum(MDL.gamma_code(tt) + rr.mdl for tt, rr in self.rules.items())
 
     def ensure(self, t1: int, t2: int):
         assert t1 in self.times
@@ -95,7 +94,6 @@ class Rule:
         Class properties:
             nonterminals = list of nonterminal symbols on this rule's right-hand side
             mdl = the description length of encoding the rule (in bits)
-            dl = the description length of encoding the rule (in bits)
     '''
     __slots__ = ('lhs', 'graph', 'alias', 'frequency', 'subtree', 'idn')
 
@@ -114,14 +112,17 @@ class Rule:
 
     @property
     def mdl(self) -> float:
-        return self.dl
-
-    @property
-    def dl(self) -> float:
         b_deg = nx.get_node_attributes(self.graph, 'b_deg')
         assert len(b_deg) > 0, 'invalid b_deg'
         max_boundary_degree = max(b_deg.values())
         return MDL.gamma_code(max(0, self.lhs) + 1) + MDL.graph_dl(self.graph) + MDL.gamma_code(self.frequency + 1) + self.graph.order() * MDL.gamma_code(max_boundary_degree + 1)
+
+    # @property
+    # def dl(self) -> float:
+    #     b_deg = nx.get_node_attributes(self.graph, 'b_deg')
+    #     assert len(b_deg) > 0, 'invalid b_deg'
+    #     max_boundary_degree = max(b_deg.values())
+    #     return MDL.gamma_code(max(0, self.lhs) + 1) + MDL.graph_dl(self.graph) + MDL.gamma_code(self.frequency + 1) + self.graph.order() * MDL.gamma_code(max_boundary_degree + 1)
 
     def copy(self) -> 'Rule':
         return Rule(lhs=self.lhs,

@@ -40,7 +40,6 @@ class VRG:
             root_idx = the index (in the rule tree) of the root of the decomposition
             root_rule = the root rule of the decomposition
             mdl = the minimum description length (MDL) of the collection of rules
-            dl = the minimum description length (MDL) of the collection of rules
             ll = the (conditional) log-likelihood of this grammar conditioned on the previous grammar
                  == 0 if this grammar is static
                  >= 0 if this grammar is dynamic
@@ -93,11 +92,11 @@ class VRG:
 
     @property
     def mdl(self) -> float:
-        return self.dl
-
-    @property
-    def dl(self) -> float:
         return sum(rule.mdl for rule, _, _ in self.decomposition)
+
+    # @property
+    # def dl(self) -> float:
+    #     return sum(rule.mdl for rule, _, _ in self.decomposition)
 
     def ll(self, posterior: int, prior: int = None, verbose: bool = False) -> float:
         return np.log(self.likelihood(posterior, prior=prior, verbose=verbose))
