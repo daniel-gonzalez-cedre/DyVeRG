@@ -34,7 +34,7 @@ def generate_graph(rules: dict[int, Rule], upper_bound: int) -> tuple[LightMulti
     rule_ordering = []  # idn's of rules in the order they were applied
 
     g = LightMultiGraph()
-    g.add_node(S, label=S)
+    g.add_node(0, label=S)
 
     while len(nonterminals) > 0:
         if g.order() > upper_bound:
