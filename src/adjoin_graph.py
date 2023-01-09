@@ -77,6 +77,8 @@ def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph,
 
     for idx, (metarule, _, _) in enumerate(charted_grammar.decomposition):
         metarule.idn = idx
+        for rule in metarule:
+            rule.idn = idx
 
     charted_grammar.compute_rules(t2)
     charted_grammar.compute_levels()

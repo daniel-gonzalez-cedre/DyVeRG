@@ -76,11 +76,14 @@ class LightMultiGraph(nx.Graph):
         if d['weight'] <= 0:
             super().remove_edge(u, v)
 
-    def number_of_edges(self, u=None, v=None):
+    def number_of_edges(self, u: int = None, v: int = None):
         if u is None and v is None:
-            return self.size()  # number of edges in the graph
-        if u is None or v is None:
-            return 0  # nonsense
+            return self.size()
+        if u is None:
+            return self.degree(u)
+        if v is None:
+            return self.degree(v)
+
         try:
             return self[u][v]['weight']
         except KeyError:

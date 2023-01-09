@@ -1,11 +1,14 @@
 from signal import SIGALRM, ITIMER_REAL, setitimer, signal
-from collections import defaultdict
+from typing import Callable, Iterator, Union, Optional
 
 import sys
 from contextlib import contextmanager
 from os import makedirs, devnull
 
-from typing import Callable, Iterator, Union, Optional
+import math
+from collections import defaultdict
+
+from gamma_coding import gamma_coding
 from networkx import graph_edit_distance as ged, Graph
 import networkx.algorithms.isomorphism as iso
 
@@ -123,6 +126,37 @@ def replace(x: object, y: object, iterable: Union[list, dict, set]):
                 break
     else:
         raise NotImplementedError
+
+
+def gamma(x: int) -> int:
+    return len(gamma_coding(x))
+
+
+def graph_mdl(g: Graph) -> int:
+    def lu(g: Graph) -> int:
+        node_types = set()
+        for _, d in g.nodes(data=True):
+            if 'label' in d:
+                node_types.add('nts')
+            else:
+                node_types.add('terminal')
+        return 1 + len(node_types)
+
+    n = max(1, g.order())
+    m = max(1, len(g.edges()))
+    types = lu(g)
+
+    # cost to encode each node and differentiate between the types
+    dl_nodes = int(math.log2(n) + 1) + int(math.log2(types) + 1) * n
+
+    # cost to encode an edge as an unordered pair of nodes
+    dl_edges = (
+        int(math.log2(m) + 1) +
+        int(math.log2(types) + 1) * sum(2 * gamma(g.number_of_edges(u, v))
+                                        for u, v in g.edges())
+    )
+
+    return dl_nodes + dl_edges
 
 
 def node_match_(u, v):

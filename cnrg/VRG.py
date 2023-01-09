@@ -7,7 +7,7 @@ from joblib import Parallel, delayed
 from tqdm import tqdm
 import numpy as np
 
-from cnrg.Rule import MetaRule, Rule
+from cnrg.Rule import MetaRule
 from src.utils import find
 
 
@@ -221,14 +221,17 @@ class VRG:
     def __repr__(self):
         return str(self)
 
+    def __iter__(self):
+        for metarule, _, _ in self.decomposition:
+            yield metarule
+
     def __getitem__(self, item):
-        return self.decomposition[item]
+        return self.decomposition[item][0]
 
     def reset(self):
         self.decomposition = []
         self.cover = {}
         self.extraction_map = {}
-        self.dl = 0
         # self.transition_matrix = None
         # self.temporal_matrix = None
 

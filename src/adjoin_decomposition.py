@@ -44,7 +44,7 @@ def prepare(u: int, grammar: VRG, t1: int, t2: int, stop_at: int = -1):
     if stop_at == rule_idx:
         return
 
-    metarule, pidx, anode = grammar[rule_idx]
+    metarule, pidx, anode = grammar.decomposition[rule_idx]
     metarule[t2].lhs = max(1, metarule[t2].lhs + 1)
     metarule[t2].graph.nodes[metarule[t2].alias[u]]['b_deg'] += 1
 
@@ -63,18 +63,18 @@ def anneal(host_grammar: VRG, parasite_grammar: VRG,
 
     splitting_rule.idn = len(host_grammar.decomposition)
     host_root_idx = host_grammar.root_idx
-    host_grammar[host_root_idx][1] = splitting_rule.idn
-    host_grammar[host_root_idx][2] = '0'
+    host_grammar.decomposition[host_root_idx][1] = splitting_rule.idn
+    host_grammar.decomposition[host_root_idx][2] = '0'
 
     host_grammar.decomposition.append([splitting_rule, None, None])
     offset = len(host_grammar.decomposition)
 
     for idx, (metarule, pidx, anode) in enumerate(parasite_grammar.decomposition):
         if pidx is None and anode is None:
-            parasite_grammar[idx][1] = splitting_rule.idn
-            parasite_grammar[idx][2] = '1'
+            parasite_grammar.decomposition[idx][1] = splitting_rule.idn
+            parasite_grammar.decomposition[idx][2] = '1'
         else:
-            parasite_grammar[idx][1] += offset
+            parasite_grammar.decomposition[idx][1] += offset
         metarule.idn += offset
 
     host_grammar.decomposition += parasite_grammar.decomposition
@@ -104,10 +104,10 @@ def branch(host_grammar: VRG, parasite_grammar: VRG,
 
     for idx, (metarule, pidx, anode) in enumerate(parasite_grammar.decomposition):
         if pidx is None and anode is None:
-            parasite_grammar[idx][1] = branch_idx
-            parasite_grammar[idx][2] = nts
+            parasite_grammar.decomposition[idx][1] = branch_idx
+            parasite_grammar.decomposition[idx][2] = nts
         else:
-            parasite_grammar[idx][1] += offset
+            parasite_grammar.decomposition[idx][1] += offset
         metarule.idn += offset
 
     host_grammar.decomposition += parasite_grammar.decomposition

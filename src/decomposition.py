@@ -30,12 +30,12 @@ def decompose(g: nx.Graph, time: int = -1, mu: int = 4, clustering: str = 'leide
         # make the root of the old decomposition point to the new root
         splitting_rule.idn = len(supergrammar.decomposition)
         prev_root_idx = supergrammar.root_idx
-        supergrammar[prev_root_idx][1] = splitting_rule.idn
-        supergrammar[prev_root_idx][2] = '0'
+        supergrammar.decomposition[prev_root_idx][1] = splitting_rule.idn
+        supergrammar.decomposition[prev_root_idx][2] = '0'
         # for idx, (_, pidx, anode) in enumerate(supergrammar.decomposition):
         #     if pidx is None and anode is None:
-        #         supergrammar[idx][1] = splitting_rule.idn
-        #         supergrammar[idx][2] = '0'
+        #         supergrammar.decomposition[idx][1] = splitting_rule.idn
+        #         supergrammar.decomposition[idx][2] = '0'
         #         break
         # else:
         #     raise AssertionError('never found the root rule')
@@ -46,12 +46,12 @@ def decompose(g: nx.Graph, time: int = -1, mu: int = 4, clustering: str = 'leide
 
             # shift the indices of the sub-decomposition
             for idx, (_, pidx, anode) in enumerate(subgrammar.decomposition):
-                subgrammar[idx][0].idn += offset
+                subgrammar.decomposition[idx][0].idn += offset
                 if pidx is None and anode is None:
-                    subgrammar[idx][1] = splitting_rule.idn
-                    subgrammar[idx][2] = str(i)
+                    subgrammar.decomposition[idx][1] = splitting_rule.idn
+                    subgrammar.decomposition[idx][2] = str(i)
                 else:
-                    subgrammar[idx][1] += offset
+                    subgrammar.decomposition[idx][1] += offset
 
             # append the sub-decomposition to the super-decomposition
             supergrammar.decomposition += subgrammar.decomposition

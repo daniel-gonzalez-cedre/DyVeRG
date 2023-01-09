@@ -42,6 +42,7 @@ def perturb_graph(g: nx.Graph, p: float = 0.01) -> nx.Graph:
 def experiment(trial: int, curr_time: int, next_time: int,
                curr_graph: nx.Graph, next_graph: nx.Graph,
                p: float, mu: int) -> tuple[int, int, int, float, VRG, VRG, VRG, VRG]:
+    print(trial, curr_time, next_time)
     perturbed_graph = perturb_graph(next_graph, p)
 
     base_grammar = decompose(curr_graph, time=curr_time, mu=mu)
@@ -117,7 +118,7 @@ def main(pre_dispatch: bool):
             jbllfile.write(f'{trial},{curr_time},{next_time},{p},{jb_ll}\n')
 
 
-# nice -n 10 python experiment_random.py email-enron -r 0.25 -d 25 -n 25 -p -j 40 -m 4
+# nice -n 10 python experiment_random.py email-eucore -r 0.25 -d 25 -n 25 -p -j 40 -m 4
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('dataset',

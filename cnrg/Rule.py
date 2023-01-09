@@ -1,8 +1,7 @@
 import networkx as nx
 import networkx.algorithms.isomorphism as iso
 
-from src.utils import autodict, graph_edit_distance
-from cnrg import MDL
+from src.utils import autodict, gamma, graph_mdl, graph_edit_distance
 from cnrg.LightMultiGraph import convert
 from cnrg.LightMultiGraph import LightMultiGraph as LMG
 
@@ -35,11 +34,7 @@ class MetaRule:
 
     @property
     def mdl(self) -> float:
-        return sum(MDL.gamma_code(tt) + rr.mdl for tt, rr in self.rules.items())
-
-    # @property
-    # def dl(self) -> float:
-    #     return sum(MDL.gamma_code(tt) + rr.mdl for tt, rr in self.rules.items())
+        return sum(gamma(tt) + rr.mdl for tt, rr in self.rules.items())
 
     def ensure(self, t1: int, t2: int):
         assert t1 in self.times
@@ -68,6 +63,9 @@ class MetaRule:
     def copy(self) -> 'MetaRule':
         return MetaRule(rules=self.rules.copy(), idn=self.idn)
 
+    def __iter__(self):
+        yield from self.rules.values()
+
     def __getitem__(self, time: int) -> 'Rule':
         return self.rules[time]
 
@@ -75,7 +73,7 @@ class MetaRule:
         return NotImplemented
 
     def __str__(self):
-        return '{' + ', '.join(f'{tt}@{rr.lhs}->{rr.graph.order()}' for tt, rr in self.rules.items()) + '}'
+        return '{' + ', '.join(f'{tt} @ {rr.lhs} -> {rr.graph.order()}' for tt, rr in self.rules.items()) + '}'
 
     def __repr__(self):
         return str(self)
@@ -113,16 +111,8 @@ class Rule:
     @property
     def mdl(self) -> float:
         b_deg = nx.get_node_attributes(self.graph, 'b_deg')
-        assert len(b_deg) > 0, 'invalid b_deg'
-        max_boundary_degree = max(b_deg.values())
-        return MDL.gamma_code(max(0, self.lhs) + 1) + MDL.graph_dl(self.graph) + MDL.gamma_code(self.frequency + 1) + self.graph.order() * MDL.gamma_code(max_boundary_degree + 1)
-
-    # @property
-    # def dl(self) -> float:
-    #     b_deg = nx.get_node_attributes(self.graph, 'b_deg')
-    #     assert len(b_deg) > 0, 'invalid b_deg'
-    #     max_boundary_degree = max(b_deg.values())
-    #     return MDL.gamma_code(max(0, self.lhs) + 1) + MDL.graph_dl(self.graph) + MDL.gamma_code(self.frequency + 1) + self.graph.order() * MDL.gamma_code(max_boundary_degree + 1)
+        max_boundary_degree = 0 if not b_deg else max(b_deg.values())
+        return gamma(max(0, self.lhs)) + graph_mdl(self.graph) + gamma(self.frequency) + self.graph.order() * gamma(max_boundary_degree)
 
     def copy(self) -> 'Rule':
         return Rule(lhs=self.lhs,

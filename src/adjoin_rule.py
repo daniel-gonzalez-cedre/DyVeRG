@@ -45,7 +45,7 @@ def domestic(grammar: VRG, u: int, v: int, t1: int, t2: int, mode: str):  # TODO
             uparent_metarule[t2].graph.nodes[ancestor_u]['b_deg'] -= 1
             uparent_metarule[t2].lhs -= 1
 
-        propagate_ancestors(grammar[uparent_idx][2], grammar[uparent_idx][1], grammar, t1, t2, mode, stop_at=parent_idx)
+        propagate_ancestors(grammar.decomposition[uparent_idx][2], grammar.decomposition[uparent_idx][1], grammar, t1, t2, mode, stop_at=parent_idx)
 
     if 'label' in parent_metarule[t2].graph.nodes[mapping[v]]:
         vparent_idx, vparent_metarule, ancestor_v = ancestor(v, grammar, t2)
@@ -60,7 +60,7 @@ def domestic(grammar: VRG, u: int, v: int, t1: int, t2: int, mode: str):  # TODO
             vparent_metarule[t2].graph.nodes[ancestor_v]['b_deg'] -= 1
             vparent_metarule[t2].lhs -= 1
 
-        propagate_ancestors(grammar[vparent_idx][2], grammar[vparent_idx][1], grammar, t1, t2, mode, stop_at=parent_idx)
+        propagate_ancestors(grammar.decomposition[vparent_idx][2], grammar.decomposition[vparent_idx][1], grammar, t1, t2, mode, stop_at=parent_idx)
 
 
 def diplomatic(grammar: VRG, u: int, v: int, t1: int, t2: int):  # TODO: update docstring instructions
@@ -130,11 +130,11 @@ def delete_domestic(grammar: VRG, u: int, v: int, t1: int, t2: int):  # TODO: up
 
             uparent_metarule[t2].lhs -= 1
             uparent_metarule[t2].graph.nodes[ancestor_u]['b_deg'] -= 1
-            propagate_ancestors(grammar[uparent_idx][2], grammar[uparent_idx][1], grammar, t1, t2, mode='del', stop_at=parent_idx)
+            propagate_ancestors(grammar.decomposition[uparent_idx][2], grammar.decomposition[uparent_idx][1], grammar, t1, t2, mode='del', stop_at=parent_idx)
 
         if 'label' in parent_metarule[t2].graph.nodes[mapping[v]]:
             parent_metarule[t2].graph.nodes[mapping[v]]['label'] -= 1
 
             vparent_metarule[t2].lhs -= 1
             vparent_metarule[t2].graph.nodes[ancestor_v]['b_deg'] -= 1
-            propagate_ancestors(grammar[vparent_idx][2], grammar[vparent_idx][1], grammar, t1, t2, mode='del', stop_at=parent_idx)
+            propagate_ancestors(grammar.decomposition[vparent_idx][2], grammar.decomposition[vparent_idx][1], grammar, t1, t2, mode='del', stop_at=parent_idx)
