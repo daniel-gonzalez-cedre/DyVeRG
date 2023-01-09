@@ -17,7 +17,7 @@ import networkx as nx
 
 from cnrg.LightMultiGraph import LightMultiGraph
 from cnrg.MDL import graph_dl
-from cnrg.Rule import BaseRule, FullRule, PartRule, NoRule
+from cnrg.Rule import MetaRule, Rule
 from cnrg.globals import find_boundary_edges
 from cnrg.part_info import set_boundary_degrees
 from cnrg.Tree import TreeNode
@@ -59,32 +59,14 @@ class Record:
         return st
 
 
-def create_rule(subtree: Set[int], g: LightMultiGraph, mode: str) -> Tuple[PartRule, List[Tuple[int, int]]]:
+def create_rule(subtree: Set[int], g: LightMultiGraph) -> tuple[Rule, list[tuple[int, int]], dict[int, str]]:
     sg = g.subgraph(subtree).copy()
     assert isinstance(sg, LightMultiGraph)
     boundary_edges = find_boundary_edges(g, subtree)
 
-    if mode == 'full':  # in the full information case, we add the boundary edges to the RHS and contract it
-        rule = FullRule(lhs=len(boundary_edges), internal_nodes=subtree, graph=sg)
-
-        for bdry in boundary_edges:
-            if len(bdry) == 2:
-                u, v = bdry
-                rule.graph.add_edge(u, v, b=True)
-            elif len(bdry) == 3:
-                u, v, d = bdry
-                rule.graph.add_edge(u, v, b=True, **d)
-
-        rule.contract_rhs()  # contract and generalize
-
-    elif mode == 'part':  # in the partial boundary info, we need to set the boundary degrees
-        rule = PartRule(lhs=len(boundary_edges), graph=sg, subtree=subtree)
-        set_boundary_degrees(g, rule.graph)
-        rule.generalize_rhs()
-
-    else:
-        rule = NoRule(lhs=len(boundary_edges), graph=sg)
-        rule.generalize_rhs()
+    rule = Rule(lhs=len(boundary_edges), graph=sg, subtree=subtree)
+    set_boundary_degrees(g, rule.graph)
+    rule.generalize_rhs()
 
     return rule, boundary_edges
 
@@ -163,7 +145,7 @@ def compress_graph(g: LightMultiGraph, subtree: Set[int], boundary_edges: Any, p
 class BaseExtractor(abc.ABC):
     # __slots__ = 'gtype', 'g', 'root', 'tnode_to_score', 'grammar', 'mu'
 
-    def __init__(self, g: LightMultiGraph, gtype: str, root: TreeNode, grammar: VRG, mu: int) -> None:
+    def __init__(self, g: LightMultiGraph, gtype: str, root: TreeNode, grammar: VRG, mu: int, time: int = -1) -> None:
         assert gtype in (
             'local_dl',
             'global_dl',
@@ -172,17 +154,17 @@ class BaseExtractor(abc.ABC):
             'mu_dl',
             'mu_level_dl'
         ), f'Invalid mode: {gtype}'
-        self.gtype: str = gtype
         self.g: nx.Graph = g  # the graph
-        self.root = root
+        self.gtype: str = gtype
+        self.root: TreeNode = root
         self.tnode_to_score: Dict[TreeNode, Any] = {}
         self.grammar: VRG = grammar
         self.mu: int = mu
-        self.extracted_sequence: list[BaseRule] = []  # stores list of rules in the order they were extracted
+        self.time: int = time
+        self.extracted_sequence: list[MetaRule] = []  # stores list of rules in the order they were extracted
 
     def __str__(self) -> str:
-        st = f'Type: {self.gtype}, mu: {self.mu}'
-        return st
+        return f'Type: {self.gtype}, mu: {self.mu}'
 
     def __repr__(self) -> str:
         return str(self)
@@ -258,7 +240,7 @@ class BaseExtractor(abc.ABC):
         :param tnode:
         :return:
         """
-        pass
+        return NotImplemented
 
     @abc.abstractmethod
     def tnode_score(self, tnode: TreeNode, subtree: Set[int]) -> Any:
@@ -267,42 +249,44 @@ class BaseExtractor(abc.ABC):
         :param subtree:
         :return:
         """
-        pass
+        return NotImplemented
 
     @abc.abstractmethod
-    def extract_rule(self) -> PartRule:
+    def extract_rule(self) -> MetaRule:
         """
         extracts one rule using the Extraction method
         :return:
         """
-        pass
+        return NotImplemented
 
     def generate_grammar(self, verbose: bool = False) -> None:
         """
         generates the grammar
         """
         num_nodes = self.g.order()
+        self.grammar.cover[self.time] = {}
 
         with tqdm(total=100, bar_format='{l_bar}{bar}|[{elapsed}<{remaining}]', ncols=50, disable=(not verbose)) as pbar:
             while True:
-                rule = self.extract_rule()
+                metarule = self.extract_rule()
                 assert nx.is_connected(self.g), 'graph is disconnected'
-                assert rule is not None
+                assert metarule is not None
 
                 # rule = self.grammar.add_rule(rule)
-                self.extracted_sequence += [rule]
+                self.extracted_sequence += [metarule]
 
                 percent = (1 - (self.g.order() - 1) / (num_nodes - 1)) * 100 if num_nodes > 1 else 100
                 curr_progress = percent - pbar.n
                 pbar.update(curr_progress)
-                if rule.lhs == 0:  # we are compressing the root, so that's the end
+
+                if metarule[self.time].lhs == 0:  # we are compressing the root, so that's the end
                     assert self.g.order() == 1, 'Graph not correctly compressed'
                     break
 
 
 class MuExtractor(BaseExtractor):
-    def __init__(self, g: LightMultiGraph, gtype: str, root: TreeNode, grammar: VRG, mu: int):
-        super().__init__(g=g, gtype=gtype, root=root, grammar=grammar, mu=mu)
+    def __init__(self, g: LightMultiGraph, gtype: str, root: TreeNode, grammar: VRG, mu: int, time: int = 0):
+        super().__init__(g=g, gtype=gtype, root=root, grammar=grammar, mu=mu, time=time)
         self.grammar: VRG
         self.update_subtree_scores(start_tnode=self.root)  # initializes the scores
 
@@ -332,7 +316,7 @@ class MuExtractor(BaseExtractor):
             if diff > 0:  # don't bother creating the rule
                 rule_cost = None
             else:
-                temp_rule, _ = create_rule(subtree=subtree, g=self.g, mode='part')
+                temp_rule, _ = create_rule(subtree=subtree, g=self.g)
                 rule_cost = temp_rule.mdl
 
             if self.gtype == 'mu_dl':
@@ -358,7 +342,7 @@ class MuExtractor(BaseExtractor):
             del self.tnode_to_score[child]
         tnode.make_leaf(new_key=new_key)
 
-    def extract_rule(self) -> BaseRule:
+    def extract_rule(self) -> MetaRule:
         """
         Step 1: get best tnode
         Step 2: create rule, add to grammar
@@ -369,27 +353,26 @@ class MuExtractor(BaseExtractor):
         best_tnode, _ = self.get_best_tnode_and_score()
         subtree = best_tnode.leaves & set(self.g.nodes())
 
-        rule, boundary_edges = create_rule(subtree=subtree, g=self.g, mode='part')
+        rule, boundary_edges = create_rule(subtree=subtree, g=self.g)
+        rule.idn = len(self.grammar.decomposition)
 
         # !!! CRITICAL SECTOR !!!
-        # add rule to the decomposition: [rule, parent_index, ancestor_node]
-        self.grammar.decomposition.append([rule, None, None])
-        this_idx = len(self.grammar.decomposition) - 1
-        rule.idn = this_idx
+        metarule = MetaRule(rules={self.time: rule}, idn=rule.idn)
+        self.grammar.decomposition.append([metarule, None, None])
 
         for x, d in self.g.subgraph(subtree).nodes(data=True):
             if 'label' in d:  # if x is a nonterminal symbol
                 child_idx = self.grammar.extraction_map[x]  # find the rule corresponding to x
-                self.grammar.decomposition[child_idx][1] = this_idx  # make this rule the parent of that rule
-                self.grammar.decomposition[child_idx][2] = rule.alias[x]  # map that child rule to this RHS node
+                self.grammar.decomposition[child_idx][1] = metarule.idn  # make this rule the parent of that rule
+                self.grammar.decomposition[child_idx][2] = metarule[self.time].alias[x]  # map that child rule to this RHS node
                 # self.grammar.push_down_branch(self.grammar.decomposition[child_idx][0])  # increase descendants' levels
             else:  # if x is a regular node
-                self.grammar.cover[x] = this_idx  # associate that node with this rule in the decomposition
+                self.grammar.cover[self.time][x] = metarule.idn  # associate that node with this rule in the decomposition
 
-        self.grammar.extraction_map[min(subtree)] = this_idx  # map compressed node to this index in the decomposition
+        self.grammar.extraction_map[min(subtree)] = metarule.idn  # map compressed node to this index in the decomposition
         # !!! CRITICAL SECTOR !!!
 
         compress_graph(g=self.g, subtree=subtree, boundary_edges=boundary_edges, permanent=True)
         self.update_tree(tnode=best_tnode)
 
-        return rule
+        return metarule

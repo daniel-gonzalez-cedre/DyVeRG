@@ -1,4 +1,3 @@
-import networkx as nx
 import math
 
 from cnrg.LightMultiGraph import LightMultiGraph

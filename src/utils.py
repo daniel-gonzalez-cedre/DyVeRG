@@ -1,15 +1,24 @@
 from signal import SIGALRM, ITIMER_REAL, setitimer, signal
-from traceback import format_exc
+from collections import defaultdict
 
 import sys
 from contextlib import contextmanager
 from os import makedirs, devnull
 
-from typing import Callable, Iterator, Union
+from typing import Callable, Iterator, Union, Optional
 from networkx import graph_edit_distance as ged, Graph
 import networkx.algorithms.isomorphism as iso
 
-from cnrg.Rule import BaseRule
+
+class autodict(defaultdict):
+    def __missing__(self, key):
+        self.default_factory: Callable
+
+        if self.default_factory is None:
+            raise KeyError(key)
+
+        ret = self[key] = self.default_factory(key)
+        return ret
 
 
 @contextmanager
@@ -27,6 +36,15 @@ def silence(enabled=True):
                 sys.stderr = old_stderr
     else:
         yield
+
+
+def once(f):
+    def wrapper(*args, **kwargs):  # pylint: disable=inconsistent-return-statements
+        if not wrapper.has_run:
+            wrapper.has_run = True
+            return f(*args, **kwargs)
+    wrapper.has_run = False
+    return wrapper
 
 
 def timeout(func: Callable, args: Union[list, tuple] = None, kwargs: dict = None,
@@ -157,7 +175,7 @@ def graph_edit_distance(g1: Graph, g2: Graph,
                         node_match: Callable = node_match_, edge_match: Callable = edge_match_,
                         edge_subst_cost: Callable = edge_subst_cost_,
                         edge_del_cost: Callable = edge_del_cost_, edge_ins_cost: Callable = edge_ins_cost_,
-                        patience: int = 5):
+                        patience: int = 120):
     dist = ged(g1, g2,
                node_match=node_match, edge_match=edge_match,
                edge_subst_cost=edge_subst_cost,
@@ -174,19 +192,38 @@ def graph_isomorphisms(g1: Graph, g2: Graph) -> Iterator[dict]:
         yield f
 
 
-def rule_isomorphisms(r1: BaseRule, r2: BaseRule) -> Iterator[dict]:
-    if r1.lhs == r2.lhs:
-        for f in graph_isomorphisms(r1.graph, r2.graph):
-            yield f
-
-
 def is_graph_isomorphic(g1: Graph, g2: Graph) -> Union[dict, None]:
     for f in graph_isomorphisms(g1, g2):
         return f
     return None
 
 
-def is_rule_isomorphic(r1: BaseRule, r2: BaseRule) -> Union[dict, None]:
-    if r1.lhs == r2.lhs:
-        return is_graph_isomorphic(r1.graph, r2.graph)
-    return None
+def boundary_edges(g: Graph, nodes: set[int]) -> list[tuple[int, int, Optional[dict]]]:
+    nodes = nodes if isinstance(nodes, set) else set(nodes)
+
+    if len(nodes) == g.order():
+        return []
+
+    edges = []
+    for u in nodes:
+        for v in g.neighbors(u):
+            if v not in nodes:
+                d = g.edges[u, v]
+                if 'colors' in d:
+                    edge = (u, v, {'colors': d['colors']})
+                else:
+                    edge = (u, v)
+                edges.extend(g.number_of_edges(u, v) * [edge])
+    return edges
+
+
+# def rule_isomorphisms(r1: Rule, r2: Rule) -> Iterator[dict]:
+#     if r1.lhs == r2.lhs:
+#         for f in graph_isomorphisms(r1.graph, r2.graph):
+#             yield f
+
+
+# def is_rule_isomorphic(r1: Rule, r2: Rule) -> Union[dict, None]:
+#     if r1.lhs == r2.lhs:
+#         return is_graph_isomorphic(r1.graph, r2.graph)
+#     return None
