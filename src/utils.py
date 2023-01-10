@@ -209,7 +209,7 @@ def graph_edit_distance(g1: Graph, g2: Graph,
                         node_match: Callable = node_match_, edge_match: Callable = edge_match_,
                         edge_subst_cost: Callable = edge_subst_cost_,
                         edge_del_cost: Callable = edge_del_cost_, edge_ins_cost: Callable = edge_ins_cost_,
-                        patience: int = 120):
+                        patience: int = 30):
     dist = ged(g1, g2,
                node_match=node_match, edge_match=edge_match,
                edge_subst_cost=edge_subst_cost,
