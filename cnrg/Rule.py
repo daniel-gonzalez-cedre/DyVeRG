@@ -42,10 +42,10 @@ class MetaRule:
     def mdl(self) -> float:
         return sum(gamma(tt) + rr.mdl for tt, rr in self.rules.items())
 
-    def ensure(self, t1: int, t2: int):
-        assert t1 in self.times
-        if t2 not in self.times:
-            self.rules[t2] = self.rules[t1].copy()
+    # def ensure(self, t1: int, t2: int):
+    #     assert t1 in self.times
+    #     if t2 not in self.times:
+    #         self.rules[t2] = self.rules[t1].copy()
 
     def cost(self, timepair: tuple[int, int]):
         t1, t2 = timepair
@@ -76,6 +76,9 @@ class MetaRule:
 
     def __getitem__(self, time: int) -> 'Rule':
         return self.rules[time]
+
+    def __setitem__(self, time: int, item: 'Rule'):
+        self.rules[time] = item
 
     def __eq__(self, other):
         return NotImplemented

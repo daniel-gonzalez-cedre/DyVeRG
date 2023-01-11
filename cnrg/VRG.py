@@ -5,9 +5,11 @@ from typing import Union
 
 from joblib import Parallel, delayed
 from tqdm import tqdm
+import networkx as nx
 import numpy as np
 
-from cnrg.Rule import MetaRule
+from cnrg.LightMultiGraph import LightMultiGraph
+from cnrg.Rule import MetaRule, Rule
 from src.utils import find
 
 
@@ -117,12 +119,25 @@ class VRG:
                 if prior in metarule.times)  # TODO: parallelize this line?
         return S
 
-    def ensure(self, t1, t2):
-        self.ruledict[t2] = {}
-        if t2 not in self.cover:
-            self.cover[t2] = self.cover[t1].copy()
+    def ensure(self, time):
+        if time in self.times:
+            return
+
+        for t in self.times:
+            if t < time:
+                for metarule, _, _ in self.decomposition:
+                    if t not in metarule.times:
+                        metarule[t] = Rule(lhs=0, graph=LightMultiGraph(), idn=metarule.idn)
+
+        if time not in self.cover:
+            self.cover[time] = self.cover[max(self.times)].copy()
+
         for metarule, _, _ in self.decomposition:
-            metarule.ensure(t1, t2)
+            assert time not in metarule.times
+            metarule[time] = metarule[max(metarule.times)].copy()
+
+        self.ruledict[time] = {}
+        self.times.append(time)
 
     def compute_rules(self, time: int, merge: bool = True):
         candidates = [metarule[time] for metarule, _, _ in self.decomposition

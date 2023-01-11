@@ -43,9 +43,10 @@ def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph,
     #                      {'j', 'a'}, {'j', 'r', 'a'},  # joint models: annealing
     #                      {'j', 'b'}, {'j', 'r', 'b'})  # joint models: branching
 
+    assert max(grammar.times) < t2
+
     charted_grammar: VRG = grammar.copy()
-    charted_grammar.times += [t2]
-    charted_grammar.ensure(t1, t2)
+    charted_grammar.ensure(t2)
 
     nodes_domestic = set(home_graph.nodes())
     for v in away_graph:
