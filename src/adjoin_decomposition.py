@@ -1,12 +1,12 @@
 # from joblib import Parallel, delayed
 
 from cnrg.VRG import VRG
-from src.bookkeeping import common_ancestor, propagate_ancestors
+from src.bookkeeping import ancestor, common_ancestor, propagate_ancestors
 from src.decomposition import create_splitting_rule
 
 
-def conjoin_grammars(host_grammar: VRG, parasite_grammar: VRG, frontier: set[tuple[int, int]],
-                     t1: int, t2: int, approach: str) -> VRG:
+def conjoin_grammars(host_grammar: VRG, parasite_grammar: VRG,
+                     frontier: set[tuple[int, int]], t1: int, t2: int) -> VRG:
     """
         Joins two grammars in the manner described by the ``approach``.
         Both grammar objects are modified (not copied) in-place; the final joined grammar resides is referred to by the first argument.
@@ -28,28 +28,30 @@ def conjoin_grammars(host_grammar: VRG, parasite_grammar: VRG, frontier: set[tup
                                    a nonterminal symbol is added to that rule in the first grammar, whose size is len(frontier)
                                    the second grammar decomposition is inserted as a branch under this rule in the first grammar
     """
-    strategy = 'anneal' if len(frontier) == 0 else approach.strip().lower()
-
-    if strategy == 'anneal':
+    if len(frontier) == 0:
         anneal(host_grammar, parasite_grammar, frontier, t1, t2)
-    elif strategy == 'branch':
-        branch(host_grammar, parasite_grammar, frontier, t1, t2)
     else:
-        raise AssertionError(f'{strategy} is not a valid joining strategy; select one of "branch" or "anneal"')
+        branch(host_grammar, parasite_grammar, frontier, t1, t2)
 
 
 def prepare(u: int, grammar: VRG, t1: int, t2: int, stop_at: int = -1):
-    rule_idx = grammar.cover[t2][u]
+    # rule_idx = grammar.cover[t2][u]
+    rule_idx, _, _ = ancestor(u, grammar)
 
     if stop_at == rule_idx:
         return
 
     metarule, pidx, anode = grammar.decomposition[rule_idx]
-    metarule[t2].lhs = max(1, metarule[t2].lhs + 1)
-    metarule[t2].graph.nodes[metarule[t2].alias[u]]['b_deg'] += 1
 
-    assert 'label' not in metarule[t2].graph[metarule[t2].alias[u]]
-    propagate_ancestors(anode, pidx, grammar, t1, t2, mode='add', stop_at=stop_at)
+    if metarule[t2].alias[u] not in metarule[t2].graph:
+        metarule[t2].graph.add_node(metarule.alias[u], b_deg=0)
+        grammar.cover[t2][u] = rule_idx
+
+    metarule[t2].graph.nodes[metarule.alias[u]]['b_deg'] += 1
+    metarule[t2].lhs = max(1, metarule[t2].lhs + 1)
+
+    assert 'label' not in metarule[t2].graph[metarule.alias[u]]
+    propagate_ancestors(anode, pidx, metarule[t2].lhs, grammar, t1, t2, mode='add', stop_at=stop_at)
 
 
 def anneal(host_grammar: VRG, parasite_grammar: VRG,
@@ -79,22 +81,33 @@ def anneal(host_grammar: VRG, parasite_grammar: VRG,
 
     host_grammar.decomposition += parasite_grammar.decomposition
 
+    for v in parasite_grammar.cover[t2]:
+        parasite_grammar.cover[t2][v] += offset
+
+    host_grammar.cover[t2] |= parasite_grammar.cover[t2]
+    assert len(parasite_grammar.times) == 1
+
 
 def branch(host_grammar: VRG, parasite_grammar: VRG,
            frontier: set[tuple[int, int]], t1: int, t2: int):
     for _, v in frontier:
         prepare(v, parasite_grammar, t1, t2)
 
-    branch_idx, branch_metarule, mapping = common_ancestor({u for u, _ in frontier}, host_grammar, t2)
+    branch_idx, branch_metarule, mapping = common_ancestor({u for u, _ in frontier}, host_grammar)
     # branch_metarule.ensure(t1, t2)
     # branch_rule = branch_metarule[t2]
 
-    nts = chr(max(ord(v) for v in branch_metarule[t2].graph.nodes()) + 1)
+    # nts = chr(max(ord(v) for v in branch_metarule[t2].graph.nodes()) + 1)
+    # nts = chr(ord(max(branch_metarule.alias.values())) + 1)
+    nts = branch_metarule.next
     branch_metarule[t2].graph.add_node(nts, b_deg=0, label=parasite_grammar.root_rule[t2].lhs)
     # branch_metarule[t2].branch = True  # TODO: debugging
 
     for u, _ in frontier:
         prepare(u, host_grammar, t1, t2, stop_at=branch_idx)
+        if mapping[u] not in branch_metarule[t2].graph:
+            branch_metarule[t2].graph.add_node(mapping[u], b_deg=0)
+            host_grammar.cover[t2][u] = branch_idx
         branch_metarule[t2].graph.add_edge(mapping[u], nts)
 
         if 'label' in branch_metarule[t2].graph.nodes[mapping[u]]:
@@ -111,3 +124,9 @@ def branch(host_grammar: VRG, parasite_grammar: VRG,
         metarule.idn += offset
 
     host_grammar.decomposition += parasite_grammar.decomposition
+
+    for v in parasite_grammar.cover[t2]:
+        parasite_grammar.cover[t2][v] += offset
+
+    host_grammar.cover[t2] |= parasite_grammar.cover[t2]
+    assert len(parasite_grammar.times) == 1

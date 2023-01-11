@@ -20,13 +20,19 @@ class MetaRule:
             times = a list containing the keys for the `rules` dict
             mdl = the description length of encoding the rule (in bits)
     '''
-    __slots__ = ('rules', 'edits', 'level', 'idn')
+    __slots__ = ('rules', 'alias', 'edits', 'level', 'idn')
 
-    def __init__(self, rules: dict[int, 'Rule'] = None, idn: int = -1):
+    def __init__(self, rules: dict[int, 'Rule'] = None, alias: dict[int, str] = None, idn: int = -1):
         self.rules: dict[int, Rule] = rules if rules else {}
+        self.alias: dict[int, str] = alias if alias else {}
         self.edits: dict[(int, int), int] = autodict(self.cost)
         self.level: int = 0
         self.idn: int = idn
+
+    @property
+    def next(self) -> chr:
+        nodes = {u for rule in self.rules.values() for u in rule.graph} | set(self.alias.values())
+        return chr(ord(max(nodes)) + 1)
 
     @property
     def times(self) -> list[int]:
@@ -61,7 +67,9 @@ class MetaRule:
             # self.edits[(t1, t2)] = graph_edit_distance(self.rules[t1].graph, self.rules[t2].graph)
 
     def copy(self) -> 'MetaRule':
-        return MetaRule(rules=self.rules.copy(), idn=self.idn)
+        return MetaRule(rules=self.rules.copy(),
+                        alias=self.alias.copy(),
+                        idn=self.idn)
 
     def __iter__(self):
         yield from self.rules.values()

@@ -357,14 +357,14 @@ class MuExtractor(BaseExtractor):
         rule.idn = len(self.grammar.decomposition)
 
         # !!! CRITICAL SECTOR !!!
-        metarule = MetaRule(rules={self.time: rule}, idn=rule.idn)
+        metarule = MetaRule(rules={self.time: rule}, alias=rule.alias.copy(), idn=rule.idn)
         self.grammar.decomposition.append([metarule, None, None])
 
         for x, d in self.g.subgraph(subtree).nodes(data=True):
             if 'label' in d:  # if x is a nonterminal symbol
                 child_idx = self.grammar.extraction_map[x]  # find the rule corresponding to x
                 self.grammar.decomposition[child_idx][1] = metarule.idn  # make this rule the parent of that rule
-                self.grammar.decomposition[child_idx][2] = metarule[self.time].alias[x]  # map that child rule to this RHS node
+                self.grammar.decomposition[child_idx][2] = metarule.alias[x]  # map that child rule to this RHS node
                 # self.grammar.push_down_branch(self.grammar.decomposition[child_idx][0])  # increase descendants' levels
             else:  # if x is a regular node
                 self.grammar.cover[self.time][x] = metarule.idn  # associate that node with this rule in the decomposition

@@ -42,7 +42,6 @@ def perturb_graph(g: nx.Graph, p: float = 0.01) -> nx.Graph:
 def experiment(trial: int, curr_time: int, next_time: int,
                curr_graph: nx.Graph, next_graph: nx.Graph,
                p: float, mu: int) -> tuple[int, int, int, float, VRG, VRG, VRG, VRG]:
-    print(trial, curr_time, next_time)
     perturbed_graph = perturb_graph(next_graph, p)
 
     base_grammar = decompose(curr_graph, time=curr_time, mu=mu)
@@ -92,13 +91,13 @@ def main(pre_dispatch: bool):
                    for trial in range(1, args.n_trials + 1)]
 
     # write the output
-    with open(pathprefix + '_base.mdls', 'wb') as basemdlfile, \
-         open(pathprefix + '_i.mdls', 'wb') as imdlfile, \
-         open(pathprefix + '_ja.mdls', 'wb') as jamdlfile, \
-         open(pathprefix + '_jb.mdls', 'wb') as jbmdlfile, \
-         open(pathprefix + '_i.lls', 'wb') as illfile, \
-         open(pathprefix + '_ja.lls', 'wb') as jallfile, \
-         open(pathprefix + '_jb.lls', 'wb') as jbllfile:
+    with open(pathprefix + '_base.mdls', 'w') as basemdlfile, \
+         open(pathprefix + '_i.mdls', 'w') as imdlfile, \
+         open(pathprefix + '_ja.mdls', 'w') as jamdlfile, \
+         open(pathprefix + '_jb.mdls', 'w') as jbmdlfile, \
+         open(pathprefix + '_i.lls', 'w') as illfile, \
+         open(pathprefix + '_ja.lls', 'w') as jallfile, \
+         open(pathprefix + '_jb.lls', 'w') as jbllfile:
         basemdlfile.write('trial,time,p,mdl\n')
         imdlfile.write('trial,time1,time2,p,mdl\n')
         jamdlfile.write('trial,time1,time2,p,mdl\n')
