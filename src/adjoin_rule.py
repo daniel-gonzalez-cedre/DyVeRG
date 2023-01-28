@@ -1,7 +1,7 @@
 from networkx.exception import NetworkXError
 
 from cnrg.VRG import VRG
-from src.bookkeeping import ancestor, common_ancestor, propagate_ancestors, propagate_descendants
+from src.bookkeeping import ancestor, common_ancestor, redact, unseal, propagate_ancestors, propagate_descendants
 
 
 def domestic(grammar: VRG, u: int, v: int, t1: int, t2: int, mode: str):  # TODO: update docstring instructions
@@ -22,52 +22,71 @@ def domestic(grammar: VRG, u: int, v: int, t1: int, t2: int, mode: str):  # TODO
         Returns:
             The grammar with the mutated rule in it.
     """
-    mode = mode.lower()
+    mode = mode.strip().lower()
     assert mode in ('add', 'del')
 
-    # for x in (u, v):
-    #     xparent_idx, xparent_metarule, ancestor_x = ancestor(x, grammar)
+    uparent_idx, uparent_metarule, ancestor_u = ancestor(u, grammar)
+    if ancestor_u not in uparent_metarule[t2].graph:
+        if uparent_metarule[t2].graph.order() == 0:
+            unseal(grammar,
+                   grammar.decomposition[uparent_idx][1],
+                   grammar.decomposition[uparent_idx][2],
+                   t2)
+        uparent_metarule[t2].graph.add_node(ancestor_u, b_deg=0)
+        grammar.cover[t2][u] = uparent_idx
 
-    parent_idx, parent_metarule, mapping = common_ancestor({u, v}, grammar)
+    vparent_idx, vparent_metarule, ancestor_v = ancestor(v, grammar)
+    if ancestor_v not in vparent_metarule[t2].graph:
+        if vparent_metarule[t2].graph.order() == 0:
+            unseal(grammar,
+                   grammar.decomposition[vparent_idx][1],
+                   grammar.decomposition[vparent_idx][2],
+                   t2)
+        vparent_metarule[t2].graph.add_node(ancestor_v, b_deg=0)
+        grammar.cover[t2][v] = vparent_idx
 
-    if mode == 'add':  # TODO: think about this; i don't think we ever remove nts, so maybe this is fine?
-        if mapping[u] not in parent_metarule[t2].graph:
-            parent_metarule[t2].graph.add_node(mapping[u], b_deg=0)
-            grammar.cover[t2][u] = parent_idx
-        if mapping[v] not in parent_metarule[t2].graph:
-            parent_metarule[t2].graph.add_node(mapping[v], b_deg=0)
-            grammar.cover[t2][v] = parent_idx
-        parent_metarule[t2].graph.add_edge(mapping[u], mapping[v])
+    common_idx, common_metarule, mapping = common_ancestor({u, v}, grammar)
+    if common_metarule[t2].graph.order() == 0:
+        raise AssertionError(f'rule #{common_metarule.idn} is empty when it should not be')
+
+    if mode == 'add':
+        common_metarule[t2].graph.add_edge(mapping[u], mapping[v])
     else:
-        parent_metarule[t2].graph.remove_edge(mapping[u], mapping[v])
+        common_metarule[t2].graph.remove_edge(mapping[u], mapping[v])
 
-    for x in (u, v):
-        if 'label' in parent_metarule[t2].graph.nodes[mapping[x]]:
-            xparent_idx, xparent_metarule, ancestor_x = ancestor(x, grammar)
-            try:
-                assert parent_idx != xparent_idx
-            except:
-                import pdb
-                pdb.set_trace()
+    if 'label' in common_metarule[t2].graph.nodes[mapping[u]]:
+        assert common_idx != uparent_idx
 
-            if ancestor_x not in xparent_metarule[t2].graph:
-                xparent_metarule[t2].graph.add_node(ancestor_x, b_deg=0)
-                grammar.cover[t2][x] = xparent_idx
+        if mode == 'add':
+            common_metarule[t2].graph.nodes[mapping[u]]['label'] += 1
+            uparent_metarule[t2].graph.nodes[ancestor_u]['b_deg'] += 1
+            uparent_metarule[t2].lhs += 1
+        else:
+            common_metarule[t2].graph.nodes[mapping[u]]['label'] -= 1
+            uparent_metarule[t2].graph.nodes[ancestor_u]['b_deg'] -= 1
+            uparent_metarule[t2].lhs -= 1
 
-            if mode == 'add':
-                parent_metarule[t2].graph.nodes[mapping[x]]['label'] += 1
-                xparent_metarule[t2].graph.nodes[ancestor_x]['b_deg'] += 1
-                xparent_metarule[t2].lhs += 1
-            else:
-                parent_metarule[t2].graph.nodes[mapping[x]]['label'] -= 1
-                xparent_metarule[t2].graph.nodes[ancestor_x]['b_deg'] -= 1
-                xparent_metarule[t2].lhs -= 1
+            if uparent_metarule[t2].graph.nodes[ancestor_u]['b_deg'] < 0:
+                raise AssertionError
 
-                if xparent_metarule[t2].graph.nodes[ancestor_x]['b_deg'] < 0:
-                    import pdb
-                    pdb.set_trace()
+        propagate_ancestors(grammar.decomposition[uparent_idx][2], grammar.decomposition[uparent_idx][1], uparent_metarule[t2].lhs, grammar, t1, t2, mode, stop_at=common_idx)
 
-            propagate_ancestors(grammar.decomposition[xparent_idx][2], grammar.decomposition[xparent_idx][1], xparent_metarule[t2].lhs, grammar, t1, t2, mode, stop_at=parent_idx)
+    if 'label' in common_metarule[t2].graph.nodes[mapping[v]]:
+        assert common_idx != vparent_idx
+
+        if mode == 'add':
+            common_metarule[t2].graph.nodes[mapping[v]]['label'] += 1
+            vparent_metarule[t2].graph.nodes[ancestor_v]['b_deg'] += 1
+            vparent_metarule[t2].lhs += 1
+        else:
+            common_metarule[t2].graph.nodes[mapping[v]]['label'] -= 1
+            vparent_metarule[t2].graph.nodes[ancestor_v]['b_deg'] -= 1
+            vparent_metarule[t2].lhs -= 1
+
+            if vparent_metarule[t2].graph.nodes[ancestor_v]['b_deg'] < 0:
+                raise AssertionError
+
+        propagate_ancestors(grammar.decomposition[vparent_idx][2], grammar.decomposition[vparent_idx][1], vparent_metarule[t2].lhs, grammar, t1, t2, mode, stop_at=common_idx)
 
 
 def diplomatic(grammar: VRG, u: int, v: int, t1: int, t2: int):  # TODO: update docstring instructions
@@ -89,6 +108,9 @@ def diplomatic(grammar: VRG, u: int, v: int, t1: int, t2: int):  # TODO: update 
     """
     parent_idx, parent_metarule, ancestor_u = ancestor(u, grammar)
 
+    if parent_metarule[t2].graph.order() == 0:
+        unseal(grammar, grammar.decomposition[parent_idx][1], grammar.decomposition[parent_idx][2], t2)
+
     if ancestor_u not in parent_metarule[t2].graph:
         parent_metarule[t2].graph.add_node(ancestor_u, b_deg=0)
         grammar.cover[t2][u] = parent_idx
@@ -107,15 +129,14 @@ def diplomatic(grammar: VRG, u: int, v: int, t1: int, t2: int):  # TODO: update 
         propagate_descendants(ancestor_u, parent_idx, grammar, t1, t2, mode='add')
 
 
-def remove_citizen(grammar: VRG, u: int, time: int):  # TODO: update docstring instructions
+def censor_citizen(grammar: VRG, u: int, time: int):  # TODO: update docstring instructions
     _, parent_metarule, ancestor_u = ancestor(u, grammar)
-    try:
-        assert parent_metarule[time].graph.nodes[ancestor_u]['b_deg'] == 0
-        assert parent_metarule[time].graph.degree(ancestor_u) == 0
-    except:
-        import pdb
-        pdb.set_trace()
+    assert parent_metarule[time].graph.nodes[ancestor_u]['b_deg'] == 0
+    assert parent_metarule[time].graph.degree(ancestor_u) == 0
 
     parent_metarule[time].graph.remove_node(ancestor_u)
     del grammar.cover[time][u]
-    # del parent_metarule[time].alias[u]
+
+    if parent_metarule[time].graph.order() == 0:
+        _, pidx, anode = grammar.decomposition[parent_metarule.idn]
+        redact(grammar, pidx, anode, time)

@@ -120,14 +120,14 @@ class VRG:
         return S
 
     def ensure(self, time):
-        if time in self.times:
-            return
-
         for t in self.times:
             if t < time:
                 for metarule, _, _ in self.decomposition:
                     if t not in metarule.times:
                         metarule[t] = Rule(lhs=0, graph=LightMultiGraph(), idn=metarule.idn)
+
+        if time in self.times:
+            return
 
         if time not in self.cover:
             self.cover[time] = self.cover[max(self.times)].copy()

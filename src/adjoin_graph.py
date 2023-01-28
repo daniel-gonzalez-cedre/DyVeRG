@@ -5,7 +5,7 @@ from cnrg.VRG import VRG
 from src.utils import silence
 from src.decomposition import decompose
 from src.adjoin_decomposition import conjoin_grammars
-from src.adjoin_rule import domestic, diplomatic, remove_citizen
+from src.adjoin_rule import domestic, diplomatic, censor_citizen
 
 
 def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph,
@@ -55,7 +55,7 @@ def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph,
                 nodes_domestic.add(v)
     nodes_foreign = set(away_graph.nodes()) - nodes_domestic
 
-    node_additions: set[int] = set(away_graph.nodes()) - set(home_graph.nodes())
+    # node_additions: set[int] = set(away_graph.nodes()) - set(home_graph.nodes())
     node_deletions: set[int] = set(home_graph.nodes()) - set(away_graph.nodes())
 
     edge_additions: set[tuple[int, int]] = set(away_graph.edges()) - set(home_graph.edges())
@@ -112,19 +112,18 @@ def joint(charted_grammar: VRG, nodes_domestic, nodes_foreign,
     uncharted_territories: dict[frozenset[int], nx.Graph] = {frozenset(nodes): uncharted_region.subgraph(nodes)
                                                              for nodes in nx.connected_components(uncharted_region)}
 
-    # incorporate edges from "large-enough" connected components
+    # incorporate edges from connected components (even if they're not "large enough")
     for nodes, territory in tqdm(uncharted_territories.items(), desc='joint changes', leave=True, disable=(not verbose)):
-        if True or territory.order() >= mu:
-            with silence():  # suppress progress bars from CNRG
-                territory_grammar = decompose(territory, time=t2, mu=mu)
+        with silence():  # suppress progress bars from CNRG
+            territory_grammar = decompose(territory, time=t2, mu=mu)
 
-            frontier = {(u, v) for (u, v) in edges_diplomatic if v in territory}
+        frontier = {(u, v) for (u, v) in edges_diplomatic if v in territory}
 
-            conjoin_grammars(charted_grammar, territory_grammar, frontier, t1, t2)
+        conjoin_grammars(charted_grammar, territory_grammar, frontier, t1, t2)
 
-            edges_diplomatic -= {(u, v) for u, v in edges_diplomatic if v in territory}
-            edges_foreign -= {(u, v) for u, v in edges_foreign if u in territory and v in territory}
-            conquered_territories[nodes] = territory
+        edges_diplomatic -= {(u, v) for u, v in edges_diplomatic if v in territory}
+        edges_foreign -= {(u, v) for u, v in edges_foreign if u in territory and v in territory}
+        conquered_territories[nodes] = territory
 
     # TODO: i don't think this block is necessary; think about this
     # remove the incorporated edges from future consideration
@@ -173,7 +172,7 @@ def independent(charted_grammar: VRG, nodes_domestic, nodes_foreign,
 
     # handle the node deletions
     for u in node_deletions:
-        remove_citizen(charted_grammar, u, time=t2)
+        censor_citizen(charted_grammar, u, time=t2)
 
 
 def refactor():

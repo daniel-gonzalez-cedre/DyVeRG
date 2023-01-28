@@ -45,19 +45,13 @@ def experiment(trial: int, curr_time: int, next_time: int,
     perturbed_graph = perturb_graph(next_graph, p)
 
     base_grammar = decompose(curr_graph, time=curr_time, mu=mu)
-    i_grammar = update_grammar(base_grammar, curr_graph, perturbed_graph, curr_time, next_time, 'i')
-    ja_grammar = update_grammar(base_grammar, curr_graph, perturbed_graph, curr_time, next_time, 'ja')
-    jb_grammar = update_grammar(base_grammar, curr_graph, perturbed_graph, curr_time, next_time, 'jb')
+    dyn_grammar = update_grammar(base_grammar, curr_graph, perturbed_graph, curr_time, next_time)
 
     # save the grammars
     with open(pathprefix + f'_base_{curr_time}_{trial}.grammars', 'wb') as basefile:
         pickle.dump(base_grammar, basefile)
-    with open(pathprefix + f'_i_{curr_time}_{next_time}_{trial}.grammars', 'wb') as ifile:
-        pickle.dump(i_grammar, ifile)
-    with open(pathprefix + f'_ja_{curr_time}_{next_time}_{trial}.grammars', 'wb') as jafile:
-        pickle.dump(ja_grammar, jafile)
-    with open(pathprefix + f'_jb_{curr_time}_{next_time}_{trial}.grammars', 'wb') as jbfile:
-        pickle.dump(jb_grammar, jbfile)
+    with open(pathprefix + f'_dyn_{curr_time}_{next_time}_{trial}.grammars', 'wb') as dynfile:
+        pickle.dump(dyn_grammar, dynfile)
 
     return (trial, curr_time, next_time, p,
             base_grammar.mdl, i_grammar.mdl, ja_grammar.mdl, jb_grammar.mdl,
@@ -66,12 +60,6 @@ def experiment(trial: int, curr_time: int, next_time: int,
 
 
 def main(pre_dispatch: bool):
-    def tasks():
-        for trial in range(1, args.n_trials + 1):
-            for p in np.linspace(0, args.rewire, args.delta):
-                for curr_time, next_time in zip(times[:-1], times[1:]):
-                    yield (trial, curr_time, next_time, graphs[curr_time], graphs[next_time], p, args.mu)
-
     time_graph_pairs: list[tuple[int, nx.Graph]] = load_data(args.dataset)
     times: list[int] = [t for t, _ in time_graph_pairs]
     graphs: dict[int, nx.Graph] = {t: g for t, g in time_graph_pairs}  # pylint: disable=unnecessary-comprehension

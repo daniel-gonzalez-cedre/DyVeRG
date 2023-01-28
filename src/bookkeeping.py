@@ -54,6 +54,34 @@ def common_ancestor(nodes: Collection[int], grammar: VRG) -> tuple[int, MetaRule
     return least_common_idx, ancestor_metarule, ancestor_nodes
 
 
+# removes nonterminals referring to this rule up the decomposition
+def redact(grammar: VRG, idx: int, nts: chr, time: int):
+    if not idx:
+        return
+
+    metarule, pidx, anode = grammar.decomposition[idx]
+
+    assert 'label' in metarule[time].graph.nodes[nts]
+    metarule[time].graph.remove_node(nts)
+
+    if metarule[time].graph.order() == 0:
+        redact(grammar, pidx, anode, time)
+
+
+# reintroduces nonterminals referring to this rule up the decomposition
+def unseal(grammar: VRG, idx: int, nts: chr, time: int):
+    if not idx:
+        return
+
+    metarule, pidx, anode = grammar.decomposition[idx]
+
+    if metarule[time].graph.order() == 0:
+        unseal(grammar, pidx, anode, time)
+
+    assert nts not in metarule[time].graph
+    metarule[time].graph.add_node(nts, b_deg=0, label=0)
+
+
 def propagate_ancestors(nts: str, rule_idx: int, child_lhs: int, grammar: VRG,
                         t1: int, t2: int, mode: str, stop_at: int = -1):
     assert mode in ('add', 'del')

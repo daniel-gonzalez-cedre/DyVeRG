@@ -1,7 +1,7 @@
 # from joblib import Parallel, delayed
 
 from cnrg.VRG import VRG
-from src.bookkeeping import ancestor, common_ancestor, propagate_ancestors
+from src.bookkeeping import ancestor, common_ancestor, unseal, propagate_ancestors
 from src.decomposition import create_splitting_rule
 
 
@@ -44,6 +44,8 @@ def prepare(u: int, grammar: VRG, t1: int, t2: int, stop_at: int = -1):
     metarule, pidx, anode = grammar.decomposition[rule_idx]
 
     if metarule[t2].alias[u] not in metarule[t2].graph:
+        if metarule[t2].graph.order() == 0:
+            unseal(grammar, pidx, anode, t2)
         metarule[t2].graph.add_node(metarule.alias[u], b_deg=0)
         grammar.cover[t2][u] = rule_idx
 
@@ -94,14 +96,9 @@ def branch(host_grammar: VRG, parasite_grammar: VRG,
         prepare(v, parasite_grammar, t1, t2)
 
     branch_idx, branch_metarule, mapping = common_ancestor({u for u, _ in frontier}, host_grammar)
-    # branch_metarule.ensure(t1, t2)
-    # branch_rule = branch_metarule[t2]
 
-    # nts = chr(max(ord(v) for v in branch_metarule[t2].graph.nodes()) + 1)
-    # nts = chr(ord(max(branch_metarule.alias.values())) + 1)
     nts = branch_metarule.next
     branch_metarule[t2].graph.add_node(nts, b_deg=0, label=parasite_grammar.root_rule[t2].lhs)
-    # branch_metarule[t2].branch = True  # TODO: debugging
 
     for u, _ in frontier:
         prepare(u, host_grammar, t1, t2, stop_at=branch_idx)
