@@ -2,8 +2,8 @@ import networkx as nx
 import networkx.algorithms.isomorphism as iso
 
 from src.utils import autodict, gamma, graph_mdl, graph_edit_distance
-from cnrg.LightMultiGraph import convert
-from cnrg.LightMultiGraph import LightMultiGraph as LMG
+from dyverg.LightMultiGraph import convert
+from dyverg.LightMultiGraph import LightMultiGraph as LMG
 
 
 class MetaRule:

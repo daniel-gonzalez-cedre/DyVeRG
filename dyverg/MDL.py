@@ -1,6 +1,6 @@
 import math
 
-from cnrg.LightMultiGraph import LightMultiGraph
+from dyverg.LightMultiGraph import LightMultiGraph
 
 
 def gamma_code(n):

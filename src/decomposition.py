@@ -2,13 +2,13 @@ from typing import Iterable
 
 import networkx as nx
 
-from cnrg.Rule import MetaRule, Rule
-from cnrg.VRG import VRG
-from cnrg.Tree import create_tree
-from cnrg.LightMultiGraph import convert
-from cnrg.LightMultiGraph import LightMultiGraph as LMG
-from cnrg.extract import MuExtractor
-from cnrg.partitions import leiden, louvain
+from dyverg.Rule import MetaRule, Rule
+from dyverg.VRG import VRG
+from dyverg.Tree import create_tree
+from dyverg.LightMultiGraph import convert
+from dyverg.LightMultiGraph import LightMultiGraph as LMG
+from dyverg.extract import MuExtractor
+from dyverg.partitions import leiden, louvain
 
 
 def create_splitting_rule(subgrammars: Iterable[VRG], time: int) -> MetaRule:
@@ -88,7 +88,7 @@ def decompose(g: nx.Graph, time: int = -1, mu: int = 4, clustering: str = 'leide
         assert v in supergrammar.cover[time]
 
     # supergrammar.compute_rules()
-    supergrammar.compute_rules(time)
+    # supergrammar.compute_rules(time)
     supergrammar.compute_levels()
     supergrammar.times += [time]
 

@@ -1,6 +1,6 @@
 # from joblib import Parallel, delayed
 
-from cnrg.VRG import VRG
+from dyverg.VRG import VRG
 from src.bookkeeping import ancestor, common_ancestor, unseal, propagate_ancestors
 from src.decomposition import create_splitting_rule
 

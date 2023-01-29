@@ -1,7 +1,7 @@
 import networkx as nx
 from tqdm import tqdm
 
-from cnrg.VRG import VRG
+from dyverg.VRG import VRG
 from src.utils import silence
 from src.decomposition import decompose
 from src.adjoin_decomposition import conjoin_grammars
@@ -10,7 +10,7 @@ from src.adjoin_rule import domestic, diplomatic, censor_citizen
 
 def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph,
                    t1: int, t2: int,
-                   mu: int = None, amnesia: bool = False, verbose: bool = False):
+                   mu: int = None, amnesia: bool = False, verbose: bool = False) -> VRG:
     """
         Required arguments:
             grammar = the Vertex Replacement Graph Grammar to update
@@ -96,7 +96,7 @@ def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph,
         for rule in metarule:
             rule.idn = idx
 
-    charted_grammar.compute_rules(t2)
+    # charted_grammar.compute_rules(t2)
     charted_grammar.compute_levels()
     return charted_grammar
 

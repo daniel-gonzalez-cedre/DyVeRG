@@ -1,27 +1,18 @@
-"""
-VRG extraction
-"""
 import abc
 import math
-# import pickle
 import itertools
-# import logging
 from typing import List, Tuple, Dict, Set, Any, Union
 
 from tqdm import tqdm
 import networkx as nx
 
-# import sys
-# sys.path.append('..')
-# import cnrg
-
-from cnrg.LightMultiGraph import LightMultiGraph
-from cnrg.MDL import graph_dl
-from cnrg.Rule import MetaRule, Rule
-from cnrg.globals import find_boundary_edges
-from cnrg.part_info import set_boundary_degrees
-from cnrg.Tree import TreeNode
-from cnrg.VRG import VRG
+from dyverg.LightMultiGraph import LightMultiGraph
+from dyverg.MDL import graph_dl
+from dyverg.Rule import MetaRule, Rule
+from dyverg.globals import find_boundary_edges
+from dyverg.part_info import set_boundary_degrees
+from dyverg.Tree import TreeNode
+from dyverg.VRG import VRG
 
 
 class Record:

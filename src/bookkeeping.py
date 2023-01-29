@@ -1,8 +1,8 @@
 import random
 from typing import Collection
 
-from cnrg.Rule import MetaRule
-from cnrg.VRG import VRG
+from dyverg.Rule import MetaRule
+from dyverg.VRG import VRG
 
 
 # TODO: move ancestor() and common_ancestor() to VRG.py?

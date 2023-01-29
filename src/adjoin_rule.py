@@ -1,6 +1,6 @@
-from networkx.exception import NetworkXError
+# from networkx.exception import NetworkXError
 
-from cnrg.VRG import VRG
+from dyverg.VRG import VRG
 from src.bookkeeping import ancestor, common_ancestor, redact, unseal, propagate_ancestors, propagate_descendants
 
 

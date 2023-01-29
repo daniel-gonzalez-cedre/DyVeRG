@@ -3,14 +3,14 @@ refactored VRG
 """
 from typing import Union
 
-from joblib import Parallel, delayed
+# from joblib import Parallel, delayed
 from tqdm import tqdm
-import networkx as nx
+# import networkx as nx
 import numpy as np
 
-from cnrg.LightMultiGraph import LightMultiGraph
-from cnrg.Rule import MetaRule, Rule
-from src.utils import find
+from dyverg.LightMultiGraph import LightMultiGraph
+from dyverg.Rule import MetaRule, Rule
+from src.utils import find, boundary_edges
 
 
 class VRG:
@@ -64,7 +64,7 @@ class VRG:
         self.decomposition: list[list] = []
         self.cover: dict[int, dict[int, int]] = {}
         self.times: list[int] = []
-        self.ruledict: dict[int, dict[int, list[MetaRule]]] = {}
+        # self.ruledict: dict[int, dict[int, list[MetaRule]]] = {}
 
         # self.penalty: float = 0
         # self.amplifier: float = 100
@@ -87,18 +87,8 @@ class VRG:
         return r
 
     @property
-    def nonterminals(self):
-        if not self.rules:
-            self.compute_rules()
-        return set(self.rules)
-
-    @property
     def mdl(self) -> float:
         return sum(rule.mdl for rule, _, _ in self.decomposition)
-
-    # @property
-    # def dl(self) -> float:
-    #     return sum(rule.mdl for rule, _, _ in self.decomposition)
 
     def ll(self, posterior: int, prior: int = None, verbose: bool = False) -> float:
         return np.log(self.likelihood(posterior, prior=prior, verbose=verbose))
@@ -115,7 +105,7 @@ class VRG:
         if not prior:
             prior = self.times[self.times.index(posterior) - 1]
         S = sum(metarule.edits[prior, posterior]
-                for metarule, _, _ in tqdm(self.decomposition, disable=(not verbose))
+                for metarule, _, _ in tqdm(self.decomposition, desc='computing edits', disable=(not verbose))
                 if prior in metarule.times)  # TODO: parallelize this line?
         return S
 
@@ -136,32 +126,39 @@ class VRG:
             assert time not in metarule.times
             metarule[time] = metarule[max(metarule.times)].copy()
 
-        self.ruledict[time] = {}
+        # self.ruledict[time] = {}
         self.times.append(time)
 
-    def compute_rules(self, time: int, merge: bool = True):
+    def compute_rules(self, time: int, merge: bool = True) -> dict[int, list[tuple[Rule, int]]]:
+        # self.ruledict[time] = {}
+        ruledict = {}  # lhs |-> [(rule, freq), ...]
         candidates = [metarule[time] for metarule, _, _ in self.decomposition
                       if time in metarule.times]
 
-        for rule in candidates:
-            rule.frequency = 1
-
-        self.ruledict[time] = {}
+        # for rule in candidates:
+        #     rule.frequency = 1
 
         for rule in candidates:
-            if rule.lhs in self.ruledict[time]:
+            if rule.lhs in ruledict:
                 if merge:  # merge isomorphic copies of the same rule together
-                    for other_rule in self.ruledict[time][rule.lhs]:
+                    for idx, (other_rule, freq) in enumerate(ruledict[rule.lhs]):
                         if rule == other_rule:  # isomorphism up to differences in boundary degree
-                            rule.frequency = 0
-                            other_rule.frequency += 1
+                            # rule.frequency = 0
+                            # other_rule.frequency += 1
+                            ruledict[rule.lhs][idx][1] = freq + 1
                             break
                     else:
-                        self.ruledict[time][rule.lhs] += [rule]
+                        ruledict[rule.lhs].append([rule, 1])
                 else:  # distinguish between isomorphic copies of the same rule
-                    self.ruledict[time][rule.lhs] += [rule]
+                    ruledict[rule.lhs].append([rule, 1])
             else:
-                self.ruledict[time][rule.lhs] = [rule]
+                ruledict[rule.lhs] = [[rule, 1]]
+
+        for ll in ruledict.values():
+            for idx, tt in enumerate(ll):
+                ll[idx] = tuple(tt)
+
+        return ruledict
 
     # find a reference to a rule somewhere in this grammar
     def find_rule(self, ref: Union[int, MetaRule]) -> int:
@@ -211,6 +208,106 @@ class VRG:
             parent_idx = self.decomposition[parent_idx][1]
 
         return level
+
+    def generate(self, time: int, goal: int,
+                 tolerance: float = 0.05, merge_rules: bool = True,
+                 verbose: bool = False) -> tuple[LightMultiGraph, list[int]]:
+        lower_bound = int(goal * (1 - tolerance))
+        upper_bound = int(goal * (1 + tolerance))
+        max_attempts = 1000
+
+        ruledict = self.compute_rules(time, merge=merge_rules)
+        for attempt in tqdm(range(max_attempts), desc='timeout meter', disable=(not verbose)):
+            g, ro = self._generate(ruledict, upper_bound)
+
+            if (g is not None) and (lower_bound <= g.order() <= upper_bound):
+                if verbose:
+                    tqdm.write(f'Generation succeeded after {attempt} attempts.')
+                return g, ro
+
+        raise TimeoutError(f'Generation failed after exceeding {max_attempts} attempts.')
+
+    def _generate(self, ruledict, upper_bound) -> tuple[LightMultiGraph, list[int]]:
+        node_counter = 1
+        rng = np.random.default_rng()
+
+        S = min(ruledict)  # find the starting symbol
+        nonterminals = [0]  # names of nodes in g corresponding to nonterminal symbols
+        rule_ordering = []  # idn's of rules in the order they were applied
+
+        g = LightMultiGraph()
+        g.add_node(0, label=S)
+
+        while len(nonterminals) > 0:
+            if g.order() > upper_bound:
+                return None, None
+
+            # choose a nonterminal symbol at random
+            nts: int = rng.choice(nonterminals)
+            lhs: int = g.nodes[nts]['label']
+            candidate_rules: list[Rule] = [rr for rr, _ in ruledict[lhs]]
+            candidate_freqs: list[int] = [ff for _, ff in ruledict[lhs]]
+
+            # select a new rule to apply
+            freqs = np.asarray(candidate_freqs)
+            weights = freqs / np.sum(freqs)
+            rule = rng.choice(candidate_rules, p=weights).copy()  # we will have to modify the boundary degrees
+            rhs = rule.graph
+
+            rule_ordering.append(rule.idn)
+            broken_edges: list[tuple[int, int]] = boundary_edges(g, {nts})
+            assert len(broken_edges) == max(0, lhs)
+
+            g.remove_node(nts)
+            nonterminals.remove(nts)
+
+            # add all of the nodes from the rule to the graph
+            node_map = {}
+            for n, d in rhs.nodes(data=True):
+                new_node = node_counter
+                node_map[n] = new_node
+                attr = {'b_deg': d['b_deg']}
+
+                if 'label' in d:
+                    attr['label'] = d['label']
+                    nonterminals.append(new_node)
+
+                if 'colors' in d:
+                    attr['color'] = rng.choice(d['colors'])
+
+                g.add_node(new_node, **attr)
+                node_counter += 1
+
+            # add all of the edges from the rule to the graph
+            for u, v, d in rhs.edges(data=True):
+                attr = {'weight': d['weight']}
+                if 'colors' in d:
+                    attr['color'] = rng.choice(d['colors'])
+
+                g.add_edge(node_map[u], node_map[v], **attr)
+
+            # rewire the broken edges from g to the new structure from the rule
+            while len(broken_edges) > 0:
+                eidx = rng.choice(len(broken_edges))
+                edge = broken_edges.pop(eidx)
+                u, v, *d = edge
+
+                # choose a node on the rule's right-hand side to attach this broken edge to
+                n = rng.choice([x for x, d in rhs.nodes(data=True) if d['b_deg'] > 0])
+                rhs.nodes[n]['b_deg'] -= 1
+
+                # there should never be self-edges on nonterminal symbols
+                if u == nts and v != nts:
+                    u = node_map[n]
+                elif u != nts and v == nts:
+                    v = node_map[n]
+                else:
+                    raise AssertionError(f'investigate: {nts}, {u}, {v}, {edge}')
+
+                # attach the nonterminal we previously selected to the rule node
+                g.add_edge(u, v, **dict(*d))
+
+        return g, rule_ordering
 
     def copy(self) -> 'VRG':
         vrg_copy = VRG(gtype=self.gtype, clustering=self.clustering, name=self.name, mu=self.mu)

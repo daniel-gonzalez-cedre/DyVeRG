@@ -9,7 +9,7 @@ import random
 import networkx as nx
 import numpy as np
 
-from cnrg.globals import find_boundary_edges
+from dyverg.globals import find_boundary_edges
 
 
 def generate_graph(rule_dict, rule_list):

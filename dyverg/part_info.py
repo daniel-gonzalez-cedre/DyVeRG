@@ -9,8 +9,8 @@ import random
 import networkx as nx
 import numpy as np
 
-from cnrg.LightMultiGraph import LightMultiGraph
-from cnrg.globals import find_boundary_edges
+from dyverg.LightMultiGraph import LightMultiGraph
+from dyverg.globals import find_boundary_edges
 
 
 def set_boundary_degrees(g, sg):

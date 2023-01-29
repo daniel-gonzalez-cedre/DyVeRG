@@ -19,8 +19,8 @@ from scipy.cluster.hierarchy import linkage, to_tree, cophenet
 from scipy.spatial.distance import pdist
 from sklearn.cluster import KMeans
 
-import cnrg.node2vec as n2v
-from cnrg.LightMultiGraph import LightMultiGraph
+from dyverg.LightMultiGraph import LightMultiGraph
+import dyverg.node2vec as n2v
 
 
 def leiden_one_level_old(g):
@@ -319,4 +319,3 @@ def get_node2vec(g):
     n2v.learn_embeddings(walks)
     embeddings = n2v.get_embeddings()
     return get_dendrogram(embeddings)
-

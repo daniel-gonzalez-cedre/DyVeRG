@@ -3,10 +3,10 @@ from typing import Optional
 
 import numpy as np
 
-from cnrg.LightMultiGraph import LightMultiGraph
-from cnrg.VRG import VRG
-from cnrg.Rule import PartRule
-from cnrg.globals import find_boundary_edges
+from dyverg.LightMultiGraph import LightMultiGraph
+from dyverg.VRG import VRG
+from dyverg.Rule import PartRule
+from dyverg.globals import find_boundary_edges
 
 
 def generate_graph(target_n: int, grammar: VRG, merge_iso_rules: bool,
