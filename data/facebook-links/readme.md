@@ -1,4 +1,4 @@
-# Facebook links temporal dataset
+# Facebook friendship links temporal dataset
 - data acquired from Prof. Alan Mislove at the Max Planck Institute
 - `https://socialnetworks.mpi-sws.org/data-wosn2009.html`
 

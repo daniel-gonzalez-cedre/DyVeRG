@@ -1,5 +1,5 @@
-# Email DNC temporal dataset
-- data acquired from SNAP.
+# European university email correspondence temporal dataset
+- data acquired from SNAP
 - `https://snap.stanford.edu/data/email-Eu-core-temporal.html`
 
 # quick stats

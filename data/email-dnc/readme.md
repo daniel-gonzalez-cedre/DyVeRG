@@ -1,5 +1,5 @@
-# Email DNC temporal dataset
-- data acquired from The Network Data Repository.
+# Democratic National Committee email leak temporal dataset
+- data acquired from The Network Data Repository
 - `https://networkrepository.com/email-dnc.php`
 
 # quick stats
