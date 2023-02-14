@@ -5,6 +5,18 @@ import git
 import networkx as nx
 
 
+# load an arbitrary edgelist, optionally with timestamped edges
+def read_edgelist(filepath: str, delimiter: str = ' ', times: bool = True) -> nx.Graph:
+    # return nx.convert_node_labels_to_integers(nx.read_edgelist(filepath, delimiter=delimiter))  # node labels must be integers
+    g = nx.read_edgelist(filepath,
+                         delimiter=delimiter,
+                         create_using=nx.MultiGraph,
+                         nodetype=int,
+                         data=[('time', int)] if times else True)
+    return nx.convert_node_labels_to_integers(g)
+
+
+# load one of the standard datasets
 def load_data(dataname: str = 'email-dnc', lookback: int = 0, override=False) -> list[tuple[int, nx.Graph]]:
     assert dataname in ['email-dnc', 'email-eucore', 'email-enron', 'facebook-links']
 
@@ -47,4 +59,13 @@ def load_data(dataname: str = 'email-dnc', lookback: int = 0, override=False) ->
 
     # return sorted(giants, key=lambda x: x[0])
 
-    return sorted(graphs, key=lambda x: x[0])
+    if dataname == 'email-eucore':
+        takerange = list(range(0, 17 + 1))
+    elif dataname == 'facebook-links':
+        takerange = list(range(1, 27 + 1))
+    elif dataname == 'email-dnc':
+        takerange = list(range(1, 7 + 1))
+    else:
+        takerange = None
+
+    return sorted(graphs, key=lambda x: x[0]), takerange

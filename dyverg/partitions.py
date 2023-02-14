@@ -23,23 +23,6 @@ from dyverg.LightMultiGraph import LightMultiGraph
 import dyverg.node2vec as n2v
 
 
-def leiden_one_level_old(g):
-    if g.size() < 3 and nx.is_connected(g):
-        return list(g.nodes())
-    g = nx.convert_node_labels_to_integers(g, label_attribute='old_label')
-    nx.write_edgelist(g, './src/leiden/graph.g', delimiter='\t', data=False)
-
-    subprocess.run('cd src/leiden; java -jar RunNetworkClustering.jar -q modularity -o clusters.txt graph.g', shell=True)
-
-    clusters = defaultdict(list)
-    old_label = nx.get_node_attributes(g, 'old_label')
-    with open('./src/leiden/clusters.txt') as f:
-        for line in f.readlines():
-            u, c_u = map(int, line.split())
-            clusters[c_u].append(old_label[u])
-    return clusters.values()
-
-
 def leiden_one_level(g: LightMultiGraph):
     # if g.size() < 3 and nx.is_connected(g):
     #     clusters = [[[n] for n in g.nodes()]]
@@ -61,6 +44,10 @@ def leiden_one_level(g: LightMultiGraph):
 
 
 def leiden(g: LightMultiGraph):
+    """
+        Recursively produce a hierarchical clustering
+        using the Leiden algorithm
+    """
     tree = []
 
     if g.order() < 2:
@@ -89,19 +76,27 @@ def get_random_partition(g: LightMultiGraph, seed=None):
 
 
 def random_partition(nodes):
+    """
+        Recursively produce a hierarchical clustering
+        using random bipartitions
+    """
     tree = []
     if len(nodes) < 2:
         return nodes
 
-    left = nodes[: len(nodes) // 2]
-    right = nodes[len(nodes) // 2: ]
+    left = nodes[:len(nodes) // 2]
+    right = nodes[len(nodes) // 2:]
 
     tree.append(random_partition(left))
     tree.append(random_partition(right))
     return tree
 
 
-def louvain(g: nx.Graph, randomize=False):
+def louvain(g: nx.Graph):
+    """
+        Recursively produce a hierarchical clustering
+        using the Louvain (modularity optimization) algorithm
+    """
     if g.order() < 2:
         return [[n] for n in g.nodes()]
 
@@ -307,9 +302,9 @@ def get_dendrogram(embeddings, method='best', metric='euclidean'):
 
 def get_node2vec(g):
     """
-    Partitions the graph using hierarchical clustering on node2vec embeddings
-    :param g: graph
-    :return: tree of partitions
+        Partitions the graph by hierarchically clustering its node2vec embeddings
+        :param g: graph
+        :return: tree of partitions
     """
     nx_g = nx.Graph(g)
     nx.set_edge_attributes(nx_g, 'weight', 1)

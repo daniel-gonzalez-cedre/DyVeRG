@@ -108,7 +108,7 @@ def create_tree(lst: List[Any]) -> TreeNode:
     :param lst: nested list of lists
     :return: root of the tree
     """
-    key = 'a'
+    key = '0'
 
     def create(lst):
         nonlocal key
@@ -116,7 +116,8 @@ def create_tree(lst: List[Any]) -> TreeNode:
         if len(lst) == 1 and isinstance(lst[0], int):  # detect leaf
             return TreeNode(key=lst[0], is_leaf=True)
         node = TreeNode(key=key)
-        key = chr(ord(key) + 1)
+        # key = chr(ord(key) + 1)
+        key = str(int(key) + 1)
 
         for item in lst:
             node.kids.append(create(item))
@@ -147,13 +148,14 @@ def create_tree(lst: List[Any]) -> TreeNode:
     def relabel_tnodes(tnode):
         q = deque()
         q.append(tnode)
-        key = 'a'
+        key = '0'
         while len(q) != 0:
             tnode = q.popleft()
             if tnode.is_leaf:
                 continue
             tnode.key = key
-            key = chr(ord(key) + 1)
+            # key = chr(ord(key) + 1)
+            key = str(int(key) + 1)
             for kid in tnode.kids:
                 q.append(kid)
 

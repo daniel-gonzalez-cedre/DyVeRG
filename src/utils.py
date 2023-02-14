@@ -1,7 +1,7 @@
 from signal import SIGALRM, ITIMER_REAL, setitimer, signal
 from typing import Callable, Iterator, Union, Optional
-
 import sys
+import time
 from contextlib import contextmanager
 from os import makedirs, devnull
 
@@ -11,6 +11,7 @@ from collections import defaultdict
 from gamma_coding import gamma_coding
 from networkx import graph_edit_distance as ged, Graph
 import networkx.algorithms.isomorphism as iso
+from loguru import logger
 
 
 class autodict(defaultdict):
@@ -41,6 +42,19 @@ def silence(enabled=True):
         yield
 
 
+# decorator
+def timer(func):
+    def wrapper(*args, **kwargs):
+        start = time.process_time()
+        result = func(*args, **kwargs)
+        end = time.process_time()
+        logger.info('time elapsed: {time_elapsed}', time_elapsed=round(end - start, 4))
+
+        return result
+    return wrapper
+
+
+# decorator
 def once(f):
     def wrapper(*args, **kwargs):  # pylint: disable=inconsistent-return-statements
         if not wrapper.has_run:

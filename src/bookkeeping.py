@@ -55,7 +55,7 @@ def common_ancestor(nodes: Collection[int], grammar: VRG) -> tuple[int, MetaRule
 
 
 # removes nonterminals referring to this rule up the decomposition
-def redact(grammar: VRG, idx: int, nts: chr, time: int):
+def redact(grammar: VRG, idx: int, nts: int, time: int):
     if not idx:
         return
 
@@ -69,7 +69,7 @@ def redact(grammar: VRG, idx: int, nts: chr, time: int):
 
 
 # reintroduces nonterminals referring to this rule up the decomposition
-def unseal(grammar: VRG, idx: int, nts: chr, time: int):
+def unseal(grammar: VRG, idx: int, nts: int, time: int):
     if not idx:
         return
 
@@ -109,6 +109,7 @@ def propagate_ancestors(nts: str, rule_idx: int, child_lhs: int, grammar: VRG,
         if metarule[t2].graph.nodes[nts]['b_deg'] < 0:
             import pdb
             pdb.set_trace()
+        assert metarule[t2].graph.nodes[nts]['b_deg'] >= 0
 
     propagate_ancestors(anode, pidx, metarule[t2].lhs, grammar, t1, t2, mode, stop_at=stop_at)
 

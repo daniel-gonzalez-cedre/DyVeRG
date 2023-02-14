@@ -18,10 +18,11 @@ class VRG:
         Vertex-replacement graph grammar
 
         Class attributes:
-            gtype = type of grammar
             clustering = node clustering algorithm used on the input graph to extract this grammar
-            name = a string naming the graph this grammar was extracted from
             mu = the μ hyperparameter that (indirectly) determines the rules' maximum RHS sizes
+            name = a string naming the graph this grammar was extracted from
+            gtype = a string describing the extraction strategy for the grammar
+
             extraction_map = maps the dendrogram nodes to the rules extracted from them
                              used during the extraction process to compute self.decomposition
 
@@ -48,17 +49,19 @@ class VRG:
     """
 
     __slots__ = (
-        'gtype', 'clustering', 'name', 'mu', 'extraction_map',
+        'mu', 'clustering', 'name', 'gtype',
+        'extraction_map',
         'decomposition', 'cover', 'times', 'ruledict',
         # 'transition_matrix', 'temporal_matrix',
-        'penalty', 'amplifier'
+        # 'penalty', 'amplifier'
     )
 
-    def __init__(self, gtype: str, clustering: str, name: str, mu: int):
-        self.gtype: str = gtype
+    def __init__(self, mu: int, clustering: str = 'leiden', name: str = ''):
         self.clustering: str = clustering
-        self.name: str = name
         self.mu: int = mu
+        self.name: str = name
+        self.gtype: str = 'mu_level_dl'
+
         self.extraction_map: dict[int, int] = {}
 
         self.decomposition: list[list] = []
@@ -221,8 +224,8 @@ class VRG:
             g, ro = self._generate(ruledict, upper_bound)
 
             if (g is not None) and (lower_bound <= g.order() <= upper_bound):
-                if verbose:
-                    tqdm.write(f'Generation succeeded after {attempt} attempts.')
+                # if verbose:
+                #     tqdm.write(f'Generation succeeded after {attempt} attempts.')
                 return g, ro
 
         raise TimeoutError(f'Generation failed after exceeding {max_attempts} attempts.')
@@ -310,7 +313,7 @@ class VRG:
         return g, rule_ordering
 
     def copy(self) -> 'VRG':
-        vrg_copy = VRG(gtype=self.gtype, clustering=self.clustering, name=self.name, mu=self.mu)
+        vrg_copy = VRG(mu=self.mu, clustering=self.clustering, name=self.name)
         vrg_copy.decomposition = [[rule.copy(), pidx, anode] for rule, pidx, anode in self.decomposition]
         vrg_copy.extraction_map = self.extraction_map.copy()
         vrg_copy.cover = self.cover.copy()
@@ -325,9 +328,9 @@ class VRG:
 
     def __str__(self):
         st = (f'graph: {self.name}, ' +
-              f'mu: {self.mu}, type: {self.gtype}, ' +
+              f'mu: {self.mu}, ' +
               f'clustering: {self.clustering}, ' +
-              f'rules: {len(self.decomposition)}')
+              f'rules: {len(self)}')
         return st
 
     def __repr__(self):

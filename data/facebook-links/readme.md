@@ -5,8 +5,15 @@
 # quick stats
 - First timestamp: `2006-09-05 11:15:29`
 - Last timestamp: `2009-01-21 22:15:25`
-- Total number of months: `29`
-- Number of interactions: `905_565`
+- Number of timestamps: `736_674`
+- Number of graph snapshots: `29`
+
+- Number of unique nodes: `61_096`
+- Number of unique edges: `614_797`
+- Number of self-edges: `0`
+
+- Number of (undirected) interactions: `788_135`
+- Number of (directed) interactions: `905_565`
 
 # raw data
 - Each line contains a sender, receiver, and UNIX epoch timestamp (if valid) separated by tabs.

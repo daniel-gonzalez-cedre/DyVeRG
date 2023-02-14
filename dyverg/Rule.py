@@ -30,9 +30,13 @@ class MetaRule:
         self.idn: int = idn
 
     @property
-    def next(self) -> chr:
-        nodes = {u for rule in self.rules.values() for u in rule.graph} | set(self.alias.values())
-        return chr(ord(max(nodes)) + 1)
+    def next(self) -> int:
+        # nodes = {u for rule in self.rules.values() for u in rule.graph} | set(self.alias.values())
+        nodes = {int(u) for rule in self.rules.values() for u in rule.graph}
+        nodes |= set(map(int, self.alias.values()))
+        # return max(nodes)
+        # return chr(ord(max(nodes)) + 1)
+        return str(max(nodes) + 1)
 
     @property
     def times(self) -> list[int]:
@@ -135,11 +139,13 @@ class Rule:
 
     def generalize_rhs(self):
         self.alias = {}
-        internal_node_counter = 'a'
+        internal_node_counter = '0'
+        # internal_node_counter = 'a'
 
         for n in self.graph.nodes():
             self.alias[n] = internal_node_counter
-            internal_node_counter = chr(ord(internal_node_counter) + 1)
+            # internal_node_counter += 1
+            internal_node_counter = str(int(internal_node_counter) + 1)
 
         nx.relabel_nodes(self.graph, mapping=self.alias, copy=False)
 

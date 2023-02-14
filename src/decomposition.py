@@ -108,10 +108,9 @@ def decompose_component(g: nx.Graph, mu: int = 4, time: int = -1, clustering: st
 
     dendrogram = create_tree(clusters)
 
-    vrg = VRG(clustering=clustering,
-              gtype=gtype,
-              name=name,
-              mu=mu)
+    vrg = VRG(mu=mu,
+              clustering=clustering,
+              name=name)
 
     extractor = MuExtractor(g=g.copy(),
                             gtype=gtype,
