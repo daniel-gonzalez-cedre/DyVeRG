@@ -6,7 +6,9 @@
 - First timestamp: `2013-09-16 02:30:33`
 - Last timestamp: `2016-05-25 09:26:28`
 - Number of timestamps: `19_389`
-- Number of graph snapshots: `11`
+- Number of graph snapshots: `18`
+- Effective snapshot indices: `1 -- 17`
+- Effective snapshot timestamps: `201501 -- 201507`
 
 - Number of unique nodes: `1891`
 - Number of unique edges: `4465`

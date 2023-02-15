@@ -1,10 +1,14 @@
-def analyse(dataname, processed):
+def analyse(dataname, mode):
     assert dataname in ['email-dnc', 'email-enron', 'email-eucore', 'facebook-links']
+    assert mode in ('r', 'raw', 'f', 'full', 'p', 'pruned')
 
-    if processed:
-        fname = f'{dataname}/{dataname}_processed.edgelist'
+    if mode in ('f', 'full'):  # full processed
+        fname = f'{dataname}/{dataname}_full.edgelist'
         delim = ','
-    else:
+    elif mode in ('p', 'pruned'):  # pruned processed
+        fname = f'{dataname}/{dataname}_pruned.edgelist'
+        delim = ','
+    else:  # raw
         if dataname == 'email-dnc':
             ext = 'edges'
             delim = ','
@@ -62,7 +66,7 @@ def analyse(dataname, processed):
     print(f'number of (undirected) interactions: {len(uinteractions)}')
     print(f'number of (directed) interactions: {len(dinteractions)}')
 
-    if processed:
+    if mode in ('f', 'full', 'p', 'pruned'):
         snapshots = {}
         for e, t in edges_t:
             if len(e) == 1:
@@ -75,7 +79,7 @@ def analyse(dataname, processed):
             else:
                 snapshots[t] = {frozenset({u, v})}
         print(f'number of snapshots: {len(snapshots)}')
-        print(f'\ttime: \t\torder\tsize')
+        print('\ttime: \t\torder:\tsize:')
         for t, e in sorted(snapshots.items()):
             nn = {u for n in e for u in n}
             print(f'\t{t}:   \t{len(nn)}\t{len(e)}')
@@ -84,8 +88,6 @@ def analyse(dataname, processed):
 
 
 if __name__ == '__main__':
-    dname = input('Enter name of dataset to analyse: ')
-    proc = input('Processed (p) or raw (r)?: ')
-    proc = True if proc.lower() in ('p', 'processed', 'y', 'yes') \
-                else False
-    analyse(dname, proc)
+    dname = input('Enter name of dataset to analyse: ').lower().strip()
+    pmode = input('Raw (r), full (f), or pruned (p)?: ').lower().strip()
+    analyse(dname, pmode)

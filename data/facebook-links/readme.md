@@ -7,6 +7,8 @@
 - Last timestamp: `2009-01-21 22:15:25`
 - Number of timestamps: `736_674`
 - Number of graph snapshots: `29`
+- Effective snapshot indices: `1 -- 27`
+- Effective snapshot timestamps: `200610 -- 200812`
 
 - Number of unique nodes: `61_096`
 - Number of unique edges: `614_797`
