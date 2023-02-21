@@ -1,16 +1,16 @@
 import numpy as np
 from networkx import Graph
 
-from evaluation.mmd import mmd_rbf, mmd_poly, mmd_linear
+from evaluation.mmd import mmd_wasserstein, mmd_rbf, mmd_poly, mmd_linear
 from evaluation.portrait_divergence.portrait_divergence import portrait_divergence as pd
 
 
-def maximum_mean_discrepancy(P: list[list], Q: list[list], kernel: str = 'gaussian', gamma: float = 1.0) -> float:
+def maximum_mean_discrepancy(P: list[list], Q: list[list], kernel: str = 'wasserstein', gamma: float = 1.0) -> float:
     '''
         P: list of samples [[...], [...], ... [...]]
         Q: list of samples [[...], [...], ... [...]]
     '''
-    assert kernel in ('rbf', 'radial', 'gaussian', 'polynomial', 'linear')
+    assert kernel in ('wasserstein', 'rbf', 'radial', 'gaussian', 'polynomial', 'linear')
 
     maxlenP = max(len(p) for p in P)
     maxlenQ = max(len(q) for q in Q)
@@ -22,7 +22,9 @@ def maximum_mean_discrepancy(P: list[list], Q: list[list], kernel: str = 'gaussi
     X = np.asarray(P)
     Y = np.asarray(Q)
 
-    if kernel in ('rbf', 'radial', 'gaussian'):
+    if kernel == 'wasserstein':
+        value = mmd_wasserstein(X, Y, gamma=gamma)
+    elif kernel in ('rbf', 'radial', 'gaussian'):
         value = mmd_rbf(X, Y, gamma=gamma)
     elif kernel == 'polynomial':
         value = mmd_poly(X, Y)

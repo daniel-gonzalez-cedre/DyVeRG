@@ -3,7 +3,9 @@ from sklearn import metrics
 from scipy.stats import wasserstein_distance as wasserstein
 
 
-def mmd_wasserstein(X: np.ndarray, Y: np.ndarray, kernel: str = 'gaussian', gamma: float = 1.0, sigma: float = 1.0) -> float:
+def mmd_wasserstein(X: np.ndarray, Y: np.ndarray, gamma: float = None, sigma: float = 1.0) -> float:
+    if not gamma:
+        gamma = 1 / len(X[0])
     kernel = lambda x, y: np.exp(-wasserstein(x, y) / (2 * (sigma**2)))
     expectation = lambda P, Q: np.mean([kernel(p, q) for p in P for q in Q])
     max_mean_discrepancy = expectation(X, X) + expectation(Y, Y) - (2 * expectation(X, Y))
