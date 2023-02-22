@@ -11,3 +11,5 @@ Thanks to the eternal patience of my advisor Tim Weninger.
 
 [cnrgcode]: https://github.com/satyakisikdar/CNRG
 [cnrgpaper]: https://ieeexplore.ieee.org/document/8970955
+
+`python==3.9.5`
