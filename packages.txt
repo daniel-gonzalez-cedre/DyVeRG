@@ -1,0 +1,15 @@
+joblib
+numpy
+networkx
+scikit-learn
+scipy
+matplotlib
+pandas
+gensim
+python-louvain
+leidenalg
+igraph
+loguru
+gamma_coding
+tqdm
+gitpython
