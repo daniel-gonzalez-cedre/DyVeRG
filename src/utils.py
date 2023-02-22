@@ -96,6 +96,12 @@ def mkdir(path):
     makedirs(path, exist_ok=True)
 
 
+def transpose(ll: list[list]):
+    for sublist in ll:
+        assert len(sublist) == len(ll[0])
+    return [[ll[i][j] for i in range(len(ll))] for j in range(len(ll[0]))]
+
+
 # find all occurrences of an object (e.g., a rule) in a grammar (rule_list, rule_dict, or rule_tree)
 def find(x: object, iterable: Union[list, dict]) -> Union[list[int], list[tuple[int, int]]]:
     references = []

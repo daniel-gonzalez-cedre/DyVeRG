@@ -5,10 +5,11 @@ __pycache__
 .ipynb_checkpoints
 *.grammars
 
-old_*/
 backup_results/
 figures/
 results/
+trash/
+old_*/
 
 data/*
 !data/readme.md

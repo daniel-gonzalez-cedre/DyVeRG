@@ -5,7 +5,7 @@ import networkx as nx
 
 
 # scalar-valued statistics
-def average_degre(g: nx.Graph) -> float:
+def average_degree(g: nx.Graph) -> float:
     '''the average degree of g'''
     return np.mean([g.degree(v) for v in g])
 
@@ -15,7 +15,7 @@ def triangle_count(g: nx.Graph) -> int:
     return sum(nx.triangles(g).values()) // 3
 
 
-def clutering(g: nx.Graph) -> float:
+def clustering(g: nx.Graph) -> float:
     '''the average clustering coefficient of g'''
     return nx.average_clustering(g)
 
