@@ -18,12 +18,13 @@ class Args():
         # self.note = 'GraphRNN_RNN_nobfs'
 
         ### Which dataset is used to train the model
+        self.graph_type = ''
         # self.graph_type = 'DD'
         # self.graph_type = 'caveman'
         # self.graph_type = 'caveman_small'
         # self.graph_type = 'caveman_small_single'
         # self.graph_type = 'community4'
-        self.graph_type = 'grid'
+        # self.graph_type = 'grid'
         # self.graph_type = 'grid_small'
         # self.graph_type = 'ladder_small'
 

@@ -6,17 +6,26 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '1,2'
 from baselines.graphrnn.train import *
 
 
-def fit(graphs):
-    ''' performs GraphRNN model training on a specified list of graphs
+def fit(graphs, nn: str, graphname: str = ''):
+    ''' performs graph neural net model training on a specified list of graphs
         parameters:
             graphs (nx.Graph list): list of Networkx Graph() objects
+            nn (str): one of (RNN, VAE, MLP)
         output:
-            the thing
+            the list of generated graphs
     '''
+    nn = nn.lower()
+    nns = {'rnn': 'GraphRNN_RNN',
+           'vae': 'GraphRNN_VAE_conditional',
+           'mlp': 'GraphRNN_MLP'}
+    assert nn in nns
+    # nn_arch = nns[nn]
+
     # maybe not necessary?
     time = strftime("%Y-%m-%d %H:%M:%S", gmtime())
     args = Args()
-    args.max_prev_node = 40
+    args.graph_type = graphname
+    args.max_prev_node = 11
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.cuda)
     # if args.clean_tensorboard:  # SS: Tensorboard not necessary?
     #     if os.path.isdir("tensorboard"):
@@ -46,22 +55,28 @@ def fit(graphs):
     max_num_edge = max(graphs[i].number_of_edges() for i in range(len(graphs)))
     min_num_edge = min(graphs[i].number_of_edges() for i in range(len(graphs)))
 
-    dataset = Graph_sequence_sampler_pytorch(graphs_train, max_prev_node=args.max_prev_node, max_num_node=args.max_num_node, iteration=20)
+    dataset = Graph_sequence_sampler_pytorch(graphs_train, args,iteration=20)
     sample_strategy = torch.utils.data.sampler.WeightedRandomSampler([1.0 / len(dataset) for i in range(len(dataset))], num_samples=args.batch_size*args.batch_ratio, replacement=True)
     dataset_loader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, num_workers=args.num_workers, sampler=sample_strategy)
 
     # initialize the model
-    if 'GraphRNN_VAE_conditional' in args.note:
+    # if 'GraphRNN_VAE_conditional' in args.note:
+    if nn == 'vae':
+        args.note = 'GraphRNN_VAE_conditional'
         model = GRU_plain(input_size=args.max_prev_node, embedding_size=args.embedding_size_rnn,
                           hidden_size=args.hidden_size_rnn, num_layers=args.num_layers,
                           has_input=True, has_output=False).cuda()
         output = MLP_VAE_conditional_plain(h_size=args.hidden_size_rnn, embedding_size=args.embedding_size_output, y_size=args.max_prev_node).cuda()
-    elif 'GraphRNN_MLP' in args.note:
+    # elif 'GraphRNN_MLP' in args.note:
+    elif nn == 'mlp':
+        args.note = 'GraphRNN_MLP'
         model = GRU_plain(input_size=args.max_prev_node, embedding_size=args.embedding_size_rnn,
                           hidden_size=args.hidden_size_rnn, num_layers=args.num_layers,
                           has_input=True, has_output=False).cuda()
         output = MLP_plain(h_size=args.hidden_size_rnn, embedding_size=args.embedding_size_output, y_size=args.max_prev_node).cuda()
-    elif 'GraphRNN_RNN' in args.note:
+    # elif 'GraphRNN_RNN' in args.note:
+    elif nn == 'rnn':
+        args.note = 'GraphRNN_RNN'
         model = GRU_plain(input_size=args.max_prev_node, embedding_size=args.embedding_size_rnn,
                           hidden_size=args.hidden_size_rnn, num_layers=args.num_layers,
                           has_input=True, has_output=True, output_size=args.hidden_size_rnn_output).cuda()

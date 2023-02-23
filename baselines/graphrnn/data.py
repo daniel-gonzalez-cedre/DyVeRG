@@ -385,22 +385,24 @@ def test_encode_decode_adj_full():
 
 ########## use pytorch dataloader
 class Graph_sequence_sampler_pytorch(torch.utils.data.Dataset):
-    def __init__(self, G_list, max_num_node=None, max_prev_node=None, iteration=20000):
+    def __init__(self, G_list, args, iteration=20000):
         self.adj_all = []
         self.len_all = []
         for G in G_list:
             self.adj_all.append(np.asarray(nx.to_numpy_matrix(G)))
             self.len_all.append(G.number_of_nodes())
-        if max_num_node is None:
+        if args.max_num_node is None:
             self.n = max(self.len_all)
+            args.max_num_node = self.n
         else:
-            self.n = max_num_node
-        if max_prev_node is None:
+            self.n = args.max_num_node
+        if args.max_prev_node is None:
             print('calculating max previous node, total iteration: {}'.format(iteration))
-            self.max_prev_node = max(self.calc_max_prev_node(iter=iteration))
+            self.max_prev_node = min(max(self.calc_max_prev_node(iter=iteration)), 256)
             print('max previous node: {}'.format(self.max_prev_node))
+            args.max_prev_node = self.max_prev_node
         else:
-            self.max_prev_node = max_prev_node
+            self.max_prev_node = args.max_prev_node
 
         # self.max_prev_node = max_prev_node
 

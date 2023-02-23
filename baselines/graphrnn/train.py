@@ -695,23 +695,23 @@ def train(args, dataset_train, rnn, output):
                         G_pred_step = test_rnn_epoch(epoch, args, rnn, output, test_batch_size=args.test_batch_size)
                     G_pred.extend(G_pred_step)
                 # save graphs
-                fname = args.graph_save_path + args.fname_pred + str(epoch) +'_'+str(sample_time) + '.dat'
+                # fname = args.graph_save_path + args.fname_pred + str(epoch) +'_'+str(sample_time) + '.dat'
                 # save_graph_list(G_pred, fname)
                 if 'GraphRNN_RNN' in args.note:
                     break
             # print('test done, graphs saved')
-            print('test done')
+            # print('test done')
 
 
         # save model checkpoint
-        if args.save:
-            if epoch % args.epochs_save == 0:
-                fname = args.model_save_path + args.fname + 'lstm_' + str(epoch) + '.dat'
-                # torch.save(rnn.state_dict(), fname)
-                fname = args.model_save_path + args.fname + 'output_' + str(epoch) + '.dat'
-                # torch.save(output.state_dict(), fname)
+        # if args.save:
+        #     if epoch % args.epochs_save == 0:
+        #         fname = args.model_save_path + args.fname + 'lstm_' + str(epoch) + '.dat'
+        #         torch.save(rnn.state_dict(), fname)
+        #         fname = args.model_save_path + args.fname + 'output_' + str(epoch) + '.dat'
+        #         torch.save(output.state_dict(), fname)
         epoch += 1
-    np.save(args.timing_save_path+args.fname,time_all)
+    # np.save(args.timing_save_path+args.fname,time_all)
 
 
 ########### for graph completion task
