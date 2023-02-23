@@ -3,7 +3,7 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['CUDA_VISIBLE_DEVICES'] = '1,2'
 
-from src.baselines.graphrnn.train import *
+from baselines.graphrnn.train import *
 
 
 def gen(args, model, output, gen_num=1):

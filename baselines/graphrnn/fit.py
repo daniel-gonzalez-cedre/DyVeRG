@@ -3,7 +3,7 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['CUDA_VISIBLE_DEVICES'] = '1,2'
 
-from src.graphrnn.train import *
+from baselines.graphrnn.train import *
 
 
 def fit(graphs):
