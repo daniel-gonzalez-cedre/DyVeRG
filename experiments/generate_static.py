@@ -2,6 +2,8 @@ from tqdm import tqdm
 import networkx as nx
 
 from baselines.static import VeRG, uniform, erdos_renyi, chung_lu
+from baselines.graphrnn.fit import fit
+from baselines.graphrnn.gen import gen
 
 
 # static DyVeRG
@@ -23,6 +25,18 @@ def verg_generate(graphs, mu: int = 4, clustering: str = 'leiden', verbose: bool
 # static CNRG
 def cnrg_generate(graphs, mu: int = 4, clustering: str = 'leiden', verbose: bool = False) -> list[nx.Graph]:
     raise NotImplementedError
+
+
+# TODO
+# static HRG
+def hrg_generate(graphs, mu: int = 4, clustering: str = 'leiden', verbose: bool = False) -> list[nx.Graph]:
+    raise NotImplementedError
+
+
+def graphrnn_generate(graphs) -> list[nx.Graph]:
+    args, model, output = fit(graphs)
+    generated_graphs = gen(args=args, model=model, output=output)
+    return generated_graphs
 
 
 # static random (chooses uniformly from all graphs on nₜ nodes and mₜ edges)

@@ -1,31 +1,29 @@
 from functools import partial
+from random import shuffle, seed  # graphrnn
 
 import numpy as np
 import networkx as nx
+
+from baselines.graphrnn.fit import fit
+# from baselines.graphrnn.train import *  # graphrnn
+# from baselines.graphrnn.train import random, shuffle
 
 from src.decomposition import decompose
 from dyverg.VRG import VRG
 from dyverg.LightMultiGraph import LightMultiGraph as LMG
 
 
-def VeRG(g: nx.Graph, time: int = None,
-         mu: int = 4, clustering: int = 'leiden', verbose: bool = False) -> VRG:
-    return decompose(g, time=(time if time else 0), mu=mu, clustering=clustering, verbose=verbose)
+def VeRG(g: nx.Graph, t: int = None, mu: int = 4, clustering: int = 'leiden', verbose: bool = False) -> VRG:
+    return decompose(g, time=(t if t else 0), mu=mu, clustering=clustering, verbose=verbose)
 
 
 def CNRG(g: nx.Graph):
     raise NotImplementedError
 
 
-def graphRNN(graphs: list[nx.Graph]):
-    graphs_train = graphs[0:int(0.8 * len(graphs))]
-    graphs_test = graphs[int(0.8 * len(graphs)):]
-    graphs_validate = graphs[0:int(0.2 * len(graphs))]
-
-    graph_validate_len = 0
-    for graph in graphs_validate:
-        graph_validate_len += graph.number_of_nodes()
-    pass
+def graphRNN(graphs: list[nx.Graph]) -> tuple:
+    return fit(graphs)
+    # return {'args': args, 'model': model, 'output': output}
 
 
 def uniform(g: nx.Graph, directed: bool = False) -> nx.Graph:
