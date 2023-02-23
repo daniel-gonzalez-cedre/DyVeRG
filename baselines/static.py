@@ -13,9 +13,86 @@ def VeRG(g: nx.Graph, time: int = None,
     return decompose(g, time=(time if time else 0), mu=mu, clustering=clustering, verbose=verbose)
 
 
+def CNRG(g: nx.Graph):
+    raise NotImplementedError
+
+
+def graphRNN(graphs: list[nx.Graph]):
+    graphs_train = graphs[0:int(0.8 * len(graphs))]
+    graphs_test = graphs[int(0.8 * len(graphs)):]
+    graphs_validate = graphs[0:int(0.2 * len(graphs))]
+
+    graph_validate_len = 0
+    for graph in graphs_validate:
+        graph_validate_len += graph.number_of_nodes()
+    pass
+
+
 def uniform(g: nx.Graph, directed: bool = False) -> nx.Graph:
     return nx.gnm_random_graph(g.order(), g.size(), directed=directed)
 
+
+def erdos_renyi(g: nx.Graph, directed: bool = False) -> nx.Graph:
+    n = g.order()
+    m = g.size()
+
+    if not directed:
+        p = (2 * m) / (n * (n - 1))
+    else:
+        p = m / (n * (n - 1))
+
+    return nx.erdos_renyi_graph(n, p, directed=directed)
+
+
+def chung_lu(g: nx.Graph) -> nx.Graph:
+    w = list(dict(nx.degree(g)).values())
+    return nx.expected_degree_graph(w, selfloops=(nx.number_of_selfloops(g) > 0))
+
+
+def watts_strogatz(g: nx.Graph):
+    rng = np.random.default_rng()
+    n: int = g.order()
+    m: int = g.size()
+    avg: float = 2 * m / n
+
+    k: int = int(avg)
+    p: float = avg - k
+
+    def ws_distance(u: int, v: int):
+        return min((u - v) % n, (v - u) % n)
+
+    h = LMG() if isinstance(g, LMG) else nx.Graph()
+    h.add_nodes_from(list(range(n)))
+
+    for u in h:
+        k_ball = [v for v in h
+                  if (u != v) and (ws_distance(u, v) <= k)]
+        k_ball = sorted(k_ball, key=partial(ws_distance, u))
+
+        for v in k_ball[:k]:
+            if (u, v) not in h.edges():
+                h.add_edge(u, v)
+
+        if (p == 1.0) or (rng.uniform() < p):
+            for v in k_ball[k:]:
+                if (u, v) not in h.edges():
+                    h.add_edge(u, v)
+                    break
+
+    return h
+
+
+def barabasi_albert(g: nx.Graph):
+    pass
+
+
+def stochastic_block(g: nx.Graph):
+    raise NotImplementedError
+    # return nx.stochastic_block_model()
+
+###############################################
+###############################################
+###############################################
 
 def _uniform(g: nx.Graph, simple: bool = True):
     rng = np.random.default_rng()
@@ -38,18 +115,6 @@ def _uniform(g: nx.Graph, simple: bool = True):
     return h
 
 
-def erdos_renyi(g: nx.Graph, directed: bool = False) -> nx.Graph:
-    n = g.order()
-    m = g.size()
-
-    if not directed:
-        p = (2 * m) / (n * (n - 1))
-    else:
-        p = m / (n * (n - 1))
-
-    return nx.erdos_renyi_graph(n, p, directed=directed)
-
-
 def _erdos_renyi(g: nx.Graph, directed: bool = False) -> nx.Graph:
     rng = np.random.default_rng()
     n = g.order()
@@ -69,11 +134,6 @@ def _erdos_renyi(g: nx.Graph, directed: bool = False) -> nx.Graph:
                 h.add_edge(u, v)
 
     return h
-
-
-def chung_lu(g: nx.Graph) -> nx.Graph:
-    w = list(dict(nx.degree(g)).values())
-    return nx.expected_degree_graph(w, selfloops=(nx.number_of_selfloops(g) > 0))
 
 
 def _chung_lu(g: nx.Graph, simple: bool = True):
@@ -130,49 +190,3 @@ def _chung_lu_switch(g: nx.Graph, num_switches: int = None, simple: bool = True)
         num_switches -= 1
 
     return h
-
-
-def watts_strogatz(g: nx.Graph):
-    rng = np.random.default_rng()
-    n: int = g.order()
-    m: int = g.size()
-    avg: float = 2 * m / n
-
-    k: int = int(avg)
-    p: float = avg - k
-
-    def ws_distance(u: int, v: int):
-        return min((u - v) % n, (v - u) % n)
-
-    h = LMG() if isinstance(g, LMG) else nx.Graph()
-    h.add_nodes_from(list(range(n)))
-
-    for u in h:
-        k_ball = [v for v in h
-                  if (u != v) and (ws_distance(u, v) <= k)]
-        k_ball = sorted(k_ball, key=partial(ws_distance, u))
-
-        for v in k_ball[:k]:
-            if (u, v) not in h.edges():
-                h.add_edge(u, v)
-
-        if (p == 1.0) or (rng.uniform() < p):
-            for v in k_ball[k:]:
-                if (u, v) not in h.edges():
-                    h.add_edge(u, v)
-                    break
-
-    return h
-
-
-def barabasi_albert(g: nx.Graph):
-    pass
-
-
-def stochastic_block(g: nx.Graph):
-    raise NotImplementedError
-    # return nx.stochastic_block_model()
-
-
-def cnrg(g: nx.Graph):
-    raise NotImplementedError
