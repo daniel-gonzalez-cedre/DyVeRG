@@ -17,7 +17,8 @@ def read_edgelist(filepath: str, delimiter: str = ' ', times: bool = True) -> nx
 
 
 # load one of the standard datasets
-def load_data(dataname: str, mode: str = 'pruned') -> list[tuple[int, nx.Graph]]:
+# def load_data(dataname: str, mode: str = 'pruned') -> list[tuple[int, nx.Graph]]:
+def load_data(dataname: str, mode: str = 'pruned') -> list:
     dataname = dataname.lower().strip()
     mode = mode.lower().strip()
     assert dataname in ('email-dnc', 'email-eucore', 'email-enron', 'facebook-links')
