@@ -398,7 +398,7 @@ class Graph_sequence_sampler_pytorch(torch.utils.data.Dataset):
             self.n = args.max_num_node
         if args.max_prev_node is None:
             print('calculating max previous node, total iteration: {}'.format(iteration))
-            self.max_prev_node = min(max(self.calc_max_prev_node(iter=iteration)), 256)
+            self.max_prev_node = min(max(self.calc_max_prev_node(iter=iteration)), 128)
             print('max previous node: {}'.format(self.max_prev_node))
             args.max_prev_node = self.max_prev_node
         else:

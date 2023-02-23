@@ -25,7 +25,7 @@ def fit(graphs, nn: str, graphname: str = ''):
     time = strftime("%Y-%m-%d %H:%M:%S", gmtime())
     args = Args()
     args.graph_type = graphname
-    args.max_prev_node = 11
+    args.max_prev_node = 15
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.cuda)
     # if args.clean_tensorboard:  # SS: Tensorboard not necessary?
     #     if os.path.isdir("tensorboard"):
