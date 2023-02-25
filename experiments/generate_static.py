@@ -7,7 +7,7 @@ from baselines.graphrnn.gen import gen
 
 
 # static DyVeRG
-def verg_generate(graphs, mu: int = 4, clustering: str = 'leiden', verbose: bool = False) -> list[nx.Graph]:
+def VeRG_generate(graphs, mu: int = 4, clustering: str = 'leiden', verbose: bool = False) -> list[nx.Graph]:
     """
         Static graph generator.
         For each gₜ in graphs, generates from an instance of DyVeRG learned independently at time t.
