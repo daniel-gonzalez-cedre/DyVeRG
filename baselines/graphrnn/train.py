@@ -551,9 +551,10 @@ def test_rnn_epoch(epoch, args, rnn, output, test_batch_size=16):
     for i in range(test_batch_size):
         adj_pred = decode_adj(y_pred_long_data[i].cpu().numpy())
         G_pred = get_graph(adj_pred) # get a graph from zero-padded adj
-        G_pred_list.append(G_pred)
+        yield G_pred
+        # G_pred_list.append(G_pred)
 
-    return G_pred_list
+    # return G_pred_list
 
 
 

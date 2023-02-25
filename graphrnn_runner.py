@@ -1,10 +1,10 @@
-from os import getcwd, mkdir
+from os import getcwd, makedirs
 from os.path import join
 
 import git
 import torch
 import networkx as nx
-torch.cuda.set_device(0)
+torch.cuda.set_device(1)
 
 from baselines.graphrnn.fit import fit
 from baselines.graphrnn.gen import gen
@@ -14,7 +14,7 @@ from src.data import load_data
 
 dataset: str = input('dataset: ').lower()
 mode: str = input('static or dynamic? ').lower()
-num_gen: int = input('number of graphs to generate (at each timestep): ').lower()
+num_gen: int = int(input('number of graphs to generate (at each timestep): ').lower())
 perturb: bool = False
 
 assert dataset in ('email-dnc', 'email-enron', 'email-eucore', 'facebook-links')
@@ -23,6 +23,7 @@ assert isinstance(num_gen, int)
 
 rootpath = git.Repo(getcwd(), search_parent_directories=True).git.rev_parse("--show-toplevel")
 resultspath = f'results/graphs_{mode}/graphrnn/{dataset}'
+makedirs(resultspath, exist_ok=True)
 
 # makedirs(path, exist_ok=True)
 
@@ -31,8 +32,7 @@ graphs = [g for _, g in loaded]
 
 
 def write_graph(g, filepath, filename):
-    with open(join(filepath, filename), 'w') as outfile:
-        nx.write_edgelist(g, outfile)
+    nx.write_edgelist(g, join(filepath, filename))
 
 
 if mode == 'static':  # static generation
@@ -50,6 +50,9 @@ else:  # dynamic generation
             input_graphs.append(input_graphs[t - counter])
             counter += 1
         args, model, output = fit(input_graphs, nn='rnn')
+
         generated_graphs = gen(args=args, model=model, output=output)
-        for trial, graph in enumerate(generated_graphs):
+        for trial, graph in enumerate(gen(args=args, model=model, output=output)):
             write_graph(graph, resultspath, f'{t}_{trial}.edgelist')
+        # for trial, graph in enumerate(generated_graphs):
+        #     write_graph(graph, resultspath, f'{t}_{trial}.edgelist')
