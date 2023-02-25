@@ -1,0 +1,14 @@
+2023-02-25 15:38:38.314 | INFO     | __main__:wrapper:22 - fit time elapsed: 852.6561487690001
+2023-02-25 15:38:38.316 | INFO     | __main__:wrapper:32 - gen time elapsed: 3.0195000022104068e-05
+2023-02-25 15:58:57.071 | INFO     | __main__:wrapper:22 - fit time elapsed: 883.3365045070001
+2023-02-25 15:58:57.073 | INFO     | __main__:wrapper:32 - gen time elapsed: 5.5640000482526375e-06
+2023-02-25 16:24:57.398 | INFO     | __main__:wrapper:22 - fit time elapsed: 1126.5204031200003
+2023-02-25 16:24:57.399 | INFO     | __main__:wrapper:32 - gen time elapsed: 5.298999894876033e-06
+2023-02-25 16:50:41.883 | INFO     | __main__:wrapper:22 - fit time elapsed: 1156.2611914149998
+2023-02-25 16:50:41.884 | INFO     | __main__:wrapper:32 - gen time elapsed: 4.397999873617664e-06
+2023-02-25 17:16:32.194 | INFO     | __main__:wrapper:22 - fit time elapsed: 1176.6927914510002
+2023-02-25 17:16:32.208 | INFO     | __main__:wrapper:32 - gen time elapsed: 4.767999598698225e-06
+2023-02-25 17:42:39.098 | INFO     | __main__:wrapper:22 - fit time elapsed: 1180.96681404
+2023-02-25 17:42:39.099 | INFO     | __main__:wrapper:32 - gen time elapsed: 6.610999662370887e-06
+2023-02-25 18:08:53.587 | INFO     | __main__:wrapper:22 - fit time elapsed: 1198.6219610480002
+2023-02-25 18:08:53.588 | INFO     | __main__:wrapper:32 - gen time elapsed: 5.647999387292657e-06
