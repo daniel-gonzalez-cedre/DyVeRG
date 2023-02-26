@@ -1,37 +1,17 @@
 from os import getcwd, makedirs
 from os.path import join
-import time
+from loguru import logger
 
 import git
 import torch
 import networkx as nx
-from loguru import logger
 torch.cuda.set_device(1)
 
+from generation.timers import fit_timer, gen_timer
 from baselines.graphrnn.fit import fit
 from baselines.graphrnn.gen import gen
 from src.data import load_data
 # from src.utils import mkdir
-
-
-def fit_timer(func):
-    def wrapper(*args, **kwargs):
-        start = time.process_time()
-        result = func(*args, **kwargs)
-        end = time.process_time()
-        logger.info('fit time elapsed: {time_elapsed}', time_elapsed=(end - start))
-        return result
-    return wrapper
-
-
-def gen_timer(func):
-    def wrapper(*args, **kwargs):
-        start = time.process_time()
-        result = func(*args, **kwargs)
-        end = time.process_time()
-        logger.info('gen time elapsed: {time_elapsed}', time_elapsed=(end - start))
-        return result
-    return wrapper
 
 
 def write_graph(g, filepath, filename):
@@ -54,11 +34,11 @@ assert isinstance(num_gen, int)
 rootpath = git.Repo(getcwd(), search_parent_directories=True).git.rev_parse("--show-toplevel")
 resultspath = f'results/graphs_{mode}/graphrnn/{dataset}'
 # logpath = f'results/logs/graphrnn/{dataset}'
-logpath = f'results/logs/'
+logpath = 'results/logs/'
 
 makedirs(join(rootpath, resultspath), exist_ok=True)
 makedirs(join(rootpath, logpath), exist_ok=True)
-logger.add(join(rootpath, logpath, f'graphrnn_{dataset}_{mode}_timing.log'))
+logger.add(join(rootpath, logpath, f'graphrnn_{dataset}_{mode}_timing.log'), mode='w')
 
 loaded = load_data(dataset)
 graphs = [g for _, g in loaded]
@@ -67,11 +47,11 @@ if mode == 'static':  # static generation
     for t, graph in enumerate(graphs):
         input_graphs = 10 * [graph]
 
-        args, model, output = fit_timer(fit)(input_graphs, nn='rnn')
-        generated_graphs = gen_timer(gen)(args=args, model=model, output=output, num_gen=num_gen)
+        args, model, output = fit_timer(fit, logger)(input_graphs, nn='rnn')
+        generated_graphs = gen_timer(gen, logger)(args=args, model=model, output=output, num_gen=num_gen)
 
-        for trial, graph in enumerate(generated_graphs):
-            write_graph(graph, resultspath, f'{t}_{trial}.edgelist')
+        for trial, gen_graph in enumerate(generated_graphs):
+            write_graph(gen_graph, join(rootpath, resultspath), f'{t}_{trial}.edgelist')
 else:  # dynamic generation
     for t in range(len(graphs)):
         counter = 1
@@ -81,10 +61,10 @@ else:  # dynamic generation
             input_graphs.append(input_graphs[t - counter])
             counter += 1
 
-        args, model, output = fit_timer(fit)(input_graphs, nn='rnn')
-        generated_graphs = gen_timer(gen)(args=args, model=model, output=output, num_gen=num_gen)
+        args, model, output = fit_timer(fit, logger)(input_graphs, nn='rnn')
+        generated_graphs = gen_timer(gen, logger)(args=args, model=model, output=output, num_gen=num_gen)
 
         for trial, graph in enumerate(generated_graphs):
-            write_graph(graph, resultspath, f'{t}_{trial}.edgelist')
+            write_graph(graph, join(rootpath, resultspath), f'{t}_{trial}.edgelist')
         # for trial, graph in enumerate(generated_graphs):
-        #     write_graph(graph, resultspath, f'{t}_{trial}.edgelist')
+        #     write_graph(graph, join(rootpath, resultspath), f'{t}_{trial}.edgelist')
