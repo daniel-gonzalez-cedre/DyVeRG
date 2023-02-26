@@ -30,3 +30,5 @@
 2023-02-26 06:02:16.347 | INFO     | __main__:wrapper:32 - gen time elapsed: 6.203001248650253e-06
 2023-02-26 10:33:04.327 | INFO     | __main__:wrapper:22 - fit time elapsed: 32610.972073140016
 2023-02-26 10:33:04.327 | INFO     | __main__:wrapper:32 - gen time elapsed: 5.0549861043691635e-06
+2023-02-26 14:58:19.745 | INFO     | __main__:wrapper:22 - fit time elapsed: 26718.98102082801
+2023-02-26 14:58:19.746 | INFO     | __main__:wrapper:32 - gen time elapsed: 8.6090003605932e-06
