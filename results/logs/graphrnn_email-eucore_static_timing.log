@@ -1,2 +1,8 @@
 2023-02-25 16:39:49.246 | INFO     | __main__:wrapper:22 - fit time elapsed: 22718.896629993
 2023-02-25 16:39:49.246 | INFO     | __main__:wrapper:32 - gen time elapsed: 5.904999852646142e-06
+2023-02-25 22:04:33.524 | INFO     | __main__:wrapper:22 - fit time elapsed: 34952.328527975
+2023-02-25 22:04:33.525 | INFO     | __main__:wrapper:32 - gen time elapsed: 6.155998562462628e-06
+2023-02-26 04:16:53.135 | INFO     | __main__:wrapper:22 - fit time elapsed: 40837.159455229994
+2023-02-26 04:16:53.136 | INFO     | __main__:wrapper:32 - gen time elapsed: 5.998997949063778e-06
+2023-02-26 10:35:09.395 | INFO     | __main__:wrapper:22 - fit time elapsed: 41195.41393147501
+2023-02-26 10:35:09.396 | INFO     | __main__:wrapper:32 - gen time elapsed: 5.045993020758033e-06

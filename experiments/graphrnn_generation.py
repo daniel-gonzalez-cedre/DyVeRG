@@ -6,7 +6,7 @@ import git
 import torch
 import networkx as nx
 from loguru import logger
-torch.cuda.set_device(0)
+torch.cuda.set_device(1)
 
 from baselines.graphrnn.fit import fit
 from baselines.graphrnn.gen import gen
@@ -41,6 +41,10 @@ def write_graph(g, filepath, filename):
 dataset: str = input('dataset: ').lower()
 mode: str = input('static or dynamic? ').lower()
 num_gen: int = int(input('number of graphs to generate (at each timestep): ').lower())
+try:
+    start: int = int(input('start at index (default 0): ').lower())
+except ValueError:
+    start: int = 0
 perturb: bool = False
 
 assert dataset in ('email-dnc', 'email-enron', 'email-eucore', 'facebook-links')
@@ -78,7 +82,7 @@ else:  # dynamic generation
             counter += 1
 
         args, model, output = fit_timer(fit)(input_graphs, nn='rnn')
-        generated_graphs = gen_timer(gen)(args=args, model=model, output=output)
+        generated_graphs = gen_timer(gen)(args=args, model=model, output=output, num_gen=num_gen)
 
         for trial, graph in enumerate(generated_graphs):
             write_graph(graph, resultspath, f'{t}_{trial}.edgelist')

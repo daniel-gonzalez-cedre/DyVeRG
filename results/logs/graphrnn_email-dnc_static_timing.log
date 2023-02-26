@@ -24,3 +24,9 @@
 2023-02-25 17:42:29.987 | INFO     | __main__:wrapper:32 - gen time elapsed: 7.729999197181314e-06
 2023-02-25 18:19:39.269 | INFO     | __main__:wrapper:22 - fit time elapsed: 5977.663375957003
 2023-02-25 18:19:39.270 | INFO     | __main__:wrapper:32 - gen time elapsed: 7.689995982218534e-06
+2023-02-25 20:02:30.754 | INFO     | __main__:wrapper:22 - fit time elapsed: 20568.882658708004
+2023-02-25 20:02:30.756 | INFO     | __main__:wrapper:32 - gen time elapsed: 6.7350047174841166e-06
+2023-02-25 20:48:56.792 | INFO     | __main__:wrapper:22 - fit time elapsed: 6041.895810460992
+2023-02-25 20:48:56.792 | INFO     | __main__:wrapper:32 - gen time elapsed: 5.581998266279697e-06
+2023-02-26 02:37:52.266 | INFO     | __main__:wrapper:22 - fit time elapsed: 40649.528644178004
+2023-02-26 02:37:52.267 | INFO     | __main__:wrapper:32 - gen time elapsed: 3.7860008887946606e-06
