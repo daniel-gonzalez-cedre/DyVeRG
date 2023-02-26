@@ -7,7 +7,7 @@ import torch
 import networkx as nx
 torch.cuda.set_device(1)
 
-from generation.timers import fit_timer, gen_timer
+from baselines.timers import fit_timer, gen_timer
 from baselines.graphrnn.fit import fit
 from baselines.graphrnn.gen import gen
 from src.data import load_data

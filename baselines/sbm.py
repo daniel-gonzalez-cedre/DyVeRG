@@ -1,7 +1,5 @@
 from os import getcwd, makedirs
 from os.path import join
-from sys import path
-path.append('..')
 
 import git
 import networkx as nx
@@ -9,8 +7,7 @@ import pyintergraph as pig
 import graph_tool.all as gt
 from loguru import logger
 
-# from generation.timers import fit_timer, gen_timer
-from generation.timers import fit_timer, gen_timer
+from baselines.timers import fit_timer, gen_timer
 from src.data import load_data
 
 
