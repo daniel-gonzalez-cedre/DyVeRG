@@ -6,3 +6,5 @@
 2023-02-26 04:16:53.136 | INFO     | __main__:wrapper:32 - gen time elapsed: 5.998997949063778e-06
 2023-02-26 10:35:09.395 | INFO     | __main__:wrapper:22 - fit time elapsed: 41195.41393147501
 2023-02-26 10:35:09.396 | INFO     | __main__:wrapper:32 - gen time elapsed: 5.045993020758033e-06
+2023-02-26 16:38:03.738 | INFO     | __main__:wrapper:22 - fit time elapsed: 40005.32667364302
+2023-02-26 16:38:03.739 | INFO     | __main__:wrapper:32 - gen time elapsed: 5.025009158998728e-06
