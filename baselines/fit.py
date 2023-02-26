@@ -1,16 +1,34 @@
 from functools import partial
-from random import shuffle, seed  # graphrnn
 
 import numpy as np
 import networkx as nx
+from tqdm import tqdm
 
 from baselines.graphrnn.fit import fit
 # from baselines.graphrnn.train import *  # graphrnn
 # from baselines.graphrnn.train import random, shuffle
 
 from src.decomposition import decompose
-from dyverg.VRG import VRG
+from src.adjoin_graph import update_grammar
 from dyverg.LightMultiGraph import LightMultiGraph as LMG
+from dyverg.VRG import VRG
+
+
+def DyVeRG(graphs: list[nx.Graphs], times: list[int] = None,
+           mu: int = 4, clustering: int = 'leiden', verbose: bool = False) -> VRG:
+    if not times:
+        times = list(range(len(graphs)))
+
+    prior_g = graphs[0]
+    prior_t = times[0]
+    grammar = decompose(prior_g, time=prior_t, mu=mu, clustering=clustering)
+
+    for g, t in tqdm(zip(graphs[1:], times[1:]), desc='updating grammar', disable=(not verbose)):
+        grammar = update_grammar(grammar, prior_g, g, prior_t, t)
+        prior_g = g
+        prior_t = t
+
+    return grammar
 
 
 def VeRG(g: nx.Graph, t: int = None, mu: int = 4, clustering: int = 'leiden', verbose: bool = False) -> VRG:
