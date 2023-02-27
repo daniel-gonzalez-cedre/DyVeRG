@@ -50,8 +50,12 @@ def domestic(grammar: VRG, u: int, v: int, t1: int, t2: int, mode: str):  # TODO
         raise AssertionError(f'rule #{common_metarule.idn} is empty when it should not be')
 
     if mode == 'add':
-        assert mapping[u] in common_metarule[t2].graph
-        assert mapping[v] in common_metarule[t2].graph
+        try:
+            assert mapping[u] in common_metarule[t2].graph
+            assert mapping[v] in common_metarule[t2].graph
+        except:
+            import pdb
+            pdb.set_trace()
         common_metarule[t2].graph.add_edge(mapping[u], mapping[v])
     else:
         common_metarule[t2].graph.remove_edge(mapping[u], mapping[v])
