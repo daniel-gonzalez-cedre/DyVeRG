@@ -44,8 +44,8 @@ loaded = load_data(dataset)
 graphs = [g for _, g in loaded]
 
 for t, graph in enumerate(graphs):
-    params = fit_timer(chung_lu, logger)(graph)
-    generated_graphs = gen_timer(gen, logger)(params[0], params[1], directed=params[2], number=num_gen)
+    w, sl = fit_timer(chung_lu, logger)(graph)
+    generated_graphs = gen_timer(gen, logger)(w, sl, number=num_gen)
 
     for trial, gen_graph in enumerate(generated_graphs):
         write_graph(gen_graph, join(rootpath, resultspath), f'{t}_{trial}.edgelist')
