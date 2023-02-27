@@ -212,7 +212,7 @@ class VRG:
 
         return level
 
-    def generate(self, time: int, goal: int,
+    def generate(self, time: int, goal: int, multigraph: bool = False,
                  tolerance: float = 0.05, merge_rules: bool = True,
                  rule_order: bool = False, verbose: bool = False) -> tuple[LightMultiGraph, list[int]]:
         try:
