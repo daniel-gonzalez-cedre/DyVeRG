@@ -21,7 +21,7 @@ def read_edgelist(filepath: str, delimiter: str = ' ', times: bool = True) -> nx
 def load_data(dataname: str, mode: str = 'pruned') -> list:
     dataname = dataname.lower().strip()
     mode = mode.lower().strip()
-    assert dataname in ('email-dnc', 'email-eucore', 'email-enron', 'facebook-links')
+    assert dataname in ('email-dnc', 'email-eucore', 'email-enron', 'facebook-links', 'coauth-dblp')
     assert mode in ('full', 'pruned')
 
     rootpath = git.Repo(getcwd(), search_parent_directories=True).git.rev_parse("--show-toplevel")

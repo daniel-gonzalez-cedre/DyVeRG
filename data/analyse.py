@@ -1,5 +1,5 @@
 def analyse(dataname, mode):
-    assert dataname in ['email-dnc', 'email-enron', 'email-eucore', 'facebook-links']
+    assert dataname in ['email-dnc', 'email-enron', 'email-eucore', 'facebook-links', 'coauth-dblp']
     assert mode in ('r', 'raw', 'f', 'full', 'p', 'pruned')
 
     if mode in ('f', 'full'):  # full processed
@@ -20,6 +20,9 @@ def analyse(dataname, mode):
             delim = ' '
         elif dataname == 'facebook-links':
             ext = 'txt'
+            delim = '\t'
+        elif dataname == 'coauth-dblp':
+            ext = 'edgelist'
             delim = '\t'
         fname = f'{dataname}/{dataname}.{ext}'
 
