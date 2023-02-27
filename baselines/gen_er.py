@@ -38,7 +38,7 @@ logpath = 'results/logs/'
 
 makedirs(join(rootpath, resultspath), exist_ok=True)
 makedirs(join(rootpath, logpath), exist_ok=True)
-logger.add(join(rootpath, logpath, f'sbm_{dataset}_{mode}_timing.log'), mode='w')
+logger.add(join(rootpath, logpath, f'er_{dataset}_{mode}_timing.log'), mode='w')
 
 loaded = load_data(dataset)
 graphs = [g for _, g in loaded]
