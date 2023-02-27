@@ -4,18 +4,13 @@ import numpy as np
 import networkx as nx
 from tqdm import tqdm
 
-from baselines.graphrnn.fit import fit
-# from baselines.graphrnn.train import *  # graphrnn
-# from baselines.graphrnn.train import random, shuffle
-
-from src.decomposition import decompose
-from src.adjoin_graph import update_grammar
-from dyverg.LightMultiGraph import LightMultiGraph as LMG
 from dyverg.VRG import VRG
 
 
 def DyVeRG(graphs: list[nx.Graphs], times: list[int] = None,
            mu: int = 4, clustering: int = 'leiden', verbose: bool = False) -> VRG:
+    from src.decomposition import decompose
+    from src.adjoin_graph import update_grammar
     if not times:
         times = list(range(len(graphs)))
 
@@ -32,6 +27,7 @@ def DyVeRG(graphs: list[nx.Graphs], times: list[int] = None,
 
 
 def VeRG(g: nx.Graph, t: int = None, mu: int = 4, clustering: int = 'leiden', verbose: bool = False) -> VRG:
+    from src.decomposition import decompose
     return decompose(g, time=(t if t else 0), mu=mu, clustering=clustering, verbose=verbose)
 
 
@@ -40,6 +36,7 @@ def CNRG(g: nx.Graph):
 
 
 def graphRNN(graphs: list[nx.Graph], nn: str = 'rnn') -> tuple:
+    from baselines.graphrnn.fit import fit
     return fit(graphs, nn=nn)
     # return {'args': args, 'model': model, 'output': output}
 
@@ -72,36 +69,3 @@ def stochastic_blockmodel(g: nx.Graph):
     graph_gt = nx2gt(g)
     state = opt(graph_gt)
     return state
-
-
-def watts_strogatz(g: nx.Graph):
-    rng = np.random.default_rng()
-    n: int = g.order()
-    m: int = g.size()
-    avg: float = 2 * m / n
-
-    k: int = int(avg)
-    p: float = avg - k
-
-    def ws_distance(u: int, v: int):
-        return min((u - v) % n, (v - u) % n)
-
-    h = LMG() if isinstance(g, LMG) else nx.Graph()
-    h.add_nodes_from(list(range(n)))
-
-    for u in h:
-        k_ball = [v for v in h
-                  if (u != v) and (ws_distance(u, v) <= k)]
-        k_ball = sorted(k_ball, key=partial(ws_distance, u))
-
-        for v in k_ball[:k]:
-            if (u, v) not in h.edges():
-                h.add_edge(u, v)
-
-        if (p == 1.0) or (rng.uniform() < p):
-            for v in k_ball[k:]:
-                if (u, v) not in h.edges():
-                    h.add_edge(u, v)
-                    break
-
-    return h
