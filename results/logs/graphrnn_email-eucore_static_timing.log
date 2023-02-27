@@ -8,3 +8,13 @@
 2023-02-26 10:35:09.396 | INFO     | __main__:wrapper:32 - gen time elapsed: 5.045993020758033e-06
 2023-02-26 16:38:03.738 | INFO     | __main__:wrapper:22 - fit time elapsed: 40005.32667364302
 2023-02-26 16:38:03.739 | INFO     | __main__:wrapper:32 - gen time elapsed: 5.025009158998728e-06
+2023-02-26 21:03:37.084 | INFO     | __main__:wrapper:22 - fit time elapsed: 27864.177588858
+2023-02-26 21:03:37.084 | INFO     | __main__:wrapper:32 - gen time elapsed: 5.49902324564755e-06
+2023-02-27 01:54:40.454 | INFO     | __main__:wrapper:22 - fit time elapsed: 30721.026291705
+2023-02-27 01:54:40.455 | INFO     | __main__:wrapper:32 - gen time elapsed: 5.081994459033012e-06
+2023-02-27 04:51:40.361 | INFO     | __main__:wrapper:22 - fit time elapsed: 14769.08265576302
+2023-02-27 04:51:40.362 | INFO     | __main__:wrapper:32 - gen time elapsed: 4.169007297605276e-06
+2023-02-27 07:12:38.827 | INFO     | __main__:wrapper:22 - fit time elapsed: 14296.666179763968
+2023-02-27 07:12:38.828 | INFO     | __main__:wrapper:32 - gen time elapsed: 4.1959574446082115e-06
+2023-02-27 09:34:47.021 | INFO     | __main__:wrapper:22 - fit time elapsed: 16884.75973256398
+2023-02-27 09:34:47.022 | INFO     | __main__:wrapper:32 - gen time elapsed: 6.033980753272772e-06

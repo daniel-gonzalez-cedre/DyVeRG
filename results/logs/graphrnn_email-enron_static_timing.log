@@ -48,3 +48,13 @@
 2023-02-26 19:04:56.997 | INFO     | __main__:wrapper:32 - gen time elapsed: 3.5850098356604576e-06
 2023-02-26 20:02:29.709 | INFO     | __main__:wrapper:22 - fit time elapsed: 12585.02841993398
 2023-02-26 20:02:29.709 | INFO     | __main__:wrapper:32 - gen time elapsed: 5.400041118264198e-06
+2023-02-26 20:37:59.130 | INFO     | __main__:wrapper:22 - fit time elapsed: 5673.835910759983
+2023-02-26 20:37:59.131 | INFO     | __main__:wrapper:32 - gen time elapsed: 7.338006980717182e-06
+2023-02-26 22:37:00.151 | INFO     | __main__:wrapper:22 - fit time elapsed: 23513.798762097023
+2023-02-26 22:37:00.152 | INFO     | __main__:wrapper:32 - gen time elapsed: 5.399982910603285e-06
+2023-02-26 23:15:17.637 | INFO     | __main__:wrapper:22 - fit time elapsed: 5868.596828738984
+2023-02-26 23:15:17.641 | INFO     | __main__:wrapper:32 - gen time elapsed: 6.173970177769661e-06
+2023-02-26 23:39:11.713 | INFO     | __main__:wrapper:22 - fit time elapsed: 1034.7986823460087
+2023-02-26 23:39:11.713 | INFO     | __main__:wrapper:32 - gen time elapsed: 6.5899803303182125e-06
+2023-02-26 23:57:48.584 | INFO     | __main__:wrapper:22 - fit time elapsed: 786.307337183971
+2023-02-26 23:57:48.585 | INFO     | __main__:wrapper:32 - gen time elapsed: 7.399998139590025e-06

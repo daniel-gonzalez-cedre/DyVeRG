@@ -7,7 +7,7 @@ import git
 import torch
 import networkx as nx
 from loguru import logger
-torch.cuda.set_device(0)
+torch.cuda.set_device(1)
 
 from baselines.fit import graphRNN
 from baselines.graphrnn.train import test_rnn_epoch
@@ -55,7 +55,7 @@ if mode == 'static':  # static generation
         input_graphs = 10 * [graph]
 
         params = fit_timer(graphRNN, logger)(input_graphs, nn='rnn')
-        generated_graphs = gen_timer(gen, logger)(args=params[0], model=params[1], output=params[2], num_gen=num_gen)
+        generated_graphs = gen_timer(gen, logger)(args=params[0], model=params[1], output=params[2], number=num_gen)
 
         for trial, gen_graph in enumerate(generated_graphs):
             write_graph(gen_graph, join(rootpath, resultspath), f'{t}_{trial}.edgelist')
@@ -69,7 +69,7 @@ else:  # dynamic generation
             counter += 1
 
         params = fit_timer(graphRNN, logger)(input_graphs, nn='rnn')
-        generated_graphs = gen_timer(gen, logger)(args=params[0], model=params[1], output=params[2], num_gen=num_gen)
+        generated_graphs = gen_timer(gen, logger)(args=params[0], model=params[1], output=params[2], number=num_gen)
 
         for trial, graph in enumerate(generated_graphs):
             write_graph(graph, join(rootpath, resultspath), f'{t}_{trial}.edgelist')
