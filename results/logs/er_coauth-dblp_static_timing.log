@@ -1,0 +1,9 @@
+2023-02-27 14:54:56.063 | INFO     | baselines.timers:wrapper:19 - fit time elapsed: 0.007224257000000733
+2023-02-27 14:57:50.308 | INFO     | baselines.timers:wrapper:29 - gen time elapsed: 174.24305394299998
+2023-02-27 14:57:50.827 | INFO     | baselines.timers:wrapper:19 - fit time elapsed: 0.00892628799999784
+2023-02-27 15:01:41.823 | INFO     | baselines.timers:wrapper:29 - gen time elapsed: 230.99470088600003
+2023-02-27 15:01:42.443 | INFO     | baselines.timers:wrapper:19 - fit time elapsed: 0.010519134999981361
+2023-02-27 15:06:47.451 | INFO     | baselines.timers:wrapper:29 - gen time elapsed: 305.005216863
+2023-02-27 15:06:48.178 | INFO     | baselines.timers:wrapper:19 - fit time elapsed: 0.012078208000048107
+2023-02-27 15:14:30.550 | INFO     | baselines.timers:wrapper:29 - gen time elapsed: 462.36877167700004
+2023-02-27 15:14:31.447 | INFO     | baselines.timers:wrapper:19 - fit time elapsed: 0.02342410200003542
