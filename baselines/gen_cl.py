@@ -29,7 +29,7 @@ try:
 except ValueError:
     start: int = 0
 
-assert dataset in ('email-dnc', 'email-enron', 'email-eucore', 'facebook-links', 'coath-dblp')
+assert dataset in ('email-dnc', 'email-enron', 'email-eucore', 'facebook-links', 'coauth-dblp')
 assert isinstance(num_gen, int)
 
 rootpath = git.Repo(getcwd(), search_parent_directories=True).git.rev_parse("--show-toplevel")
