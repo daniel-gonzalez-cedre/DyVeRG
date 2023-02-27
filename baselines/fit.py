@@ -55,9 +55,9 @@ def erdos_renyi(g: nx.Graph, directed: bool = False) -> tuple:
     # return nx.erdos_renyi_graph(n, p, directed=directed)
 
 
-def chung_lu(g: nx.Graph) -> nx.Graph:
-    w = list(dict(nx.degree(g)).values())
-    return nx.expected_degree_graph(w, selfloops=(nx.number_of_selfloops(g) > 0))
+def chung_lu(g: nx.Graph) -> tuple:
+    return list(dict(nx.degree(g)).values()), (nx.number_of_selfloops(g) > 0)
+    # return nx.expected_degree_graph(w, selfloops=(nx.number_of_selfloops(g) > 0))
 
 
 def stochastic_blockmodel(g: nx.Graph):

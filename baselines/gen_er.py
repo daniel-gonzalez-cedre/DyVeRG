@@ -29,7 +29,7 @@ try:
 except ValueError:
     start: int = 0
 
-assert dataset in ('email-dnc', 'email-enron', 'email-eucore', 'facebook-links')
+assert dataset in ('email-dnc', 'email-enron', 'email-eucore', 'facebook-links', 'coauth-dblp')
 assert isinstance(num_gen, int)
 
 rootpath = git.Repo(getcwd(), search_parent_directories=True).git.rev_parse("--show-toplevel")
@@ -42,7 +42,6 @@ logger.add(join(rootpath, logpath, f'er_{dataset}_{mode}_timing.log'), mode='w')
 
 loaded = load_data(dataset)
 graphs = [g for _, g in loaded]
-
 
 for t, graph in enumerate(graphs):
     params = fit_timer(erdos_renyi, logger)(graph, directed=False)
