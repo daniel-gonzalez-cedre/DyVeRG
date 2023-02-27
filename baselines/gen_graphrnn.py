@@ -7,15 +7,20 @@ import torch
 import networkx as nx
 torch.cuda.set_device(1)
 
+from baselines.fit import graphRNN
+from baselines.graphrnn.train import test_rnn_epoch
 from baselines.timers import fit_timer, gen_timer
-from baselines.graphrnn.fit import fit
-from baselines.graphrnn.gen import gen
 from src.data import load_data
 # from src.utils import mkdir
 
 
 def write_graph(g, filepath, filename):
     nx.write_edgelist(g, join(filepath, filename))
+
+
+def gen(args, model, output, number=1):
+    for generated in test_rnn_epoch(0, args, model, output, test_batch_size=number):
+        yield generated
 
 
 dataset: str = input('dataset: ').lower()
@@ -47,8 +52,8 @@ if mode == 'static':  # static generation
     for t, graph in enumerate(graphs):
         input_graphs = 10 * [graph]
 
-        args, model, output = fit_timer(fit, logger)(input_graphs, nn='rnn')
-        generated_graphs = gen_timer(gen, logger)(args=args, model=model, output=output, num_gen=num_gen)
+        params = fit_timer(graphRNN, logger)(input_graphs, nn='rnn')
+        generated_graphs = gen_timer(gen, logger)(args=params[0], model=params[1], output=params[2], num_gen=num_gen)
 
         for trial, gen_graph in enumerate(generated_graphs):
             write_graph(gen_graph, join(rootpath, resultspath), f'{t}_{trial}.edgelist')
@@ -61,8 +66,8 @@ else:  # dynamic generation
             input_graphs.append(input_graphs[t - counter])
             counter += 1
 
-        args, model, output = fit_timer(fit, logger)(input_graphs, nn='rnn')
-        generated_graphs = gen_timer(gen, logger)(args=args, model=model, output=output, num_gen=num_gen)
+        params = fit_timer(graphRNN, logger)(input_graphs, nn='rnn')
+        generated_graphs = gen_timer(gen, logger)(args=params[0], model=params[1], output=params[2], num_gen=num_gen)
 
         for trial, graph in enumerate(generated_graphs):
             write_graph(graph, join(rootpath, resultspath), f'{t}_{trial}.edgelist')

@@ -39,8 +39,8 @@ def CNRG(g: nx.Graph):
     raise NotImplementedError
 
 
-def graphRNN(graphs: list[nx.Graph]) -> tuple:
-    return fit(graphs)
+def graphRNN(graphs: list[nx.Graph], nn: str = 'rnn') -> tuple:
+    return fit(graphs, nn=nn)
     # return {'args': args, 'model': model, 'output': output}
 
 
@@ -63,6 +63,15 @@ def erdos_renyi(g: nx.Graph, directed: bool = False) -> nx.Graph:
 def chung_lu(g: nx.Graph) -> nx.Graph:
     w = list(dict(nx.degree(g)).values())
     return nx.expected_degree_graph(w, selfloops=(nx.number_of_selfloops(g) > 0))
+
+
+def stochastic_blockmodel(g: nx.Graph):
+    from pyintergraph import nx2gt
+    from graph_tool.all import minimize_blockmodel_dl as opt
+
+    graph_gt = nx2gt(g)
+    state = opt(graph_gt)
+    return state
 
 
 def watts_strogatz(g: nx.Graph):
@@ -94,115 +103,5 @@ def watts_strogatz(g: nx.Graph):
                 if (u, v) not in h.edges():
                     h.add_edge(u, v)
                     break
-
-    return h
-
-
-def barabasi_albert(g: nx.Graph):
-    pass
-
-
-def stochastic_block(g: nx.Graph):
-    raise NotImplementedError
-    # return nx.stochastic_block_model()
-
-###############################################
-###############################################
-###############################################
-
-def _uniform(g: nx.Graph, simple: bool = True):
-    rng = np.random.default_rng()
-    m = g.size()
-
-    nodes = list(g.nodes())
-    h = LMG() if isinstance(g, LMG) else nx.Graph()
-    h.add_nodes_from(nodes)
-
-    while m > 0:
-        u, v = rng.choice(nodes, 2)
-        if simple:
-            while u == v:
-                u, v = rng.choice(nodes, 2)
-
-        if isinstance(h, LMG) or (u, v) not in h.edges():
-            h.add_edge(u, v)
-            m -= 1
-
-    return h
-
-
-def _erdos_renyi(g: nx.Graph, directed: bool = False) -> nx.Graph:
-    rng = np.random.default_rng()
-    n = g.order()
-    m = g.size()
-
-    if not directed:
-        p = (2 * m) / (n * (n - 1))
-    else:
-        p = m / (n * (n - 1))
-
-    h = LMG() if isinstance(g, LMG) else nx.Graph()
-    h.add_nodes_from(g.nodes())
-
-    for u in h:
-        for v in h:
-            if rng.choice((True, False), p=(p, 1 - p)):
-                h.add_edge(u, v)
-
-    return h
-
-
-def _chung_lu(g: nx.Graph, simple: bool = True):
-    rng = np.random.default_rng()
-    degrees = {v: g.degree(v) for v in g}
-
-    h = LMG() if isinstance(g, LMG) else nx.Graph()
-    h.add_nodes_from(g)
-
-    while degrees:
-        nodes = list(degrees.keys())
-        u, v = rng.choice(nodes, 2)
-
-        if simple:
-            while u == v:
-                u, v = rng.choice(nodes, 2)
-
-        assert degrees[u] != 0
-        assert degrees[v] != 0
-
-        if isinstance(h, LMG) or (u, v) not in h.edges():
-            h.add_edge(u, v)
-
-            if degrees[u] == 1:
-                del degrees[u]
-            else:
-                degrees[u] -= 1
-
-            if degrees[v] == 1:
-                del degrees[v]
-            else:
-                degrees[v] -= 1
-
-    return h
-
-
-def _chung_lu_switch(g: nx.Graph, num_switches: int = None, simple: bool = True):
-    rng = np.random.default_rng()
-    num_switches = num_switches if num_switches else g.size()
-    h = g.copy()
-
-    while num_switches > 0:
-        e, f = rng.choice(list(h.edges()), 2)
-        eu, ev = e
-        fu, fv = f
-
-        if simple and ((eu, fv) in h.edges() or (fu, ev) in h.edges()):
-            continue
-
-        h.remove_edge(eu, ev)
-        h.remove_edge(fu, fv)
-        h.add_edge(eu, ev)
-        h.add_edge(fu, fv)
-        num_switches -= 1
 
     return h

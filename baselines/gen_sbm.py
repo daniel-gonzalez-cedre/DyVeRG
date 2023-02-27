@@ -7,6 +7,7 @@ import pyintergraph as pig
 import graph_tool.all as gt
 from loguru import logger
 
+from baselines.fit import stochastic_blockmodel
 from baselines.timers import fit_timer, gen_timer
 from src.data import load_data
 
@@ -23,10 +24,10 @@ def graphtool_to_networkx(graph_gt) -> nx.Graph:
     return pig.InterGraph.from_graph_tool(graph_gt).to_networkx()
 
 
-def fit(graph_nx: nx.Graph):
-    graph_gt = networkx_to_graphtool(graph_nx)
-    state = gt.minimize_blockmodel_dl(graph_gt)
-    return state
+# def fit(graph_nx: nx.Graph):
+#     graph_gt = networkx_to_graphtool(graph_nx)
+#     state = gt.minimize_blockmodel_dl(graph_gt)
+#     return state
 
 
 def gen(state, number: int = 1) -> list[nx.Graph]:
@@ -66,7 +67,7 @@ loaded = load_data(dataset)
 graphs = [g for _, g in loaded]
 
 for t, graph in enumerate(graphs):
-    params = fit_timer(fit, logger)(graph)
+    params = fit_timer(stochastic_blockmodel, logger)(graph)
     generated_graphs = gen_timer(gen, logger)(params, number=num_gen)
 
     for trial, gen_graph in enumerate(generated_graphs):
