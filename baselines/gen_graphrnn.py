@@ -1,10 +1,12 @@
 from os import getcwd, makedirs
 from os.path import join
-from loguru import logger
+import sys
+sys.path.extend(['.', '..'])
 
 import git
 import torch
 import networkx as nx
+from loguru import logger
 torch.cuda.set_device(1)
 
 from baselines.fit import graphRNN

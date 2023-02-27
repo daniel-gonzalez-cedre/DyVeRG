@@ -7,7 +7,7 @@ from tqdm import tqdm
 from dyverg.VRG import VRG
 
 
-def DyVeRG(graphs: list[nx.Graphs], times: list[int] = None,
+def DyVeRG(graphs: list[nx.Graph], times: list[int] = None,
            mu: int = 4, clustering: int = 'leiden', verbose: bool = False) -> VRG:
     from src.decomposition import decompose
     from src.adjoin_graph import update_grammar
@@ -45,7 +45,7 @@ def uniform(g: nx.Graph, directed: bool = False) -> nx.Graph:
     return nx.gnm_random_graph(g.order(), g.size(), directed=directed)
 
 
-def erdos_renyi(g: nx.Graph, directed: bool = False) -> nx.Graph:
+def erdos_renyi(g: nx.Graph, directed: bool = False) -> tuple[int, float, bool]:
     n = g.order()
     m = g.size()
 
@@ -54,7 +54,8 @@ def erdos_renyi(g: nx.Graph, directed: bool = False) -> nx.Graph:
     else:
         p = m / (n * (n - 1))
 
-    return nx.erdos_renyi_graph(n, p, directed=directed)
+    return n, p, directed
+    # return nx.erdos_renyi_graph(n, p, directed=directed)
 
 
 def chung_lu(g: nx.Graph) -> nx.Graph:
