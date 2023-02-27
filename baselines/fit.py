@@ -4,11 +4,8 @@ import numpy as np
 import networkx as nx
 from tqdm import tqdm
 
-from dyverg.VRG import VRG
 
-
-def DyVeRG(graphs: list[nx.Graph], times: list[int] = None,
-           mu: int = 4, clustering: int = 'leiden', verbose: bool = False) -> VRG:
+def DyVeRG(graphs: list, times: list = None, mu: int = 4, clustering: int = 'leiden', verbose: bool = False):
     from src.decomposition import decompose
     from src.adjoin_graph import update_grammar
     if not times:
@@ -26,7 +23,7 @@ def DyVeRG(graphs: list[nx.Graph], times: list[int] = None,
     return grammar
 
 
-def VeRG(g: nx.Graph, t: int = None, mu: int = 4, clustering: int = 'leiden', verbose: bool = False) -> VRG:
+def VeRG(g: nx.Graph, t: int = None, mu: int = 4, clustering: int = 'leiden', verbose: bool = False):
     from src.decomposition import decompose
     return decompose(g, time=(t if t else 0), mu=mu, clustering=clustering, verbose=verbose)
 
@@ -35,7 +32,7 @@ def CNRG(g: nx.Graph):
     raise NotImplementedError
 
 
-def graphRNN(graphs: list[nx.Graph], nn: str = 'rnn') -> tuple:
+def graphRNN(graphs: list, nn: str = 'rnn') -> tuple:
     from baselines.graphrnn.fit import fit
     return fit(graphs, nn=nn)
     # return {'args': args, 'model': model, 'output': output}
@@ -45,7 +42,7 @@ def uniform(g: nx.Graph, directed: bool = False) -> nx.Graph:
     return nx.gnm_random_graph(g.order(), g.size(), directed=directed)
 
 
-def erdos_renyi(g: nx.Graph, directed: bool = False) -> tuple[int, float, bool]:
+def erdos_renyi(g: nx.Graph, directed: bool = False) -> tuple:
     n = g.order()
     m = g.size()
 
