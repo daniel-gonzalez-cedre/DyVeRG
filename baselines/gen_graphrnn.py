@@ -30,8 +30,10 @@ mode: str = input('static or dynamic? ').lower()
 num_gen: int = int(input('number of graphs to generate (at each timestep): ').lower())
 try:
     start: int = int(input('start at index (default 0): ').lower())
+    logmode: str = 'w' if start <= 0 else 'a'
 except ValueError:
     start: int = 0
+    logmode: str = 'w'
 perturb: bool = False
 
 assert dataset in ('email-dnc', 'email-enron', 'email-eucore', 'facebook-links')
@@ -45,7 +47,7 @@ logpath = 'results/logs/'
 
 makedirs(join(rootpath, resultspath), exist_ok=True)
 makedirs(join(rootpath, logpath), exist_ok=True)
-logger.add(join(rootpath, logpath, f'graphrnn_{dataset}_{mode}_timing.log'), mode='w')
+logger.add(join(rootpath, logpath, f'graphrnn_{dataset}_{mode}_timing.log'), mode=logmode)
 
 loaded = load_data(dataset)
 graphs = [g for _, g in loaded]
