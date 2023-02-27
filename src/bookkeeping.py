@@ -98,13 +98,17 @@ def propagate_ancestors(nts: str, rule_idx: int, child_lhs: int, grammar: VRG,
         metarule[t2].graph.add_node(nts, b_deg=0, label=child_lhs)
 
     if mode == 'add':
+        # metarule[t2].lhs += 1
         metarule[t2].lhs = max(1, metarule[t2].lhs + 1)
+        # metarule[t2].graph.nodes[nts]['label'] += 1
+        metarule[t2].graph.nodes[nts]['label'] = max(1, metarule[t2].graph.nodes[nts]['label'] + 1)
         metarule[t2].graph.nodes[nts]['b_deg'] += 1
-        metarule[t2].graph.nodes[nts]['label'] += 1
     else:
-        metarule[t2].lhs -= 1
+        # metarule[t2].lhs -= 1
+        metarule[t2].lhs = max(0, metarule[t2].lhs - 1)
+        # metarule[t2].graph.nodes[nts]['label'] -= 1
+        metarule[t2].graph.nodes[nts]['label'] = max(0, metarule[t2].graph.nodes[nts]['label'] - 1)
         metarule[t2].graph.nodes[nts]['b_deg'] -= 1
-        metarule[t2].graph.nodes[nts]['label'] -= 1
 
         if metarule[t2].graph.nodes[nts]['b_deg'] < 0:
             import pdb
@@ -122,11 +126,13 @@ def propagate_descendants(nts: str, rule_idx: int, grammar: VRG, t1: int, t2: in
 
         if mode == 'add':
             (v, d), = random.sample(child_metarule[t2].graph.nodes(data=True), 1)
+            # child_metarule[t2].lhs += 1
+            child_metarule[t2].lhs = max(1, child_metarule[t2].lhs + 1)
             d['b_deg'] += 1
-            child_metarule[t2].lhs += 1
 
             if 'label' in d:
-                d['label'] += 1
+                # d['label'] += 1
+                d['label'] = max(1, d['label'] + 1)
                 propagate_descendants(v, child_idx, grammar, t1, t2, mode=mode)
         else:
             assert sum(d['b_deg'] for v, d in child_metarule[t2].graph.nodes(data=True)) > 0
@@ -135,9 +141,11 @@ def propagate_descendants(nts: str, rule_idx: int, grammar: VRG, t1: int, t2: in
             while d['b_deg'] == 0:
                 (v, d), = random.sample(child_metarule[t2].graph.nodes(data=True), 1)
 
+            # child_metarule[t2].lhs -= 1
+            child_metarule[t2].lhs = max(0, child_metarule[t2].lhs - 1)
             d['b_deg'] -= 1
-            child_metarule[t2].lhs -= 1
 
             if 'label' in d:
-                d['label'] -= 1
+                # d['label'] -= 1
+                d['label'] = max(0, d['label'] - 1)
                 propagate_descendants(v, child_idx, grammar, t1, t2, mode=mode)

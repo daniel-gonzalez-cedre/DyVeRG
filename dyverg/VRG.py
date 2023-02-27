@@ -215,22 +215,27 @@ class VRG:
     def generate(self, time: int, goal: int,
                  tolerance: float = 0.05, merge_rules: bool = True,
                  rule_order: bool = False, verbose: bool = False) -> tuple[LightMultiGraph, list[int]]:
-        lower_bound = int(goal * (1 - tolerance))
-        upper_bound = int(goal * (1 + tolerance))
-        max_attempts = 10000
+        try:
+            lower_bound = int(goal * (1 - tolerance))
+            upper_bound = int(goal * (1 + tolerance))
+            max_attempts = 100000
 
-        ruledict = self.compute_rules(time, merge=merge_rules)
-        for _ in tqdm(range(max_attempts), desc='timeout meter', disable=(not verbose)):
-            g, ro = self._generate(ruledict, upper_bound)
+            ruledict = self.compute_rules(time, merge=merge_rules)
+            for _ in tqdm(range(max_attempts), desc='timeout meter', disable=(not verbose)):
+                g, ro = self._generate(ruledict, upper_bound)
 
-            if (g is not None) and (lower_bound <= g.order() <= upper_bound):
-                # if verbose:
-                #     tqdm.write(f'Generation succeeded after {attempt} attempts.')
-                if rule_order:
-                    return g, ro
-                return g
+                if (g is not None) and (lower_bound <= g.order() <= upper_bound):
+                    # if verbose:
+                    #     tqdm.write(f'Generation succeeded after {attempt} attempts.')
+                    if rule_order:
+                        return g, ro
+                    return g
 
-        raise TimeoutError(f'Generation failed after exceeding {max_attempts} attempts.')
+            raise TimeoutError(f'Generation failed after exceeding {max_attempts} attempts.')
+        except TimeoutError:
+            return self.generate(time, goal,
+                                 tolerance=(2 * tolerance), merge_rules=merge_rules,
+                                 rule_order=rule_order, verbose=verbose)
 
     def _generate(self, ruledict, upper_bound) -> tuple[LightMultiGraph, list[int]]:
         node_counter = 1

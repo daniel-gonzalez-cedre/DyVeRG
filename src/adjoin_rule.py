@@ -58,13 +58,17 @@ def domestic(grammar: VRG, u: int, v: int, t1: int, t2: int, mode: str):  # TODO
         assert common_idx != uparent_idx
 
         if mode == 'add':
-            common_metarule[t2].graph.nodes[mapping[u]]['label'] += 1
+            # common_metarule[t2].graph.nodes[mapping[u]]['label'] += 1
+            # uparent_metarule[t2].lhs += 1
+            common_metarule[t2].graph.nodes[mapping[u]]['label'] = max(1, common_metarule[t2].graph.nodes[mapping[u]]['label'] + 1)
+            uparent_metarule[t2].lhs = max(1, uparent_metarule[t2].lhs + 1)
             uparent_metarule[t2].graph.nodes[ancestor_u]['b_deg'] += 1
-            uparent_metarule[t2].lhs += 1
         else:
-            common_metarule[t2].graph.nodes[mapping[u]]['label'] -= 1
+            # common_metarule[t2].graph.nodes[mapping[u]]['label'] -= 1
+            # uparent_metarule[t2].lhs -= 1
+            common_metarule[t2].graph.nodes[mapping[u]]['label'] = max(0, common_metarule[t2].graph.nodes[mapping[u]]['label'] - 1)
+            uparent_metarule[t2].lhs = max(0, uparent_metarule[t2].lhs - 1)
             uparent_metarule[t2].graph.nodes[ancestor_u]['b_deg'] -= 1
-            uparent_metarule[t2].lhs -= 1
 
             if uparent_metarule[t2].graph.nodes[ancestor_u]['b_deg'] < 0:
                 raise AssertionError
@@ -75,13 +79,17 @@ def domestic(grammar: VRG, u: int, v: int, t1: int, t2: int, mode: str):  # TODO
         assert common_idx != vparent_idx
 
         if mode == 'add':
-            common_metarule[t2].graph.nodes[mapping[v]]['label'] += 1
+            # common_metarule[t2].graph.nodes[mapping[v]]['label'] += 1
+            # vparent_metarule[t2].lhs += 1
+            common_metarule[t2].graph.nodes[mapping[v]]['label'] = max(1, common_metarule[t2].graph.nodes[mapping[v]]['label'] + 1)
+            vparent_metarule[t2].lhs = max(1, vparent_metarule[t2].lhs + 1)
             vparent_metarule[t2].graph.nodes[ancestor_v]['b_deg'] += 1
-            vparent_metarule[t2].lhs += 1
         else:
-            common_metarule[t2].graph.nodes[mapping[v]]['label'] -= 1
+            # common_metarule[t2].graph.nodes[mapping[v]]['label'] -= 1
+            # vparent_metarule[t2].lhs -= 1
+            common_metarule[t2].graph.nodes[mapping[v]]['label'] = max(0, common_metarule[t2].graph.nodes[mapping[v]]['label'] - 1)
+            vparent_metarule[t2].lhs = max(0, vparent_metarule[t2].lhs - 1)
             vparent_metarule[t2].graph.nodes[ancestor_v]['b_deg'] -= 1
-            vparent_metarule[t2].lhs -= 1
 
             if vparent_metarule[t2].graph.nodes[ancestor_v]['b_deg'] < 0:
                 raise AssertionError
@@ -125,7 +133,8 @@ def diplomatic(grammar: VRG, u: int, v: int, t1: int, t2: int):  # TODO: update 
     grammar.cover[t2][v] = parent_idx
 
     if 'label' in parent_metarule[t2].graph.nodes[ancestor_u]:  # propagate changes downstream
-        parent_metarule[t2].graph.nodes[ancestor_u]['label'] += 1  # one more edge incident on this symbol
+        # parent_metarule[t2].graph.nodes[ancestor_u]['label'] += 1  # one more edge incident on this symbol
+        parent_metarule[t2].graph.nodes[ancestor_u]['label'] = max(1, parent_metarule[t2].graph.nodes[ancestor_u]['label'] + 1)  # one more edge incident on this symbol
         propagate_descendants(ancestor_u, parent_idx, grammar, t1, t2, mode='add')
 
 
