@@ -28,24 +28,24 @@ def domestic(grammar: VRG, u: int, v: int, t1: int, t2: int, mode: str):  # TODO
     uparent_idx, uparent_metarule, ancestor_u = ancestor(u, grammar)
     if ancestor_u not in uparent_metarule[t2].graph:
         assert mode != 'del'
-        # if uparent_metarule[t2].graph.order() == 0:
-        unseal(grammar,
-               grammar.decomposition[uparent_idx][1],
-               grammar.decomposition[uparent_idx][2],
-               uparent_metarule[t2].lhs,
-               t2)
+        if uparent_metarule[t2].graph.order() == 0:
+            unseal(grammar,
+                   grammar.decomposition[uparent_idx][1],
+                   grammar.decomposition[uparent_idx][2],
+                   uparent_metarule[t2].lhs,
+                   t2)
         uparent_metarule[t2].graph.add_node(ancestor_u, b_deg=0)
         grammar.cover[t2][u] = uparent_idx
 
     vparent_idx, vparent_metarule, ancestor_v = ancestor(v, grammar)
     if ancestor_v not in vparent_metarule[t2].graph:
         assert mode != 'del'
-        # if vparent_metarule[t2].graph.order() == 0:
-        unseal(grammar,
-               grammar.decomposition[vparent_idx][1],
-               grammar.decomposition[vparent_idx][2],
-               uparent_metarule[t2].lhs,
-               t2)
+        if vparent_metarule[t2].graph.order() == 0:
+            unseal(grammar,
+                   grammar.decomposition[vparent_idx][1],
+                   grammar.decomposition[vparent_idx][2],
+                   uparent_metarule[t2].lhs,
+                   t2)
         vparent_metarule[t2].graph.add_node(ancestor_v, b_deg=0)
         grammar.cover[t2][v] = vparent_idx
 
@@ -126,12 +126,12 @@ def diplomatic(grammar: VRG, u: int, v: int, t1: int, t2: int):  # TODO: update 
     """
     parent_idx, parent_metarule, ancestor_u = ancestor(u, grammar)
 
-    # if parent_metarule[t2].graph.order() == 0:
-    unseal(grammar,
-           grammar.decomposition[parent_idx][1],
-           grammar.decomposition[parent_idx][2],
-           parent_metarule[t2].lhs,
-           t2)
+    if parent_metarule[t2].graph.order() == 0:
+        unseal(grammar,
+               grammar.decomposition[parent_idx][1],
+               grammar.decomposition[parent_idx][2],
+               parent_metarule[t2].lhs,
+               t2)
 
     if ancestor_u not in parent_metarule[t2].graph:
         parent_metarule[t2].graph.add_node(ancestor_u, b_deg=0)
