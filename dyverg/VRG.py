@@ -280,11 +280,7 @@ class VRG:
             for n, d in rhs.nodes(data=True):
                 new_node = node_counter
                 node_map[n] = new_node
-                try:
-                    attr = {'b_deg': d['b_deg']}
-                except:
-                    import pdb
-                    pdb.set_trace()
+                attr = {'b_deg': d['b_deg']}
 
                 if 'label' in d:
                     attr['label'] = d['label']
