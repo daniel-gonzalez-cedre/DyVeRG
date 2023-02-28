@@ -136,7 +136,7 @@ class VRG:
         # self.ruledict[time] = {}
         ruledict = {}  # lhs |-> [(rule, freq), ...]
         candidates = [metarule[time] for metarule, _, _ in self.decomposition
-                      if time in metarule.times]
+                      if time in metarule.times]  # if (time in metarule.times) and (metarule[time].graph.order() != 0)]
 
         # for rule in candidates:
         #     rule.frequency = 1

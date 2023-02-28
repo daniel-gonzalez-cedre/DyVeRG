@@ -100,6 +100,8 @@ def propagate_ancestors(nts: str, rule_idx: int, child_lhs: int, grammar: VRG,
         # import pdb
         # pdb.set_trace()
         metarule[t2].graph.add_node(nts, b_deg=child_lhs, label=child_lhs)
+    else:
+        metarule[t2].graph.nodes[nts]['label'] = child_lhs
 
     if mode == 'add':
         # metarule[t2].lhs += 1
