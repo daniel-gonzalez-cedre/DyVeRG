@@ -99,7 +99,7 @@ def propagate_ancestors(nts: str, rule_idx: int, child_lhs: int, grammar: VRG,
     if nts not in metarule[t2].graph:
         # import pdb
         # pdb.set_trace()
-        metarule[t2].graph.add_node(nts, b_deg=child_lhs, label=child_lhs)
+        metarule[t2].graph.add_node(nts, b_deg=0, label=child_lhs)
     else:
         metarule[t2].graph.nodes[nts]['label'] = child_lhs
 
