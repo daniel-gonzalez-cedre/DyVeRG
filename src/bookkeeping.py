@@ -107,13 +107,13 @@ def propagate_ancestors(nts: str, rule_idx: int, child_lhs: int, grammar: VRG,
         # metarule[t2].lhs += 1
         metarule[t2].lhs = max(1, metarule[t2].lhs + 1)
         # metarule[t2].graph.nodes[nts]['label'] += 1
-        metarule[t2].graph.nodes[nts]['label'] = max(1, metarule[t2].graph.nodes[nts]['label'] + 1)
+        # metarule[t2].graph.nodes[nts]['label'] = max(1, metarule[t2].graph.nodes[nts]['label'] + 1)
         metarule[t2].graph.nodes[nts]['b_deg'] += 1
     else:
         # metarule[t2].lhs -= 1
         metarule[t2].lhs = max(0, metarule[t2].lhs - 1)
         # metarule[t2].graph.nodes[nts]['label'] -= 1
-        metarule[t2].graph.nodes[nts]['label'] = max(0, metarule[t2].graph.nodes[nts]['label'] - 1)
+        # metarule[t2].graph.nodes[nts]['label'] = max(0, metarule[t2].graph.nodes[nts]['label'] - 1)
         metarule[t2].graph.nodes[nts]['b_deg'] -= 1
 
         if metarule[t2].graph.nodes[nts]['b_deg'] < 0:
