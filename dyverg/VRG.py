@@ -266,7 +266,11 @@ class VRG:
 
             rule_ordering.append(rule.idn)
             broken_edges: list[tuple[int, int]] = boundary_edges(g, {nts})
-            assert len(broken_edges) == max(0, lhs)
+            try:
+                assert len(broken_edges) == max(0, lhs)
+            except:
+                import pdb()
+                pdb.set_trace()
 
             g.remove_node(nts)
             nonterminals.remove(nts)
