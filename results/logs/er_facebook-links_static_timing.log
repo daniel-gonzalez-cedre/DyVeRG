@@ -49,3 +49,5 @@
 2023-02-28 15:29:46.852 | INFO     | baselines.timers:wrapper:19 - fit time elapsed: 0.015895355999873573
 2023-02-28 15:33:26.378 | INFO     | baselines.timers:wrapper:29 - gen time elapsed: 219.52344576099995
 2023-02-28 15:33:27.201 | INFO     | baselines.timers:wrapper:19 - fit time elapsed: 0.016637906999903862
+2023-02-28 15:37:39.323 | INFO     | baselines.timers:wrapper:29 - gen time elapsed: 252.118666933
+2023-02-28 15:37:40.239 | INFO     | baselines.timers:wrapper:19 - fit time elapsed: 0.0170055170001433
