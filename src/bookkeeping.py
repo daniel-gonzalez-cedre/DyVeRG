@@ -69,21 +69,21 @@ def redact(grammar: VRG, idx: int, nts: int, time: int):
 
 
 # reintroduces nonterminals referring to this rule up the decomposition
-def unseal(grammar: VRG, idx: int, nts: int, time: int):
+def unseal(grammar: VRG, idx: int, nts: int, label: int, time: int):
     if not idx:
         return
 
-    _, pidx, anode = grammar.decomposition[idx]
+    metarule, pidx, anode = grammar.decomposition[idx]
 
     # if metarule[time].graph.order() == 0:
     #     unseal(grammar, pidx, anode, time)
-    unseal(grammar, pidx, anode, time)
+    unseal(grammar, pidx, anode, metarule.lhs, time)
 
     # assert nts not in metarule[time].graph
-    # if nts not in metarule[time].graph:
-    #     metarule[time].graph.add_node(nts, b_deg=0, label=0)
-    if nts not in grammar[idx][time].graph:
-        grammar[idx][time].graph.add_node(nts, b_deg=0, label=0)
+    if nts not in metarule[time].graph:
+        metarule[time].graph.add_node(nts, b_deg=label, label=label)
+    # if nts not in grammar[idx][time].graph:
+    #     grammar[idx][time].graph.add_node(nts, b_deg=0, label=0)
 
 
 def propagate_ancestors(nts: str, rule_idx: int, child_lhs: int, grammar: VRG,
