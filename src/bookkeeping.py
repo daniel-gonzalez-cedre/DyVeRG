@@ -97,9 +97,9 @@ def propagate_ancestors(nts: str, rule_idx: int, child_lhs: int, grammar: VRG,
     metarule, pidx, anode = grammar.decomposition[rule_idx]
 
     if nts not in metarule[t2].graph:
-        import pdb
-        pdb.set_trace()
-        metarule[t2].graph.add_node(nts, b_deg=0, label=child_lhs)
+        # import pdb
+        # pdb.set_trace()
+        metarule[t2].graph.add_node(nts, b_deg=child_lhs, label=child_lhs)
 
     if mode == 'add':
         # metarule[t2].lhs += 1
