@@ -30,8 +30,7 @@ def domestic(grammar: VRG, u: int, v: int, t1: int, t2: int, mode: str):  # TODO
         assert mode != 'del'
         # if uparent_metarule[t2].graph.order() == 0:
         unseal(grammar,
-               # grammar.decomposition[uparent_idx][1],
-               uparent_idx,
+               grammar.decomposition[uparent_idx][1],
                grammar.decomposition[uparent_idx][2],
                t2)
         uparent_metarule[t2].graph.add_node(ancestor_u, b_deg=0)
@@ -42,8 +41,7 @@ def domestic(grammar: VRG, u: int, v: int, t1: int, t2: int, mode: str):  # TODO
         assert mode != 'del'
         # if vparent_metarule[t2].graph.order() == 0:
         unseal(grammar,
-               # grammar.decomposition[vparent_idx][1],
-               vparent_idx,
+               grammar.decomposition[vparent_idx][1],
                grammar.decomposition[vparent_idx][2],
                t2)
         vparent_metarule[t2].graph.add_node(ancestor_v, b_deg=0)
