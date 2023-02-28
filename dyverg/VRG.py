@@ -218,7 +218,7 @@ class VRG:
         try:
             lower_bound = int(goal * (1 - tolerance))
             upper_bound = int(goal * (1 + tolerance))
-            max_attempts = 100000
+            max_attempts = 1000
 
             ruledict = self.compute_rules(time, merge=merge_rules)
             for _ in tqdm(range(max_attempts), desc='timeout meter', disable=(not verbose)):
@@ -276,7 +276,11 @@ class VRG:
             for n, d in rhs.nodes(data=True):
                 new_node = node_counter
                 node_map[n] = new_node
-                attr = {'b_deg': d['b_deg']}
+                try:
+                    attr = {'b_deg': d['b_deg']}
+                except:
+                    import pdb
+                    pdb.set_trace()
 
                 if 'label' in d:
                     attr['label'] = d['label']

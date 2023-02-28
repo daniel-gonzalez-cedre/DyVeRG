@@ -28,7 +28,8 @@ def conjoin_grammars(host_grammar: VRG, parasite_grammar: VRG,
                                    a nonterminal symbol is added to that rule in the first grammar, whose size is len(frontier)
                                    the second grammar decomposition is inserted as a branch under this rule in the first grammar
     """
-    if len(frontier) == 0:
+    if True:
+    # if len(frontier) == 0:
         anneal(host_grammar, parasite_grammar, frontier, t1, t2)
     else:
         branch(host_grammar, parasite_grammar, frontier, t1, t2)
@@ -43,7 +44,7 @@ def prepare(u: int, grammar: VRG, t1: int, t2: int, stop_at: int = -1):
 
     metarule, pidx, anode = grammar.decomposition[rule_idx]
 
-    if metarule[t2].alias[u] not in metarule[t2].graph:
+    if metarule.alias[u] not in metarule[t2].graph:
         if metarule[t2].graph.order() == 0:
             unseal(grammar, pidx, anode, t2)
         metarule[t2].graph.add_node(metarule.alias[u], b_deg=0)
@@ -90,6 +91,7 @@ def anneal(host_grammar: VRG, parasite_grammar: VRG,
     assert len(parasite_grammar.times) == 1
 
 
+# TODO: THE PROBLEM IS HERE
 def branch(host_grammar: VRG, parasite_grammar: VRG,
            frontier: set[tuple[int, int]], t1: int, t2: int):
     for _, v in frontier:
