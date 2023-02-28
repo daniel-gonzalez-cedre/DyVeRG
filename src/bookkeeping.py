@@ -75,11 +75,13 @@ def unseal(grammar: VRG, idx: int, nts: int, time: int):
 
     metarule, pidx, anode = grammar.decomposition[idx]
 
-    if metarule[time].graph.order() == 0:
-        unseal(grammar, pidx, anode, time)
+    # if metarule[time].graph.order() == 0:
+    #     unseal(grammar, pidx, anode, time)
+    unseal(grammar, pidx, anode, time)
 
-    assert nts not in metarule[time].graph
-    metarule[time].graph.add_node(nts, b_deg=0, label=0)
+    # assert nts not in metarule[time].graph
+    if nts not in metarule[time].graph:
+        metarule[time].graph.add_node(nts, b_deg=0, label=0)
 
 
 def propagate_ancestors(nts: str, rule_idx: int, child_lhs: int, grammar: VRG,
