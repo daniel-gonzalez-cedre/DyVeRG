@@ -269,7 +269,7 @@ class VRG:
             try:
                 assert len(broken_edges) == max(0, lhs)
             except:
-                import pdb()
+                import pdb
                 pdb.set_trace()
 
             g.remove_node(nts)
