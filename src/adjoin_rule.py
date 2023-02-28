@@ -122,8 +122,8 @@ def diplomatic(grammar: VRG, u: int, v: int, t1: int, t2: int):  # TODO: update 
     """
     parent_idx, parent_metarule, ancestor_u = ancestor(u, grammar)
 
-    if parent_metarule[t2].graph.order() == 0:
-        unseal(grammar, grammar.decomposition[parent_idx][1], grammar.decomposition[parent_idx][2], t2)
+    # if parent_metarule[t2].graph.order() == 0:
+    unseal(grammar, grammar.decomposition[parent_idx][1], grammar.decomposition[parent_idx][2], t2)
 
     if ancestor_u not in parent_metarule[t2].graph:
         parent_metarule[t2].graph.add_node(ancestor_u, b_deg=0)
