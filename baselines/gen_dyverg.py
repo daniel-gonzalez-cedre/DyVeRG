@@ -2,6 +2,7 @@ from os import getcwd, makedirs
 from os.path import join
 import sys
 sys.path.extend(['.', '..'])
+sys.setrecursionlimit(10000)
 
 import git
 import networkx as nx
