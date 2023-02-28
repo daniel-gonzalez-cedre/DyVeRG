@@ -43,11 +43,9 @@ def prepare(u: int, grammar: VRG, t1: int, t2: int, stop_at: int = -1):
 
     metarule, pidx, anode = grammar.decomposition[rule_idx]
 
-    # unseal(grammar, pidx, anode, metarule[t2].lhs, t2)
-    # if metarule[t2].alias[u] not in metarule[t2].graph:
-    if metarule.alias[u] not in metarule[t2].graph:
+    if metarule[t2].alias[u] not in metarule[t2].graph:
         if metarule[t2].graph.order() == 0:
-            unseal(grammar, pidx, anode, metarule[t2].lhs, t2)
+            unseal(grammar, pidx, anode, t2)
         metarule[t2].graph.add_node(metarule.alias[u], b_deg=0)
         grammar.cover[t2][u] = rule_idx
 

@@ -44,13 +44,13 @@ loaded = load_data(dataset)
 graphs = [g for _, g in loaded]
 
 dyngrammar = fit_timer(decompose, logger)(graphs[0], time=0, name=dataset)
-generated_graphs = gen_timer(gen, logger)(dyngrammar, time=0, target_n=graphs[0].order(), number=10)
+generated_graphs = gen_timer(gen, logger)(dyngrammar, time=0, target_n=graphs[0].order(), number=num_gen)
 for trial, gen_graph in enumerate(generated_graphs):
     write_graph(gen_graph, join(rootpath, resultspath), f'0_{trial}.edgelist')
 
 for t in range(1, len(graphs)):
     dyngrammar = fit_timer(update_grammar, logger)(dyngrammar, graphs[t - 1], graphs[t], t - 1, t)
-    generated_graphs = gen_timer(gen, logger)(dyngrammar, time=t, target_n=graphs[t].order(), number=10)
+    generated_graphs = gen_timer(gen, logger)(dyngrammar, time=t, target_n=graphs[t].order(), number=num_gen)
 
     for trial, gen_graph in enumerate(generated_graphs):
         write_graph(gen_graph, join(rootpath, resultspath), f'{t}_{trial}.edgelist')

@@ -69,21 +69,17 @@ def redact(grammar: VRG, idx: int, nts: int, time: int):
 
 
 # reintroduces nonterminals referring to this rule up the decomposition
-def unseal(grammar: VRG, idx: int, nts: int, label: int, time: int):
+def unseal(grammar: VRG, idx: int, nts: int, time: int):
     if not idx:
         return
 
     metarule, pidx, anode = grammar.decomposition[idx]
 
     if metarule[time].graph.order() == 0:
-        unseal(grammar, pidx, anode, metarule[time].lhs, time)
-    # unseal(grammar, pidx, anode, metarule[time].lhs, time)
+        unseal(grammar, pidx, anode, time)
 
-    # assert nts not in metarule[time].graph
-    if nts not in metarule[time].graph:
-        metarule[time].graph.add_node(nts, b_deg=label, label=label)
-    # if nts not in grammar[idx][time].graph:
-    #     grammar[idx][time].graph.add_node(nts, b_deg=0, label=0)
+    assert nts not in metarule[time].graph
+    metarule[time].graph.add_node(nts, b_deg=0, label=0)
 
 
 def propagate_ancestors(nts: str, rule_idx: int, child_lhs: int, grammar: VRG,
@@ -97,23 +93,21 @@ def propagate_ancestors(nts: str, rule_idx: int, child_lhs: int, grammar: VRG,
     metarule, pidx, anode = grammar.decomposition[rule_idx]
 
     if nts not in metarule[t2].graph:
-        # import pdb
-        # pdb.set_trace()
+        import pdb
+        pdb.set_trace()
         metarule[t2].graph.add_node(nts, b_deg=0, label=child_lhs)
-    else:
-        metarule[t2].graph.nodes[nts]['label'] = child_lhs
 
     if mode == 'add':
         # metarule[t2].lhs += 1
         metarule[t2].lhs = max(1, metarule[t2].lhs + 1)
         # metarule[t2].graph.nodes[nts]['label'] += 1
-        # metarule[t2].graph.nodes[nts]['label'] = max(1, metarule[t2].graph.nodes[nts]['label'] + 1)
+        metarule[t2].graph.nodes[nts]['label'] = max(1, metarule[t2].graph.nodes[nts]['label'] + 1)
         metarule[t2].graph.nodes[nts]['b_deg'] += 1
     else:
         # metarule[t2].lhs -= 1
         metarule[t2].lhs = max(0, metarule[t2].lhs - 1)
         # metarule[t2].graph.nodes[nts]['label'] -= 1
-        # metarule[t2].graph.nodes[nts]['label'] = max(0, metarule[t2].graph.nodes[nts]['label'] - 1)
+        metarule[t2].graph.nodes[nts]['label'] = max(0, metarule[t2].graph.nodes[nts]['label'] - 1)
         metarule[t2].graph.nodes[nts]['b_deg'] -= 1
 
         if metarule[t2].graph.nodes[nts]['b_deg'] < 0:

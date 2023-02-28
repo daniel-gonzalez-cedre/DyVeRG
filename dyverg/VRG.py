@@ -136,7 +136,7 @@ class VRG:
         # self.ruledict[time] = {}
         ruledict = {}  # lhs |-> [(rule, freq), ...]
         candidates = [metarule[time] for metarule, _, _ in self.decomposition
-                      if time in metarule.times]  # if (time in metarule.times) and (metarule[time].graph.order() != 0)]
+                      if time in metarule.times]
 
         # for rule in candidates:
         #     rule.frequency = 1
@@ -212,7 +212,7 @@ class VRG:
 
         return level
 
-    def generate(self, time: int, goal: int, multigraph: bool = False,
+    def generate(self, time: int, goal: int,
                  tolerance: float = 0.05, merge_rules: bool = True,
                  rule_order: bool = False, verbose: bool = False) -> tuple[LightMultiGraph, list[int]]:
         try:
@@ -266,11 +266,7 @@ class VRG:
 
             rule_ordering.append(rule.idn)
             broken_edges: list[tuple[int, int]] = boundary_edges(g, {nts})
-            try:
-                assert len(broken_edges) == max(0, lhs)
-            except:
-                import pdb
-                pdb.set_trace()
+            assert len(broken_edges) == max(0, lhs)
 
             g.remove_node(nts)
             nonterminals.remove(nts)
@@ -280,7 +276,11 @@ class VRG:
             for n, d in rhs.nodes(data=True):
                 new_node = node_counter
                 node_map[n] = new_node
-                attr = {'b_deg': d['b_deg']}
+                try:
+                    attr = {'b_deg': d['b_deg']}
+                except:
+                    import pdb
+                    pdb.set_trace()
 
                 if 'label' in d:
                     attr['label'] = d['label']
