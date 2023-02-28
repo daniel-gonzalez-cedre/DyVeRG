@@ -77,7 +77,7 @@ def unseal(grammar: VRG, idx: int, nts: int, label: int, time: int):
 
     # if metarule[time].graph.order() == 0:
     #     unseal(grammar, pidx, anode, time)
-    unseal(grammar, pidx, anode, metarule.lhs, time)
+    unseal(grammar, pidx, anode, metarule[time].lhs, time)
 
     # assert nts not in metarule[time].graph
     if nts not in metarule[time].graph:
