@@ -1,3 +1,4 @@
+import time
 from os import getcwd, makedirs
 from os.path import join
 import sys
@@ -7,6 +8,7 @@ sys.setrecursionlimit(10000)
 import git
 import networkx as nx
 from loguru import logger
+from joblib import Parallel, delayed
 
 from baselines.timers import fit_timer, gen_timer
 from baselines.fit import DyVeRG
@@ -20,9 +22,20 @@ def write_graph(g, filepath, filename):
     nx.write_edgelist(g, join(filepath, filename))
 
 
-def gen(grammar: VRG, time: int, target_n, number: int = 1) -> list[nx.Graph]:
+def gen(grammar: VRG, time: int, target_n: int, number: int = 1) -> list[nx.Graph]:
     generated = [grammar.generate(time, target_n, verbose=True) for _ in range(number)]
     return generated
+
+
+def gen_parallel(grammar: VRG, time: int, target_n: int) -> nx.Graph:
+    return grammar.generate(time, target_n, verbose=True)
+
+
+def work(num, func, *args, **kwargs) -> tuple[int, float, nx.Graph]:
+    start = time.process_time()
+    results = func(*args, **kwargs)
+    end = time.process_time()
+    return num, end - start, results
 
 
 dataset: str = input('dataset: ').lower()
@@ -32,6 +45,7 @@ try:
     start: int = int(input('start at index (default 0): ').lower())
 except ValueError:
     start: int = 0
+parallel: bool = input('parallel? ') in ('yes', 'y', 'parallel', 'p', '')
 
 rootpath = git.Repo(getcwd(), search_parent_directories=True).git.rev_parse("--show-toplevel")
 resultspath = f'results/graphs_{mode}/dyverg/{dataset}'
@@ -51,7 +65,17 @@ for trial, gen_graph in enumerate(generated_graphs):
 
 for t in range(1, len(graphs)):
     dyngrammar = fit_timer(update_grammar, logger)(dyngrammar, graphs[t - 1], graphs[t], t - 1, t)
-    generated_graphs = gen_timer(gen, logger)(dyngrammar, time=t, target_n=graphs[t].order(), number=num_gen)
 
-    for trial, gen_graph in enumerate(generated_graphs):
-        write_graph(gen_graph, join(rootpath, resultspath), f'{t}_{trial}.edgelist')
+    if parallel:
+        with Parallel(n_jobs=2) as parallel:
+            for trial, gen_time, gen_graph in parallel(
+                delayed(work)(num, gen_parallel, dyngrammar, time=t, target_n=graphs[t].order())
+                for num in range(num_gen)
+            ):
+                logger.info('gen time elapsed: {gen_time}', gen_time=gen_time)
+                write_graph(gen_graph, join(rootpath, resultspath), f'{t}_{trial}.edgelist')
+    else:
+        generated_graphs = gen_timer(gen, logger)(dyngrammar, time=t, target_n=graphs[t].order(), number=num_gen)
+
+        for trial, gen_graph in enumerate(generated_graphs):
+            write_graph(gen_graph, join(rootpath, resultspath), f'{t}_{trial}.edgelist')
