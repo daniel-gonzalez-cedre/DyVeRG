@@ -67,7 +67,7 @@ for t in range(1, len(graphs)):
     dyngrammar = fit_timer(update_grammar, logger)(dyngrammar, graphs[t - 1], graphs[t], t - 1, t)
 
     if parallel:
-        with Parallel(n_jobs=2) as parallel:
+        with Parallel(n_jobs=num_gen) as parallel:
             for trial, gen_time, gen_graph in parallel(
                 delayed(work)(num, gen_parallel, dyngrammar, time=t, target_n=graphs[t].order())
                 for num in range(num_gen)
