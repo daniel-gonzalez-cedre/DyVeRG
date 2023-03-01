@@ -218,7 +218,7 @@ class VRG:
         try:
             lower_bound = int(goal * (1 - tolerance))
             upper_bound = int(goal * (1 + tolerance))
-            max_attempts = 1000
+            max_attempts = 1000000
 
             ruledict = self.compute_rules(time, merge=merge_rules)
             for _ in tqdm(range(max_attempts), desc='timeout meter', disable=(not verbose)):
@@ -234,7 +234,7 @@ class VRG:
             raise TimeoutError(f'Generation failed after exceeding {max_attempts} attempts.')
         except TimeoutError:
             return self.generate(time, goal,
-                                 tolerance=(2 * tolerance), merge_rules=merge_rules,
+                                 tolerance=(tolerance + 0.05), merge_rules=merge_rules,
                                  rule_order=rule_order, verbose=verbose)
 
     def _generate(self, ruledict, upper_bound) -> tuple[LightMultiGraph, list[int]]:
