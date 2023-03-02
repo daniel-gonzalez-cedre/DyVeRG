@@ -39,13 +39,14 @@ def work(num, func, *args, **kwargs) -> tuple[int, float, nx.Graph]:
 
 
 dataset: str = input('dataset: ').lower()
-mode = 'dynamic'
 num_gen: int = int(input('number of graphs to generate (at each timestep): ').lower())
 try:
     start: int = int(input('start at index (default 0): ').lower())
 except ValueError:
     start: int = 0
 parallel: bool = input('parallel? ') in ('yes', 'y', 'parallel', 'p', '')
+
+mode = 'dynamic' if start >= 0 else 'incremental'
 
 rootpath = git.Repo(getcwd(), search_parent_directories=True).git.rev_parse("--show-toplevel")
 resultspath = f'results/graphs_{mode}/dyverg/{dataset}'
@@ -58,24 +59,43 @@ logger.add(join(rootpath, logpath, f'dyverg_{dataset}_{mode}_timing.log'), mode=
 loaded = load_data(dataset)
 graphs = [g for _, g in loaded]
 
-dyngrammar = fit_timer(decompose, logger)(graphs[0], time=0, name=dataset)
-generated_graphs = gen_timer(gen, logger)(dyngrammar, time=0, target_n=graphs[0].order(), number=num_gen)
-for trial, gen_graph in enumerate(generated_graphs):
-    write_graph(gen_graph, join(rootpath, resultspath), f'0_{trial}.edgelist')
+if mode == 'dynamic':
+    dyngrammar = fit_timer(decompose, logger)(graphs[0], time=0, name=dataset)
+    generated_graphs = gen_timer(gen, logger)(dyngrammar, time=0, target_n=graphs[0].order(), number=num_gen)
+    for trial, gen_graph in enumerate(generated_graphs):
+        write_graph(gen_graph, join(rootpath, resultspath), f'0_{trial}.edgelist')
 
-for t in range(1, len(graphs)):
-    dyngrammar = fit_timer(update_grammar, logger)(dyngrammar, graphs[t - 1], graphs[t], t - 1, t)
+    for t in range(1, len(graphs)):
+        dyngrammar = fit_timer(update_grammar, logger)(dyngrammar, graphs[t - 1], graphs[t], t - 1, t, switch=False)
 
-    if parallel:
-        with Parallel(n_jobs=num_gen) as parallel:
-            for trial, gen_time, gen_graph in parallel(
-                delayed(work)(num, gen_parallel, dyngrammar, time=t, target_n=graphs[t].order())
-                for num in range(num_gen)
-            ):
-                logger.info('gen time elapsed: {gen_time}', gen_time=gen_time)
+        if parallel:
+            with Parallel(n_jobs=num_gen) as parallel:
+                for trial, gen_time, gen_graph in parallel(
+                    delayed(work)(num, gen_parallel, dyngrammar, time=t, target_n=graphs[t].order())
+                    for num in range(num_gen)
+                ):
+                    logger.info('gen time elapsed: {gen_time}', gen_time=gen_time)
+                    write_graph(gen_graph, join(rootpath, resultspath), f'{t}_{trial}.edgelist')
+        else:
+            generated_graphs = gen_timer(gen, logger)(dyngrammar, time=t, target_n=graphs[t].order(), number=num_gen)
+
+            for trial, gen_graph in enumerate(generated_graphs):
                 write_graph(gen_graph, join(rootpath, resultspath), f'{t}_{trial}.edgelist')
-    else:
-        generated_graphs = gen_timer(gen, logger)(dyngrammar, time=t, target_n=graphs[t].order(), number=num_gen)
+else:
+    for t in range(0, len(graphs) - 1):
+        basegrammar = fit_timer(decompose, logger)(graphs[t], time=t, name=dataset)
+        dyngrammar = fit_timer(update_grammar, logger)(basegrammar, graphs[t], graphs[t + 1], t, t + 1, switch=False)
 
-        for trial, gen_graph in enumerate(generated_graphs):
-            write_graph(gen_graph, join(rootpath, resultspath), f'{t}_{trial}.edgelist')
+        if parallel:
+            with Parallel(n_jobs=num_gen) as parallel:
+                for trial, gen_time, gen_graph in parallel(
+                    delayed(work)(num, gen_parallel, dyngrammar, time=t + 1, target_n=graphs[t + 1].order())
+                    for num in range(num_gen)
+                ):
+                    logger.info('gen time elapsed: {gen_time}', gen_time=gen_time)
+                    write_graph(gen_graph, join(rootpath, resultspath), f'{t + 1}_{trial}.edgelist')
+        else:
+            generated_graphs = gen_timer(gen, logger)(dyngrammar, time=t + 1, target_n=graphs[t + 1].order(), number=num_gen)
+
+            for trial, gen_graph in enumerate(generated_graphs):
+                write_graph(gen_graph, join(rootpath, resultspath), f'{t + 1}_{trial}.edgelist')

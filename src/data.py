@@ -16,6 +16,36 @@ def read_edgelist(filepath: str, delimiter: str = ' ', times: bool = True) -> nx
     return nx.convert_node_labels_to_integers(g)
 
 
+def load_generated(mode: str, model: str, dataname: str, times: list = None, trials: list = None) -> list[tuple[int, int, nx.Graph]]:
+    if not times:
+        if dataname == 'email-dnc':
+            length = 17 + 1 - 1
+        elif dataname == 'email-enron':
+            length = 30 + 1 - 1
+        elif dataname == 'email-eucore':
+            length = 17 + 1 - 0
+        elif dataname == 'facebook-links':
+            length = 27 + 1 - 1
+        elif dataname == 'coauth-dblp':
+            length = 48 + 1 - 28
+        else:
+            raise AssertionError
+        times = list(range(length))
+    if not trials:
+        trials = list(range(10))
+    rootpath = git.Repo(getcwd(), search_parent_directories=True).git.rev_parse("--show-toplevel")
+    loaded_graphs = []
+    for time in times:
+        for trial in trials:
+            generatedpath = f'{rootpath}/results/graphs_{mode}/{model}/{dataname}/{time}_{trial}.edgelist'
+            g = nx.read_edgelist(generatedpath,
+                                 delimiter=' ',
+                                 create_using=nx.MultiGraph,
+                                 nodetype=int)
+            loaded_graphs.append((time, trial, g))
+    return loaded_graphs
+
+
 # load one of the standard datasets
 # def load_data(dataname: str, mode: str = 'pruned') -> list[tuple[int, nx.Graph]]:
 def load_data(dataname: str, mode: str = 'pruned') -> list:

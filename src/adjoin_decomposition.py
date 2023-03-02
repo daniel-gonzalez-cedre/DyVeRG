@@ -6,7 +6,8 @@ from src.decomposition import create_splitting_rule
 
 
 def conjoin_grammars(host_grammar: VRG, parasite_grammar: VRG,
-                     frontier: set[tuple[int, int]], t1: int, t2: int) -> VRG:
+                     frontier: set[tuple[int, int]], t1: int, t2: int,
+                     switch: bool = True) -> VRG:
     """
         Joins two grammars in the manner described by the ``approach``.
         Both grammar objects are modified (not copied) in-place; the final joined grammar resides is referred to by the first argument.
@@ -28,8 +29,7 @@ def conjoin_grammars(host_grammar: VRG, parasite_grammar: VRG,
                                    a nonterminal symbol is added to that rule in the first grammar, whose size is len(frontier)
                                    the second grammar decomposition is inserted as a branch under this rule in the first grammar
     """
-    if True:
-    # if len(frontier) == 0:
+    if switch or len(frontier) == 0:
         anneal(host_grammar, parasite_grammar, frontier, t1, t2)
     else:
         branch(host_grammar, parasite_grammar, frontier, t1, t2)

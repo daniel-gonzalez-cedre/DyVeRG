@@ -9,7 +9,7 @@ from src.adjoin_rule import domestic, diplomatic, censor_citizen
 
 
 def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph,
-                   t1: int, t2: int,
+                   t1: int, t2: int, switch: bool = True,
                    mu: int = None, amnesia: bool = False, verbose: bool = False) -> VRG:
     """
         Required arguments:
@@ -81,7 +81,8 @@ def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph,
 
     joint(charted_grammar, nodes_domestic, nodes_foreign,
           edges_domestic, edges_diplomatic, edges_foreign,
-          t1, t2, mu, verbose=verbose)
+          t1, t2, mu,
+          switch=switch, verbose=verbose)
 
     independent(charted_grammar, nodes_domestic, nodes_foreign,
                 edges_domestic, edges_diplomatic, edges_foreign, edge_deletions, node_deletions,
@@ -103,7 +104,8 @@ def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph,
 
 def joint(charted_grammar: VRG, nodes_domestic, nodes_foreign,
           edges_domestic, edges_diplomatic, edges_foreign,
-          t1, t2, mu, verbose: bool = False) -> tuple[set, set, set]:
+          t1, t2, mu,
+          switch: bool = True, verbose: bool = False) -> tuple[set, set, set]:
     uncharted_region = nx.Graph()
     uncharted_region.add_edges_from(edges_diplomatic | edges_foreign)
     uncharted_region.remove_nodes_from(nodes_domestic)
@@ -119,7 +121,7 @@ def joint(charted_grammar: VRG, nodes_domestic, nodes_foreign,
 
         frontier = {(u, v) for (u, v) in edges_diplomatic if v in territory}
 
-        conjoin_grammars(charted_grammar, territory_grammar, frontier, t1, t2)
+        conjoin_grammars(charted_grammar, territory_grammar, frontier, t1, t2, switch=switch)
 
         edges_diplomatic -= {(u, v) for u, v in edges_diplomatic if v in territory}
         edges_foreign -= {(u, v) for u, v in edges_foreign if u in territory and v in territory}
