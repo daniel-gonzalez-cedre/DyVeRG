@@ -234,7 +234,7 @@ class VRG:
             raise TimeoutError(f'Generation failed after exceeding {max_attempts} attempts.')
         except TimeoutError:
             return self.generate(time, goal,
-                                 tolerance=(tolerance + 0.05), merge_rules=merge_rules,
+                                 tolerance=(tolerance + 0.1), merge_rules=merge_rules,
                                  rule_order=rule_order, verbose=verbose)
 
     def _generate(self, ruledict, upper_bound) -> tuple[LightMultiGraph, list[int]]:

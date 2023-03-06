@@ -3,7 +3,7 @@ from os import getcwd, makedirs
 from os.path import join
 import sys
 sys.path.extend(['.', '..'])
-sys.setrecursionlimit(10000)
+sys.setrecursionlimit(10**6)
 
 import git
 import networkx as nx
@@ -41,7 +41,7 @@ def work(num, func, *args, **kwargs) -> tuple[int, float, nx.Graph]:
 dataset: str = input('dataset: ').lower()
 num_gen: int = int(input('number of graphs to generate (at each timestep): ').lower())
 try:
-    start: int = int(input('start at index (default 0): ').lower())
+    start: int = int(input('start at index (default 0, incremental -1): ').lower())
 except ValueError:
     start: int = 0
 parallel: bool = input('parallel? ') in ('yes', 'y', 'parallel', 'p', '')
