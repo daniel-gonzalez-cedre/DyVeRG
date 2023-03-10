@@ -12,7 +12,7 @@ from baselines.fit import VeRG
 from dyverg.VRG import VRG
 from src.data import load_data
 from src.decomposition import decompose
-from src.adjoin_graph import update_grammar
+# from src.adjoin_graph import update_grammar
 
 
 def write_graph(g, filepath, filename):
@@ -25,7 +25,7 @@ def gen(grammar: VRG, time: int, target_n, number: int = 1) -> list[nx.Graph]:
 
 
 dataset: str = input('dataset: ').lower()
-mode = 'dynamic'
+mode = 'static'
 num_gen: int = int(input('number of graphs to generate (at each timestep): ').lower())
 try:
     start: int = int(input('start at index (default 0): ').lower())
