@@ -1,0 +1,14 @@
+2023-03-06 17:05:52.794 | INFO     | baselines.timers:wrapper:19 - fit time elapsed: 0.39305530599999905
+2023-03-06 17:06:00.473 | INFO     | baselines.timers:wrapper:19 - fit time elapsed: 7.678167768000002
+2023-03-10 00:36:02.955 | INFO     | __main__:<module>:96 - gen time elapsed: 286372.476409933
+2023-03-10 00:36:02.960 | INFO     | __main__:<module>:96 - gen time elapsed: 285403.314064576
+2023-03-10 00:36:02.963 | INFO     | __main__:<module>:96 - gen time elapsed: 280727.940661207
+2023-03-10 00:36:02.967 | INFO     | __main__:<module>:96 - gen time elapsed: 279743.570414061
+2023-03-10 00:36:02.970 | INFO     | __main__:<module>:96 - gen time elapsed: 280912.17987156304
+2023-03-10 00:36:02.973 | INFO     | __main__:<module>:96 - gen time elapsed: 278683.897741998
+2023-03-10 00:36:02.977 | INFO     | __main__:<module>:96 - gen time elapsed: 282033.886445377
+2023-03-10 00:36:02.979 | INFO     | __main__:<module>:96 - gen time elapsed: 282456.26545456995
+2023-03-10 00:36:02.982 | INFO     | __main__:<module>:96 - gen time elapsed: 280524.634987821
+2023-03-10 00:36:02.985 | INFO     | __main__:<module>:96 - gen time elapsed: 284777.83219207503
+2023-03-10 00:36:03.332 | INFO     | baselines.timers:wrapper:19 - fit time elapsed: 0.3445748299999991
+2023-03-10 00:36:15.271 | INFO     | baselines.timers:wrapper:19 - fit time elapsed: 11.938176909

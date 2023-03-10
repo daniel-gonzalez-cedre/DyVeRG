@@ -39,12 +39,13 @@ def work(num, func, *args, **kwargs) -> tuple[int, float, nx.Graph]:
 
 
 dataset: str = input('dataset: ').lower()
-num_gen: int = int(input('number of graphs to generate (at each timestep): ').lower())
+num_gen: int = int(input('number of graphs to generate (at each timestep): ').strip().lower())
 try:
-    start: int = int(input('start at index (default 0, incremental -1): ').lower())
+    start: int = int(input('start at index (default: 0, incremental: -1): ').strip().lower())
 except ValueError:
     start: int = 0
-parallel: bool = input('parallel? ') in ('yes', 'y', 'parallel', 'p', '')
+switch: bool = input('flip the switch (default: yes)? ').lower() in ('yes', 'y', 'switch', 's', 'true', 't', '')
+parallel: bool = input('parallel? ').strip().lower() in ('yes', 'y', 'parallel', 'p', '')
 
 mode = 'dynamic' if start >= 0 else 'incremental'
 
@@ -66,7 +67,7 @@ if mode == 'dynamic':
         write_graph(gen_graph, join(rootpath, resultspath), f'0_{trial}.edgelist')
 
     for t in range(1, len(graphs)):
-        dyngrammar = fit_timer(update_grammar, logger)(dyngrammar, graphs[t - 1], graphs[t], t - 1, t, switch=False)
+        dyngrammar = fit_timer(update_grammar, logger)(dyngrammar, graphs[t - 1], graphs[t], t - 1, t, switch=switch)
 
         if parallel:
             with Parallel(n_jobs=num_gen) as parallel:
@@ -84,7 +85,7 @@ if mode == 'dynamic':
 else:
     for t in range(0, len(graphs) - 1):
         basegrammar = fit_timer(decompose, logger)(graphs[t], time=t, name=dataset)
-        dyngrammar = fit_timer(update_grammar, logger)(basegrammar, graphs[t], graphs[t + 1], t, t + 1, switch=False)
+        dyngrammar = fit_timer(update_grammar, logger)(basegrammar, graphs[t], graphs[t + 1], t, t + 1, switch=switch)
 
         if parallel:
             with Parallel(n_jobs=num_gen) as parallel:
