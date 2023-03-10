@@ -16,7 +16,8 @@ def read_edgelist(filepath: str, delimiter: str = ' ', times: bool = True) -> nx
     return nx.convert_node_labels_to_integers(g)
 
 
-def load_generated(mode: str, model: str, dataname: str, times: list = None, trials: list = None) -> list[tuple[int, int, nx.Graph]]:
+# def load_generated(mode: str, model: str, dataname: str, times: list = None, trials: list = None) -> list[tuple[int, int, nx.Graph]]:
+def load_generated(mode: str, model: str, dataname: str, times: list = None, trials: list = None) -> list:
     if not times:
         if dataname == 'email-dnc':
             length = 17 + 1 - 1

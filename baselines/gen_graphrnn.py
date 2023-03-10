@@ -7,7 +7,7 @@ import git
 import torch
 import networkx as nx
 from loguru import logger
-torch.cuda.set_device(1)
+torch.cuda.set_device(0)
 
 from baselines.fit import graphRNN
 from baselines.graphrnn.train import test_rnn_epoch
@@ -25,19 +25,19 @@ def gen(args, model, output, number=1):
         yield generated
 
 
-dataset: str = input('dataset: ').lower()
-mode: str = input('static or dynamic? ').lower()
-num_gen: int = int(input('number of graphs to generate (at each timestep): ').lower())
+dataset: str = input('dataset: ').strip().lower()
+mode: str = input('static, dynamic, or incremental? ').strip().lower()
+num_gen: int = int(input('number of graphs to generate (at each timestep): ').strip().lower())
 try:
-    start: int = int(input('start at index (default 0): ').lower())
+    start: int = int(input('start at index (default: 0): ').strip().lower())
     logmode: str = 'w' if start <= 0 else 'a'
 except ValueError:
     start: int = 0
     logmode: str = 'w'
 perturb: bool = False
 
-assert dataset in ('email-dnc', 'email-enron', 'email-eucore', 'facebook-links')
-assert mode in ('static', 'dynamic')
+assert dataset in ('email-dnc', 'email-enron', 'email-eucore', 'facebook-links', 'coauth-dblp')
+assert mode in ('static', 'dynamic', 'incremental')
 assert isinstance(num_gen, int)
 
 rootpath = git.Repo(getcwd(), search_parent_directories=True).git.rev_parse("--show-toplevel")
@@ -61,7 +61,7 @@ if mode == 'static':  # static generation
 
         for trial, gen_graph in enumerate(generated_graphs):
             write_graph(gen_graph, join(rootpath, resultspath), f'{t}_{trial}.edgelist')
-else:  # dynamic generation
+elif mode == 'dynamic':  # dynamic generation
     for t in range(len(graphs)):
         counter = 1
         input_graphs = graphs[:t + 1]
@@ -77,3 +77,12 @@ else:  # dynamic generation
             write_graph(graph, join(rootpath, resultspath), f'{t}_{trial}.edgelist')
         # for trial, graph in enumerate(generated_graphs):
         #     write_graph(graph, join(rootpath, resultspath), f'{t}_{trial}.edgelist')
+else:  # incremental generation
+    for t, (graph1, graph2) in enumerate(zip(graphs[:-1], graphs[1:])):
+        input_graphs = (5 * [graph1]) + (5 * [graph2])
+
+        params = fit_timer(graphRNN, logger)(input_graphs, nn='rnn')
+        generated_graphs = gen_timer(gen, logger)(args=params[0], model=params[1], output=params[2], number=num_gen)
+
+        for trial, gen_graph in enumerate(generated_graphs):
+            write_graph(gen_graph, join(rootpath, resultspath), f'{t}_{trial}.edgelist')
