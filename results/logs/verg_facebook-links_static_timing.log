@@ -27,3 +27,13 @@
 2023-03-10 08:11:15.392 | INFO     | baselines.timers:wrapper:19 - fit time elapsed: 33.398622820000014
 2023-03-10 08:12:47.184 | INFO     | baselines.timers:wrapper:29 - gen time elapsed: 91.94064121099996
 2023-03-10 08:13:18.721 | INFO     | baselines.timers:wrapper:19 - fit time elapsed: 31.203876271000013
+2023-03-10 08:14:32.926 | INFO     | baselines.timers:wrapper:29 - gen time elapsed: 74.20555617399998
+2023-03-10 08:14:54.590 | INFO     | baselines.timers:wrapper:19 - fit time elapsed: 21.35738739200019
+2023-03-10 08:16:08.882 | INFO     | baselines.timers:wrapper:29 - gen time elapsed: 74.30942224199998
+2023-03-10 08:16:33.022 | INFO     | baselines.timers:wrapper:19 - fit time elapsed: 23.887372985999946
+2023-03-10 08:17:52.151 | INFO     | baselines.timers:wrapper:29 - gen time elapsed: 79.18469381099999
+2023-03-10 08:18:17.558 | INFO     | baselines.timers:wrapper:19 - fit time elapsed: 25.15150783299987
+2023-03-10 08:19:34.202 | INFO     | baselines.timers:wrapper:29 - gen time elapsed: 76.64499024999986
+2023-03-10 08:20:25.380 | INFO     | baselines.timers:wrapper:19 - fit time elapsed: 50.921833764999974
+2023-03-10 08:22:34.944 | INFO     | baselines.timers:wrapper:29 - gen time elapsed: 129.811662287
+2023-03-10 08:24:18.896 | INFO     | baselines.timers:wrapper:19 - fit time elapsed: 103.57482052900014
