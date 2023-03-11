@@ -5,13 +5,13 @@ import networkx as nx
 from tqdm import tqdm
 
 
-def convert(g: nx.Graph):
+def convert(g: nx.Graph, setint: bool = False):
     if isinstance(g, LightMultiGraph):
         return g
     g_lmg = LightMultiGraph()
     g_lmg.add_nodes_from(g.nodes(data=True))
     g_lmg.add_edges_from(g.edges(data=True))
-    return g_lmg
+    return nx.relabel_nodes(g_lmg, {v: int(v) for v in g_lmg}) if setint else g_lmg
 
 
 class LightMultiGraph(nx.Graph):

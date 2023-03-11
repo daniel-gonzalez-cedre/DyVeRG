@@ -97,7 +97,7 @@ def decompose(g: nx.Graph, time: int = -1, mu: int = 4, clustering: str = 'leide
 
 def decompose_component(g: nx.Graph, mu: int = 4, time: int = -1, clustering: str = 'leiden', gtype: str = 'mu_level_dl', name: str = '', verbose: bool = False):
     if not isinstance(g, LMG):
-        g = convert(g)
+        g = convert(g, setint=True)
 
     if clustering == 'leiden':
         clusters = leiden(g)

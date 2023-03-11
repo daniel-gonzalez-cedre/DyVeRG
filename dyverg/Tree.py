@@ -1,5 +1,7 @@
 from typing import Tuple, List, Set, Union, Any
 from collections import deque
+from sys import setrecursionlimit
+setrecursionlimit(1000)
 
 
 class TreeNode:

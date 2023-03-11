@@ -2,6 +2,8 @@ import networkx as nx
 from tqdm import tqdm
 
 from dyverg.VRG import VRG
+from dyverg.LightMultiGraph import convert
+from dyverg.LightMultiGraph import LightMultiGraph as LMG
 from src.utils import silence
 from src.decomposition import decompose
 from src.adjoin_decomposition import conjoin_grammars
@@ -31,6 +33,11 @@ def update_grammar(grammar: VRG, home_graph: nx.Graph, away_graph: nx.Graph,
             verbose = whether or not to display progress bars and logs
                       by default False
     """
+    if not isinstance(home_graph, LMG):
+        home_graph = convert(home_graph, setint=True)
+    if not isinstance(away_graph, LMG):
+        away_graph = convert(away_graph, setint=True)
+
     if mu is None:
         mu = grammar.mu
 
