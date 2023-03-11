@@ -1,0 +1,12 @@
+2023-03-10 11:39:06.089 | INFO     | baselines.timers:wrapper:19 - fit time elapsed: 23714.4047984
+2023-03-10 11:39:06.089 | INFO     | baselines.timers:wrapper:29 - gen time elapsed: 5.555997631745413e-06
+2023-03-10 16:18:57.650 | INFO     | baselines.timers:wrapper:19 - fit time elapsed: 36311.170329807
+2023-03-10 16:18:57.650 | INFO     | baselines.timers:wrapper:29 - gen time elapsed: 4.654997610487044e-06
+2023-03-10 21:04:17.498 | INFO     | baselines.timers:wrapper:19 - fit time elapsed: 37678.99623426
+2023-03-10 21:04:17.498 | INFO     | baselines.timers:wrapper:29 - gen time elapsed: 5.305992090143263e-06
+2023-03-11 01:48:58.978 | INFO     | baselines.timers:wrapper:19 - fit time elapsed: 36123.569246902014
+2023-03-11 01:48:58.979 | INFO     | baselines.timers:wrapper:29 - gen time elapsed: 7.105001714080572e-06
+2023-03-11 06:45:19.380 | INFO     | baselines.timers:wrapper:19 - fit time elapsed: 35286.814765541
+2023-03-11 06:45:19.380 | INFO     | baselines.timers:wrapper:29 - gen time elapsed: 7.017981261014938e-06
+2023-03-11 11:51:15.744 | INFO     | baselines.timers:wrapper:19 - fit time elapsed: 36658.84698872699
+2023-03-11 11:51:15.745 | INFO     | baselines.timers:wrapper:29 - gen time elapsed: 7.717986591160297e-06
