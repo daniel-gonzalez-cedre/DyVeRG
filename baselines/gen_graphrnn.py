@@ -7,7 +7,7 @@ import git
 import torch
 import networkx as nx
 from loguru import logger
-torch.cuda.set_device(0)
+torch.cuda.set_device(1)
 
 from baselines.fit import graphRNN
 from baselines.graphrnn.train import test_rnn_epoch
