@@ -15,10 +15,10 @@ from src.adjoin_graph import update_grammar
 from src.utils import mkdir
 
 
-def evaluate_true_graph_incremental(t: int, basegraph: nx.Graph, truegraph: nx.Graph, njobs: int = 1) -> list[float]:
+def evaluate_true_graph_incremental(t: int, basegraph: nx.Graph, truegraph: nx.Graph, switch: bool, njobs: int = 1) -> list[float]:
     for _ in trange(10, desc=f'time {t}'):
         basegrammar = decompose(basegraph, time=t - 1, name=dataset)
-        truegrammar = update_grammar(basegrammar, basegraph, truegraph, t - 1, t, switch=False)
+        truegrammar = update_grammar(basegrammar, basegraph, truegraph, t - 1, t, switch=switch)
         truescore = truegrammar.ll(prior=t - 1, posterior=t, njobs=njobs)
         yield truescore
 
@@ -33,12 +33,12 @@ def evaluate_true_graph_dynamic(t: int, priorgraphs: nx.Graph, truegraph: nx.Gra
         yield truescore
 
 
-def evaluate_model_graph(t: int, basegraph: nx.Graph, modeldataprefix: str, njobs: int = 1) -> list[float]:
+def evaluate_model_graph(t: int, basegraph: nx.Graph, modeldataprefix: str, switch: bool, njobs: int = 1) -> list[float]:
     for modeltrial in trange(10, desc=f'time {t}'):
         basegrammar = decompose(basegraph, time=t - 1, name=dataset)
         modeldatafilename = f'{modeldataprefix}_{modeltrial}.edgelist'
         modelgraph = nx.read_edgelist(modeldatafilename)
-        modelgrammar = update_grammar(basegrammar, basegraph, modelgraph, t - 1, t)
+        modelgrammar = update_grammar(basegrammar, basegraph, modelgraph, t - 1, t, switch=switch)
         modelscore = modelgrammar.ll(prior=t - 1, posterior=t, njobs=njobs)
         yield modelscore
 
@@ -57,6 +57,7 @@ if __name__ == '__main__':
     dataset: str = input('what dataset? ').strip().lower()
     assert dataset in ('email-dnc', 'email-enron', 'email-eucore', 'facebook-links', 'coauth-dblp')
 
+    set_switch: bool = input('flip the switch? ').strip().lower() in ('yes', 'y', 'switch')
     numjobs: int = int(input('number of parallel jobs? ').strip().lower())
 
     mu = 4
@@ -65,7 +66,7 @@ if __name__ == '__main__':
     rootpath = git.Repo(getcwd(), search_parent_directories=True).git.rev_parse("--show-toplevel")
     graphdir = join(rootpath, f'results/graphs_{mode}/{model}/{dataset}/')
     resultdir = join(rootpath, 'results/likelihoods/')
-    resultfilename = join(resultdir, f'{dataset}_{model}_{mode}.ll')
+    resultfilename = join(resultdir, f'{dataset}_{model}_{mode}_{set_switch}.ll')
     mkdir(resultdir)
 
     loaded = load_data(dataname=dataset)
@@ -77,11 +78,11 @@ if __name__ == '__main__':
         for time in range(1, len(times)):
             if model == 'dyverg':
                 if mode == 'incremental':
-                    results = evaluate_true_graph_incremental(time, graphs[time - 1], graphs[time], njobs=numjobs)
+                    results = evaluate_true_graph_incremental(time, graphs[time - 1], graphs[time], set_switch, njobs=numjobs)
                 else:
                     results = evaluate_true_graph_dynamic(time, graphs[:time], graphs[time], njobs=numjobs)
             else:
-                results = evaluate_model_graph(time, graphs[time - 1], join(graphdir, f'{time}'), njobs=numjobs)
+                results = evaluate_model_graph(time, graphs[time - 1], join(graphdir, f'{time}'), set_switch, njobs=numjobs)
 
             for trial, score in enumerate(results):
                 outfile.write(f'{time},{trial},{score}\n')
