@@ -3,7 +3,7 @@ refactored VRG
 """
 from typing import Union
 
-# from joblib import Parallel, delayed
+from joblib import Parallel, delayed
 from tqdm import tqdm
 # import networkx as nx
 import numpy as np
@@ -93,26 +93,31 @@ class VRG:
     def mdl(self) -> float:
         return sum(rule.mdl for rule, _, _ in self.decomposition)
 
-    def ll(self, prior: int, posterior: int, parallel: bool = False, verbose: bool = False) -> float:
-        return np.log(self.likelihood(prior, posterior, parallel=parallel, verbose=verbose))
+    def ll(self, prior: int, posterior: int, njobs: int = 1, verbose: bool = False) -> float:
+        return np.log(self.likelihood(prior, posterior, njobs=njobs, verbose=verbose))
 
     # the more modifications were required accommodate new rules, the lower the likelihood
-    def likelihood(self, prior: int, posterior: int, parallel: bool = False, verbose: bool = False) -> float:
+    def likelihood(self, prior: int, posterior: int, njobs: int = 1, verbose: bool = False) -> float:
         # return 1 / (1 + self.cost(time) + self.amplifier * self.penalty)  # adding 1 to the denominator avoids division by zero and ensures ∈ (0, 1]
-        return 1 / (1 + self.cost(prior, posterior, parallel=parallel, verbose=verbose))  # adding 1 to the denominator avoids division by zero and ensures ∈ (0, 1]
+        return 1 / (1 + self.cost(prior, posterior, njobs=njobs, verbose=verbose))  # adding 1 to the denominator avoids division by zero and ensures ∈ (0, 1]
 
     # total cost (in terms of edit operations) incurred to dynamically augment this grammar
-    def cost(self, prior: int, posterior: int, parallel: bool = False, verbose: bool = False) -> float:
+    def cost(self, prior: int, posterior: int, njobs: int = 1, verbose: bool = False) -> float:
         if len(self.times) == 1:
             if prior == posterior:
                 return np.inf
             else:
                 raise AssertionError
-        # if not prior:
-        #     prior = self.times[self.times.index(posterior) - 1]
-        S = sum(metarule.edits[prior, posterior]
-                for metarule, _, _ in tqdm(self.decomposition, desc='computing edits', disable=(not verbose))
-                if prior in metarule.times)  # TODO: parallelize this line?
+        if njobs > 1:
+            terms = Parallel(n_jobs=njobs)(delayed(lambda m, pr, po: m.edits[pr, po])(metarule, prior, posterior)
+                                           for metarule, _, _ in
+                                           tqdm(self.decomposition, desc='computing edits', disable=(not verbose))
+                                           if prior in metarule.times)
+            S = sum(terms)
+        else:
+            S = sum(metarule.edits[prior, posterior]
+                    for metarule, _, _ in tqdm(self.decomposition, desc='computing edits', disable=(not verbose))
+                    if prior in metarule.times)
         return S
 
     def ensure(self, time):
