@@ -18,8 +18,8 @@ from src.utils import mkdir
 def evaluate_true_graph_incremental(t: int, basegraph: nx.Graph, truegraph: nx.Graph, njobs: int = 1) -> list[float]:
     for _ in trange(10, desc=f'time {t}'):
         basegrammar = decompose(basegraph, time=t - 1, name=dataset)
-        truegrammar = update_grammar(basegrammar, basegraph, truegraph, t - 1, t)
-        truescore = truegrammar.ll(prior=t - 1, posterior=t, njobs=njobs, verbose=False)
+        truegrammar = update_grammar(basegrammar, basegraph, truegraph, t - 1, t, switch=False)
+        truescore = truegrammar.ll(prior=t - 1, posterior=t, njobs=njobs)
         yield truescore
 
 
@@ -29,7 +29,7 @@ def evaluate_true_graph_dynamic(t: int, priorgraphs: nx.Graph, truegraph: nx.Gra
         basegrammar = update_grammar(basegrammar, priorgraphs[idx], nextgraph, idx, idx + 1)
     for _ in trange(10, desc=f'time {t}'):
         truegrammar = update_grammar(basegrammar, priorgraphs[-1], truegraph, t - 1, t)
-        truescore = truegrammar.ll(prior=t - 1, posterior=t, njobs=njobs, verbose=False)
+        truescore = truegrammar.ll(prior=t - 1, posterior=t, njobs=njobs)
         yield truescore
 
 
@@ -39,7 +39,7 @@ def evaluate_model_graph(t: int, basegraph: nx.Graph, modeldataprefix: str, njob
         modeldatafilename = f'{modeldataprefix}_{modeltrial}.edgelist'
         modelgraph = nx.read_edgelist(modeldatafilename)
         modelgrammar = update_grammar(basegrammar, basegraph, modelgraph, t - 1, t)
-        modelscore = modelgrammar.ll(prior=t - 1, posterior=t, njobs=njobs, verbose=False)
+        modelscore = modelgrammar.ll(prior=t - 1, posterior=t, njobs=njobs)
         yield modelscore
 
 
