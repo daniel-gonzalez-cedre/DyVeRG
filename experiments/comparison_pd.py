@@ -39,7 +39,7 @@ if __name__ == '__main__':
     dataset: str = input('what dataset? ').strip().lower()
     assert dataset in ('email-dnc', 'email-enron', 'email-eucore', 'facebook-links', 'coauth-dblp')
 
-    numjobs: int = int(input('number of parallel jobs? ').strip().lower())
+    # numjobs: int = int(input('number of parallel jobs? ').strip().lower())
 
     mu = 4
     clustering = 'leiden'
@@ -57,7 +57,7 @@ if __name__ == '__main__':
     with open(resultfilename, 'w') as outfile:
         outfile.write('time,trial,pd\n')
         for time in range(0, len(times)):
-            results = compare_pd(time, graphs[time], join(graphdir, f'{time}'), numjobs)
+            results = compare_pd(time, graphs[time], join(graphdir, f'{time}'))
 
             for trial, discrepancy in enumerate(results):
                 outfile.write(f'{time},{trial},{discrepancy}\n')
