@@ -42,7 +42,7 @@ def evaluate_model_graph(t: int, basegraph: nx.Graph, modeldataprefix: str, swit
             modeldatafilename = f'{modeldataprefix}_{modeltrial}.edgelist'
             modelgraph = nx.read_edgelist(modeldatafilename)
         except FileNotFoundError:
-            return
+            return []
 
         if modelgraph.order() == 0:
             modelscore = 0
