@@ -42,8 +42,8 @@ def degree_distribution(g: nx.Graph) -> list[int]:
     return [degrees[deg] for deg in range(max(degrees) + 1)]
 
 
-def spectrum(g: nx.Graph) -> np.ndarray[float]:
+def spectrum(g: nx.Graph) -> list[float]:
     '''the eigenvalue spectrum of the Laplacian of the (multi)graph g'''
     if g.order() == 0:
         return [0]
-    return nx.laplacian_spectrum(g)
+    return list(nx.laplacian_spectrum(g))
