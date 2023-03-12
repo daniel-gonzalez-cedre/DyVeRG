@@ -9,7 +9,7 @@ def average_degree(g: nx.Graph) -> float:
     '''the average degree of g'''
     if g.order() == 0:
         return 0
-    return np.mean([g.degree(v) for v in g])
+    return [np.mean([g.degree(v) for v in g])]
 
 
 def triangle_count(g: nx.Graph) -> int:
