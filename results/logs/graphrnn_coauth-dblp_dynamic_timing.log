@@ -16,3 +16,5 @@
 2023-03-10 00:52:17.112 | INFO     | baselines.timers:wrapper:29 - gen time elapsed: 6.869959179311991e-06
 2023-03-10 21:36:15.209 | INFO     | baselines.timers:wrapper:19 - fit time elapsed: 100034.35081245902
 2023-03-10 21:36:15.210 | INFO     | baselines.timers:wrapper:29 - gen time elapsed: 8.539005648344755e-06
+2023-03-12 03:28:33.166 | INFO     | baselines.timers:wrapper:19 - fit time elapsed: 185980.075087927
+2023-03-12 03:28:33.167 | INFO     | baselines.timers:wrapper:29 - gen time elapsed: 8.856994099915028e-06
