@@ -230,11 +230,18 @@ def graph_edit_distance(g1: Graph, g2: Graph,
                         edge_subst_cost: Callable = edge_subst_cost_,
                         edge_del_cost: Callable = edge_del_cost_, edge_ins_cost: Callable = edge_ins_cost_,
                         patience: int = 120):
-    dist = ged(g1, g2,
-               node_match=node_match, edge_match=edge_match,
-               edge_subst_cost=edge_subst_cost,
-               edge_del_cost=edge_del_cost, edge_ins_cost=edge_ins_cost,
-               timeout=patience)
+    try:
+        dist = ged(g1, g2,
+                   node_match=node_match, edge_match=edge_match,
+                   edge_subst_cost=edge_subst_cost,
+                   edge_del_cost=edge_del_cost, edge_ins_cost=edge_ins_cost,
+                   timeout=patience)
+    except RecursionError:
+        dist = (
+            g1.order() + sum(g1.edges[u, v]['weight'] for u in g1 for v in g1 if (u, v) in g1.edges()) / 2
+            +
+            g2.order() + sum(g2.edges[u, v]['weight'] for u in g2 for v in g2 if (u, v) in g2.edges()) / 2
+        )
     return dist if dist is not None else g1.size() + g2.size()
 
 

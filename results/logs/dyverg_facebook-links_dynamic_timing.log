@@ -165,3 +165,14 @@
 2023-03-11 02:42:16.503 | INFO     | __main__:<module>:78 - gen time elapsed: 73.392642808
 2023-03-11 02:42:16.503 | INFO     | __main__:<module>:78 - gen time elapsed: 73.117692336
 2023-03-11 02:42:16.503 | INFO     | __main__:<module>:78 - gen time elapsed: 73.390837283
+2023-03-11 20:23:23.271 | INFO     | baselines.timers:wrapper:19 - fit time elapsed: 63664.93467125704
+2023-03-11 20:27:01.508 | INFO     | __main__:<module>:78 - gen time elapsed: 75.73979093300001
+2023-03-11 20:27:01.509 | INFO     | __main__:<module>:78 - gen time elapsed: 76.512427155
+2023-03-11 20:27:01.509 | INFO     | __main__:<module>:78 - gen time elapsed: 75.431231001
+2023-03-11 20:27:01.510 | INFO     | __main__:<module>:78 - gen time elapsed: 76.57781785
+2023-03-11 20:27:01.510 | INFO     | __main__:<module>:78 - gen time elapsed: 74.590506468
+2023-03-11 20:27:01.510 | INFO     | __main__:<module>:78 - gen time elapsed: 74.380157548
+2023-03-11 20:27:01.510 | INFO     | __main__:<module>:78 - gen time elapsed: 76.14203044499999
+2023-03-11 20:27:01.510 | INFO     | __main__:<module>:78 - gen time elapsed: 74.128092301
+2023-03-11 20:27:01.510 | INFO     | __main__:<module>:78 - gen time elapsed: 75.71451378100001
+2023-03-11 20:27:01.511 | INFO     | __main__:<module>:78 - gen time elapsed: 75.438566029
