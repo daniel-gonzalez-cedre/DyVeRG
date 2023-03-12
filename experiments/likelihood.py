@@ -4,6 +4,7 @@ import sys
 sys.path.extend(['.', '..'])
 
 import git
+import numpy as np
 import networkx as nx
 from tqdm import trange
 # from loguru import logger
@@ -23,14 +24,14 @@ def evaluate_true_graph_incremental(t: int, basegraph: nx.Graph, truegraph: nx.G
         yield truescore
 
 
-def evaluate_true_graph_dynamic(t: int, priorgraphs: nx.Graph, truegraph: nx.Graph, njobs: int = 1) -> list[float]:
-    basegrammar = decompose(priorgraphs[0], time=0, name=dataset)
-    for idx, nextgraph in enumerate(priorgraphs[1:]):
-        basegrammar = update_grammar(basegrammar, priorgraphs[idx], nextgraph, idx, idx + 1)
-    for _ in trange(10, desc=f'time {t}'):
-        truegrammar = update_grammar(basegrammar, priorgraphs[-1], truegraph, t - 1, t)
-        truescore = truegrammar.ll(prior=t - 1, posterior=t, njobs=njobs)
-        yield truescore
+# def evaluate_true_graph_dynamic(t: int, priorgraphs: nx.Graph, truegraph: nx.Graph, njobs: int = 1) -> list[float]:
+#     basegrammar = decompose(priorgraphs[0], time=0, name=dataset)
+#     for idx, nextgraph in enumerate(priorgraphs[1:]):
+#         basegrammar = update_grammar(basegrammar, priorgraphs[idx], nextgraph, idx, idx + 1)
+#     for _ in trange(10, desc=f'time {t}'):
+#         truegrammar = update_grammar(basegrammar, priorgraphs[-1], truegraph, t - 1, t)
+#         truescore = truegrammar.ll(prior=t - 1, posterior=t, njobs=njobs)
+#         yield truescore
 
 
 def evaluate_model_graph(t: int, basegraph: nx.Graph, modeldataprefix: str, switch: bool, njobs: int = 1) -> list[float]:
@@ -38,8 +39,17 @@ def evaluate_model_graph(t: int, basegraph: nx.Graph, modeldataprefix: str, swit
         basegrammar = decompose(basegraph, time=t - 1, name=dataset)
         modeldatafilename = f'{modeldataprefix}_{modeltrial}.edgelist'
         modelgraph = nx.read_edgelist(modeldatafilename)
-        modelgrammar = update_grammar(basegrammar, basegraph, modelgraph, t - 1, t, switch=switch)
-        modelscore = modelgrammar.ll(prior=t - 1, posterior=t, njobs=njobs)
+
+        if modelgraph.order() == 0:
+            modelscore = 0
+            for metarule in basegrammar:
+                rhs = metarule[t - 1].graph
+                modelscore += rhs.order()
+                modelscore += sum(rhs.edges[u, v] for u in rhs for v in rhs if (u, v) in rhs.edges()) / 2
+            modelscore = np.log(1 / modelscore)
+        else:
+            modelgrammar = update_grammar(basegrammar, basegraph, modelgraph, t - 1, t, switch=switch)
+            modelscore = modelgrammar.ll(prior=t - 1, posterior=t, njobs=njobs)
         yield modelscore
 
 
@@ -48,7 +58,8 @@ if __name__ == '__main__':
     assert model in ('er', 'cl', 'sbm', 'graphrnn', 'verg', 'dyverg')
 
     if model == 'dyverg':
-        mode: str = input('what learning mode? ').strip().lower()
+        # mode: str = input('what learning mode? ').strip().lower()
+        mode = 'incremental'
         assert mode in ('dynamic', 'incremental')
     else:
         mode: str = input('what generating mode? ').strip().lower()
@@ -77,10 +88,11 @@ if __name__ == '__main__':
         outfile.write('time,trial,likelihood\n')
         for time in range(1, len(times)):
             if model == 'dyverg':
-                if mode == 'incremental':
-                    results = evaluate_true_graph_incremental(time, graphs[time - 1], graphs[time], set_switch, njobs=numjobs)
-                else:
-                    results = evaluate_true_graph_dynamic(time, graphs[:time], graphs[time], njobs=numjobs)
+                results = evaluate_true_graph_incremental(time, graphs[time - 1], graphs[time], set_switch, njobs=numjobs)
+                # if mode == 'incremental':
+                #     results = evaluate_true_graph_incremental(time, graphs[time - 1], graphs[time], set_switch, njobs=numjobs)
+                # else:
+                #     results = evaluate_true_graph_dynamic(time, graphs[:time], graphs[time], njobs=numjobs)
             else:
                 results = evaluate_model_graph(time, graphs[time - 1], join(graphdir, f'{time}'), set_switch, njobs=numjobs)
 
