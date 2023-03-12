@@ -16,21 +16,21 @@ def triangle_count(g: nx.Graph) -> int:
     '''the total number of triangles in g (ignoring self-edges)'''
     if g.order() == 0:
         return 0
-    return sum(nx.triangles(g).values()) // 3
+    return [sum(nx.triangles(g).values()) // 3]
 
 
 def clustering(g: nx.Graph) -> float:
     '''the average clustering coefficient of g'''
     if g.order() == 0:
         return 0
-    return nx.average_clustering(g)
+    return [nx.average_clustering(g)]
 
 
 def transitivity(g: nx.Graph) -> float:
     '''the transitivity of g'''
     if g.order() == 0:
         return 0
-    return nx.transitivity(g)
+    return [nx.transitivity(g)]
 
 
 # vector-valued statistics
