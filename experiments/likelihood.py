@@ -45,7 +45,7 @@ def evaluate_model_graph(t: int, basegraph: nx.Graph, modeldataprefix: str, swit
             for metarule in basegrammar:
                 rhs = metarule[t - 1].graph
                 modelscore += rhs.order()
-                modelscore += sum(rhs.edges[u, v] for u in rhs for v in rhs if (u, v) in rhs.edges()) / 2
+                modelscore += sum(rhs.edges[u, v]['weight'] for u in rhs for v in rhs if (u, v) in rhs.edges()) / 2
             modelscore = np.log(1 / modelscore)
         else:
             modelgrammar = update_grammar(basegrammar, basegraph, modelgraph, t - 1, t, switch=switch)
