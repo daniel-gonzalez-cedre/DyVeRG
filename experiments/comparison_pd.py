@@ -14,7 +14,7 @@ from src.data import load_data
 from src.utils import mkdir
 
 
-def compare_mmd(t: int, truegraph: nx.Graph, modeldataprefix: str, njobs: int = 1) -> list[float]:
+def compare_pd(t: int, truegraph: nx.Graph, modeldataprefix: str, njobs: int = 1) -> list[float]:
     for modeltrial in trange(10, desc=f'time {t}'):
         try:
             modeldatafilename = f'{modeldataprefix}_{modeltrial}.edgelist'
@@ -46,8 +46,8 @@ if __name__ == '__main__':
 
     rootpath = git.Repo(getcwd(), search_parent_directories=True).git.rev_parse("--show-toplevel")
     graphdir = join(rootpath, f'results/graphs_{mode}/{model}/{dataset}/')
-    resultdir = join(rootpath, 'results/mmds/')
-    resultfilename = join(resultdir, f'{dataset}_{model}_{mode}.mmd')
+    resultdir = join(rootpath, 'results/pds/')
+    resultfilename = join(resultdir, f'{dataset}_{model}_{mode}.pd')
     mkdir(resultdir)
 
     loaded = load_data(dataname=dataset)
@@ -55,9 +55,9 @@ if __name__ == '__main__':
     graphs = [g for _, g in loaded]
 
     with open(resultfilename, 'w') as outfile:
-        outfile.write('time,trial,mmd\n')
+        outfile.write('time,trial,pd\n')
         for time in range(0, len(times)):
-            results = compare_mmd(time, graphs[time], join(graphdir, f'{time}'), numjobs)
+            results = compare_pd(time, graphs[time], join(graphdir, f'{time}'), numjobs)
 
             for trial, discrepancy in enumerate(results):
                 outfile.write(f'{time},{trial},{discrepancy}\n')
