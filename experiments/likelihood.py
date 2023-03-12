@@ -37,8 +37,12 @@ def evaluate_true_graph_incremental(t: int, basegraph: nx.Graph, truegraph: nx.G
 def evaluate_model_graph(t: int, basegraph: nx.Graph, modeldataprefix: str, switch: bool, njobs: int = 1) -> list[float]:
     for modeltrial in trange(10, desc=f'time {t}'):
         basegrammar = decompose(basegraph, time=t - 1, name=dataset)
-        modeldatafilename = f'{modeldataprefix}_{modeltrial}.edgelist'
-        modelgraph = nx.read_edgelist(modeldatafilename)
+
+        try:
+            modeldatafilename = f'{modeldataprefix}_{modeltrial}.edgelist'
+            modelgraph = nx.read_edgelist(modeldatafilename)
+        except FileNotFoundError:
+            return
 
         if modelgraph.order() == 0:
             modelscore = 0
