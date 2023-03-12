@@ -18,3 +18,7 @@
 2023-03-12 05:51:01.656 | INFO     | baselines.timers:wrapper:29 - gen time elapsed: 4.975008778274059e-06
 2023-03-12 09:08:48.273 | INFO     | baselines.timers:wrapper:19 - fit time elapsed: 19945.537955807988
 2023-03-12 09:08:48.274 | INFO     | baselines.timers:wrapper:29 - gen time elapsed: 6.417976692318916e-06
+2023-03-12 14:26:43.400 | INFO     | baselines.timers:wrapper:19 - fit time elapsed: 29090.307577153028
+2023-03-12 14:26:43.401 | INFO     | baselines.timers:wrapper:29 - gen time elapsed: 7.883994840085506e-06
+2023-03-12 17:53:55.037 | INFO     | baselines.timers:wrapper:19 - fit time elapsed: 18782.968124443025
+2023-03-12 17:53:55.038 | INFO     | baselines.timers:wrapper:29 - gen time elapsed: 4.759989678859711e-06
