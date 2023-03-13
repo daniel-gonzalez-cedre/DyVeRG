@@ -60,6 +60,6 @@ if __name__ == '__main__':
                     else:
                         outfile.write(f'{t} {np.mean(datatensor[t])} {confidence(datatensor[t])}\n')
 
-                outfile.write(fr'}}{{\data{dataset.replace("-", "").upper()}{model}}}')
+                outfile.write(fr'}}{{\pd{dataset.replace("-", "").upper()}{model}}}')
                 outfile.write('\n\n')
 
