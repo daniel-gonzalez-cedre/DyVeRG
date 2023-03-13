@@ -53,7 +53,7 @@ def portrait_py(graph):
     dia = 500 #nx.diameter(graph)
     N = graph.number_of_nodes()
     # B indices are 0...dia x 0...N-1:
-    B = np.zeros((dia+1,N)) 
+    B = np.zeros((dia+1,max(2, N))) 
     
     max_path = 1
     adj = graph.adj
@@ -86,6 +86,7 @@ def portrait_py(graph):
         # add individual distribution to matrix:
         for shell,count in dict_distribution.items():
             B[shell][count] += 1
+
         
         # HACK: count starting nodes that have zero nodes in farther shells
         max_shell = dia
