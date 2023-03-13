@@ -25,6 +25,7 @@ def compare_pd(t: int, truegraph: nx.Graph, modeldataprefix: str, njobs: int = 1
         if modelgraph.order() == 0:
             yield 1.0
         else:
+            modelgraph = nx.convert_node_labels_to_integers(modelgraph)
             yield portrait_divergence(truegraph, modelgraph)
 
 
