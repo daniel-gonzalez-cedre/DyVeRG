@@ -21,8 +21,6 @@ if __name__ == '__main__':
     rootpath = git.Repo(getcwd(), search_parent_directories=True).git.rev_parse("--show-toplevel")
     models = ['er', 'cl', 'sbm', 'graphrnn', 'verg', 'dyverg']
     datasets = ['email-dnc', 'email-enron', 'email-eucore', 'facebook-links', 'coauth-dblp']
-    statistic = input('statistic: ').strip().lower().replace('_', '-').replace(' ', '-')
-    assert statistic in ('degree-distribution', 'spectrum', 'average-degree', 'clustering', 'transitivity', 'triangle-count')
 
     for dataset in tqdm(datasets):
         mode = {
@@ -33,22 +31,22 @@ if __name__ == '__main__':
             'verg': 'static',
             'dyverg': 'incremental'
         }
-        with open(join(rootpath, f'results/mmds/aggregate{dataset.replace("-", "").upper()}{statistic.replace("-", "").lower()}.mmd'), 'w') as outfile:
+        with open(join(rootpath, f'results/likelihoods/aggregate{dataset.replace("-", "").upper()}.ll'), 'w') as outfile:
             for model in models:
                 outfile.write(r'\pgfplotstableread{')
-                outfile.write('\nts mmd ci\n')
+                outfile.write('\nts avg ci\n')
 
                 datatensor = {}
-                with open(join(rootpath, f'results/mmds/{statistic}/{dataset}_{model}_{mode[model]}_{statistic}.mmd'), 'r') as infile:
+                with open(join(rootpath, f'results/likelihoods/{dataset}_{model}_{mode[model]}_False.ll'), 'r') as infile:
                     next(infile)
                     for line in infile:
-                        time, trial, mmd = line.strip().split(',')
-                        time, trial, mmd = (int(time), int(trial), float(mmd))
+                        time, trial, ll = line.strip().split(',')
+                        time, trial, ll = (int(time), int(trial), float(ll))
 
                         if time in datatensor:
-                            datatensor[time].append(mmd)
+                            datatensor[time].append(ll)
                         else:
-                            datatensor[time] = [mmd]
+                            datatensor[time] = [ll]
 
                 for t in datatensor:
                     if t == 0 or t > 10:
@@ -56,6 +54,6 @@ if __name__ == '__main__':
                     else:
                         outfile.write(f'{t} {np.mean(datatensor[t])} {confidence(datatensor[t])}\n')
 
-                outfile.write(fr'}}{{\{statistic.replace("-", "")}{dataset.replace("-", "").upper()}{model}}}')
+                outfile.write(fr'}}{{\ll{dataset.replace("-", "").upper()}{model}}}')
                 outfile.write('\n\n')
 
