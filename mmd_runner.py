@@ -2,9 +2,9 @@ import subprocess
 
 
 models = ('er', 'cl', 'sbm', 'graphrnn', 'verg', 'dyverg')
-datasets = ('email-dnc', 'email-enron', 'email-eucore', 'facebook-links', 'coauth-dblp')
-statnames = ('spectrum',)
-# statnames = ('degree-distribution', 'average-degree', 'triangle-count', 'clustering', 'transitivity')
+datasets = ('email-dnc', 'email-enron', 'email-eucore', 'coauth-dblp', 'facebook-links')
+# statnames = ('spectrum',)
+statnames = ('degree-distribution', 'average-degree', 'triangle-count', 'clustering', 'transitivity')
 # for model in models:
 for _ in range(1):
     model = input('model: ').strip().lower()
