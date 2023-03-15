@@ -15,7 +15,7 @@ from src.utils import mkdir
 
 
 def compare_pd(t: int, truegraph: nx.Graph, modeldataprefix: str, njobs: int = 1) -> list[float]:
-    for modeltrial in trange(10, desc=f'time {t}'):
+    for modeltrial in trange(10, desc=f'{model} {dataset} {t}'):
         try:
             modeldatafilename = f'{modeldataprefix}_{modeltrial}.edgelist'
             modelgraph = nx.read_edgelist(modeldatafilename)
@@ -30,18 +30,34 @@ def compare_pd(t: int, truegraph: nx.Graph, modeldataprefix: str, njobs: int = 1
 
 
 if __name__ == '__main__':
-    model: str = input('what model? ').strip().lower()
+    model, mode, statname, dataset = (None, None, None, None)
+
+    if len(sys.argv) > 1:
+        model = sys.argv[1]
+    if len(sys.argv) > 2:
+        mode = sys.argv[2]
+    if len(sys.argv) > 3:
+        dataset = sys.argv[3]
+
+    if not model:
+        model: str = input('what model? ').strip().lower()
+
     assert model in ('er', 'cl', 'sbm', 'graphrnn', 'verg', 'dyverg')
 
-    if model == 'dyverg':
-        mode: str = input('what learning mode? ').strip().lower()
-        assert mode in ('dynamic', 'incremental')
-    else:
-        mode: str = input('what generating mode? ').strip().lower()
-        assert mode in ('static', 'dynamic', 'incremental')
+    if not mode:
+        if model == 'dyverg':
+            mode: str = input('what learning mode? ').strip().lower()
+            assert mode in ('dynamic', 'incremental')
+        else:
+            mode: str = input('what generating mode? ').strip().lower()
+            assert mode in ('static', 'dynamic', 'incremental')
 
-    dataset: str = input('what dataset? ').strip().lower()
-    assert dataset in ('email-dnc', 'email-enron', 'email-eucore', 'facebook-links', 'coauth-dblp')
+    assert mode in ('static', 'dynamic', 'incremental')
+
+    if not dataset:
+        dataset: str = input('what dataset? ').strip().lower()
+
+    assert dataset in ('email-dnc', 'email-enron', 'email-eucore', 'coauth-dblp', 'facebook-links')
 
     # numjobs: int = int(input('number of parallel jobs? ').strip().lower())
 
@@ -61,6 +77,9 @@ if __name__ == '__main__':
     with open(resultfilename, 'w') as outfile:
         outfile.write('time,trial,pd\n')
         for time in range(0, len(times)):
+            if time > 12:
+                break
+
             results = compare_pd(time, graphs[time], join(graphdir, f'{time}'))
 
             for trial, discrepancy in enumerate(results):

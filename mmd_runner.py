@@ -3,8 +3,8 @@ import subprocess
 
 models = ('er', 'cl', 'sbm', 'graphrnn', 'verg', 'dyverg')
 datasets = ('email-dnc', 'email-enron', 'email-eucore', 'facebook-links', 'coauth-dblp')
-# statnames = ('spectrum',)
-statnames = ('degree-distribution', 'average-degree', 'triangle-count', 'clustering', 'transitivity')
+statnames = ('spectrum',)
+# statnames = ('degree-distribution', 'average-degree', 'triangle-count', 'clustering', 'transitivity')
 # for model in models:
 for _ in range(1):
     model = input('model: ').strip().lower()
@@ -18,4 +18,4 @@ for _ in range(1):
             'dyverg': 'incremental'
         }
         for statname in statnames:
-            subprocess.call(['python', 'experiments/comparison_mmd_fixed.py', model, modes[model], statname, dataset])
+            subprocess.call(['python', 'experiments/comparison_mmd.py', model, modes[model], statname, dataset])

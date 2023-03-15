@@ -27,7 +27,7 @@ def compare_mmd(t: int, truegraph: nx.Graph, statistic, modeldataprefix: str, nj
 
         modelstats.append(statistic(modelgraph))
 
-    yield maximum_mean_discrepancy([truestat], modelstats)
+        yield maximum_mean_discrepancy([truestat], modelstats)
 
 
 if __name__ == '__main__':
@@ -84,7 +84,7 @@ if __name__ == '__main__':
     rootpath = git.Repo(getcwd(), search_parent_directories=True).git.rev_parse("--show-toplevel")
     graphdir = join(rootpath, f'results/graphs_{mode}/{model}/{dataset}/')
     resultdir = join(rootpath, f'results/mmds/{statname}/')
-    resultfilename = join(resultdir, f'{dataset}_{model}_{mode}_{statname}.mmd_fixed')
+    resultfilename = join(resultdir, f'{dataset}_{model}_{mode}_{statname}.mmd')
     mkdir(resultdir)
 
     loaded = load_data(dataname=dataset)
@@ -92,13 +92,10 @@ if __name__ == '__main__':
     graphs = [g for _, g in loaded]
 
     with open(resultfilename, 'w') as outfile:
-        outfile.write('time,mmd\n')
+        outfile.write('time,trial,mmd\n')
         for time in range(0, len(times)):
-            if time > 12:
-                break
-
             results = compare_mmd(time, graphs[time], statfunc, join(graphdir, f'{time}'))
 
-            for discrepancy in results:
-                outfile.write(f'{time},{discrepancy}\n')
+            for trial, discrepancy in enumerate(results):
+                outfile.write(f'{time},{trial},{discrepancy}\n')
                 outfile.flush()

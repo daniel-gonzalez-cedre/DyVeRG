@@ -48,4 +48,5 @@ for t, graph in enumerate(graphs):
     generated_graphs = gen_timer(gen, logger)(params[0], params[1], directed=params[2], number=num_gen)
 
     for trial, gen_graph in enumerate(generated_graphs):
+        print(f'writing {t}_{trial}.edgelist')
         write_graph(gen_graph, join(rootpath, resultspath), f'{t}_{trial}.edgelist')

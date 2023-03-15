@@ -27,7 +27,7 @@ def compare_mmd(t: int, truegraph: nx.Graph, statistic, modeldataprefix: str, nj
 
         modelstats.append(statistic(modelgraph))
 
-        yield maximum_mean_discrepancy([truestat], modelstats)
+    yield maximum_mean_discrepancy([truestat], modelstats)
 
 
 if __name__ == '__main__':
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     if not dataset:
         dataset: str = input('what dataset? ').strip().lower()
 
-    assert dataset in ('email-dnc', 'email-enron', 'email-eucore', 'facebook-links', 'coauth-dblp')
+    assert dataset in ('email-dnc', 'email-enron', 'email-eucore', 'coauth-dblp', 'facebook-links')
 
     # numjobs: int = int(input('number of parallel jobs? ').strip().lower())
 
@@ -92,10 +92,13 @@ if __name__ == '__main__':
     graphs = [g for _, g in loaded]
 
     with open(resultfilename, 'w') as outfile:
-        outfile.write('time,trial,mmd\n')
+        outfile.write('time,mmd\n')
         for time in range(0, len(times)):
+            if time > 12:
+                break
+
             results = compare_mmd(time, graphs[time], statfunc, join(graphdir, f'{time}'))
 
-            for trial, discrepancy in enumerate(results):
-                outfile.write(f'{time},{trial},{discrepancy}\n')
+            for discrepancy in results:
+                outfile.write(f'{time},{discrepancy}\n')
                 outfile.flush()

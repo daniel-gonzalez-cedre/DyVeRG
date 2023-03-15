@@ -91,6 +91,8 @@ if __name__ == '__main__':
     with open(resultfilename, 'w') as outfile:
         outfile.write('time,trial,likelihood\n')
         for time in range(1, len(times)):
+            if time > 11:
+                break
             if model == 'dyverg':
                 results = evaluate_true_graph_incremental(time, graphs[time - 1], graphs[time], set_switch, njobs=numjobs)
                 # if mode == 'incremental':
