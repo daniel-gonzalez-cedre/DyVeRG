@@ -31,29 +31,80 @@ if __name__ == '__main__':
             'verg': 'static',
             'dyverg': 'incremental'
         }
-        with open(join(rootpath, f'results/likelihoods/aggregate{dataset.replace("-", "").upper()}.ll'), 'w') as outfile:
+        with open(join(rootpath, f'results/likelihoods/aggregate{dataset.replace("-", "").upper()}.ll_ranks'), 'w') as outfile:
+            means = {
+                'er': [],
+                'cl': [],
+                'sbm': [],
+                'graphrnn': [],
+                'verg': [],
+                'dyverg': []
+            }
+            cis = {
+                'er': [],
+                'cl': [],
+                'sbm': [],
+                'graphrnn': [],
+                'verg': [],
+                'dyverg': []
+            }
+            ranks = {
+                'er': [],
+                'cl': [],
+                'sbm': [],
+                'graphrnn': [],
+                'verg': [],
+                'dyverg': []
+            }
             for model in models:
-                outfile.write(r'\pgfplotstableread{')
-                outfile.write('\nts avg ci\n')
-
                 datatensor = {}
                 with open(join(rootpath, f'results/likelihoods/{dataset}_{model}_{mode[model]}_False.ll'), 'r') as infile:
                     next(infile)
                     for line in infile:
                         time, trial, ll = line.strip().split(',')
                         time, trial, ll = (int(time), int(trial), float(ll))
+                        ll = -ll
 
                         if time in datatensor:
                             datatensor[time].append(ll)
                         else:
                             datatensor[time] = [ll]
 
-                for t in datatensor:
-                    if t == 0 or t > 10:
-                        outfile.write(f'% {t} {np.mean(datatensor[t])} {confidence(datatensor[t])}\n')
-                    else:
-                        outfile.write(f'{t} {np.mean(datatensor[t])} {confidence(datatensor[t])}\n')
+                # for t in datatensor:
+                for t in range(1, len(datatensor)):
+                    means[model].append(np.mean(datatensor[t]))
+                    cis[model].append(confidence(datatensor[t]))
+                    # if t == 0 or t > 10:
+                    #     outfile.write(f'% {t} {mean} {ci}\n')
+                    # else:
+                    #     outfile.write(f'{t} {mean} {ci}\n')
+
+                # outfile.write(fr'}}{{\ll{dataset.replace("-", "").upper()}{model}}}')
+                # outfile.write('\n\n')
+
+            for t in range(0, 11):
+                meanslice = [(mm, means[mm][t]) for mm in models if t < len(means[mm])]
+                meanslice = sorted(meanslice, key=lambda x: x[1])
+                modelslice = [mm for mm, _ in meanslice]
+                for model in models:
+                    try:
+                        rank = modelslice.index(model)
+                    except ValueError:
+                        rank = 5
+                    ranks[model].append(rank + 1)
+
+            for model in models:
+                outfile.write(r'\pgfplotstableread{')
+                outfile.write('\nts avg ci rank\n')
+
+                for t in range(0, 11):
+                    try:
+                        if t == 0 or t > 10:
+                            outfile.write(f'% {t} {means[model][t]} {cis[model][t]} {ranks[model][t]}\n')
+                        else:
+                            outfile.write(f'{t} {means[model][t]} {cis[model][t]} {ranks[model][t]}\n')
+                    except IndexError:
+                        continue
 
                 outfile.write(fr'}}{{\ll{dataset.replace("-", "").upper()}{model}}}')
                 outfile.write('\n\n')
-
