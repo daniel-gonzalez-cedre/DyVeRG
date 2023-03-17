@@ -12,6 +12,8 @@ Thanks to: Zachariah Carmichael for his help proof-reading and his helpful feedb
 Justus Hibhsman for his stimulating discussions and brilliant suggestions;
 the eternal patience of my advisor Tim Weninger.
 
+P.S.: the `requirements.txt` and `packages.txt` may not be up to date; these will be updated in the near future.
+
 [cnrgcode]: https://github.com/satyakisikdar/CNRG
 [cnrgpaper]: https://ieeexplore.ieee.org/document/8970955
 
