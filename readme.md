@@ -7,7 +7,10 @@ from the Lawrence-Livermore National Laboratory.
 This work is based on the `Modeling Graphs with Vertex Replacement Grammars`
 [paper][cnrgpaper] and [code base][cnrgcode] by S. Sikdar *et al.*,
 wherein the `Clustering-based Node Replacement Grammar` (CNRG) was introduced.
-Thanks to the eternal patience of my advisor Tim Weninger.
+
+Thanks to: Zachariah Carmichael for his help proof-reading and his helpful feedback;
+Justus Hibhsman for his stimulating discussions and brilliant suggestions;
+the eternal patience of my advisor Tim Weninger.
 
 [cnrgcode]: https://github.com/satyakisikdar/CNRG
 [cnrgpaper]: https://ieeexplore.ieee.org/document/8970955

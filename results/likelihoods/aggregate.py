@@ -72,8 +72,12 @@ if __name__ == '__main__':
 
                 # for t in datatensor:
                 for t in range(1, len(datatensor)):
-                    means[model].append(np.mean(datatensor[t]))
-                    cis[model].append(confidence(datatensor[t]))
+                    try:
+                        means[model].append(np.mean(datatensor[t]))
+                        cis[model].append(confidence(datatensor[t]))
+                    except:
+                        print(t, model, datatensor)
+                        exit()
                     # if t == 0 or t > 10:
                     #     outfile.write(f'% {t} {mean} {ci}\n')
                     # else:
@@ -97,12 +101,12 @@ if __name__ == '__main__':
                 outfile.write(r'\pgfplotstableread{')
                 outfile.write('\nts avg ci rank\n')
 
-                for t in range(0, 11):
+                for t in range(0, 12):
                     try:
-                        if t == 0 or t > 10:
-                            outfile.write(f'% {t} {means[model][t]} {cis[model][t]} {ranks[model][t]}\n')
+                        if t + 1 > 10:
+                            outfile.write(f'% {t + 1} {means[model][t]} {cis[model][t]} {ranks[model][t]}\n')
                         else:
-                            outfile.write(f'{t} {means[model][t]} {cis[model][t]} {ranks[model][t]}\n')
+                            outfile.write(f'{t + 1} {means[model][t]} {cis[model][t]} {ranks[model][t]}\n')
                     except IndexError:
                         continue
 
